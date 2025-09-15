@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — Student Record System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0f2d49;
+      --navy-mid:   #123b63;
+      --navy-bright:#1f5f95;
+      --teal:       #1c8f7a;
+      --teal-light: #5eead4;
+      --surface:    #ffffff;
+      --text:       #0f172a;
+      --text-muted: #64748b;
+      --border:     #e2e8f0;
+      --error:      #dc2626;
+      --radius:     14px;
+      --radius-sm:  10px;
+      --ease:       cubic-bezier(.4,0,.2,1);
+    }
+
+    html, body { height: 100%; }
+    body {
+      font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--text);
+      background: #0a1628;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ==================== SPLIT LAYOUT ==================== */
+    .signin-shell {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 100vh;
+    }
+
+    /* ---- LEFT: branding panel ---- */
+    .panel-brand {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5rem;
+      overflow: hidden;
+      background:
+        linear-gradient(170deg, rgba(10,22,40,.92) 0%, rgba(15,45,73,.84) 50%, rgba(18,59,99,.78) 100%),
+        url("assets/images/classroom-hero-banner.png");
+      background-size: cover;
+      background-position: center;
+      color: #fff;
+    }
+    .panel-brand::after {
+      content: "";
+      position: absolute;
+      bottom: -120px;
+      right: -80px;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(28,143,122,.22), transparent 70%);
+      pointer-events: none;
+    }
+
+    .brand-top {
+      position: relative;
+      z-index: 1;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      text-decoration: none;
+      color: #fff;
+      margin-bottom: 3.5rem;
+    }
+    .brand-logo-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,.2), rgba(255,255,255,.08));
+      border: 1px solid rgba(255,255,255,.2);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: .95rem;
+      letter-spacing: -.02em;
+    }
+    .brand-logo-text {
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: -.01em;
+      opacity: .95;
+    }
+
+    .brand-hero {
+      position: relative;
+      z-index: 1;
+    }
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .35rem .85rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--teal-light);
+      background: rgba(28,143,122,.15);
+      border: 1px solid rgba(94,234,212,.18);
+      margin-bottom: 1.25rem;
+    }
+    .brand-badge svg { width: 12px; height: 12px; }
+    .brand-hero h2 {
+      font-size: clamp(1.75rem, 3vw, 2.5rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -.04em;
+      margin-bottom: 1rem;
+    }
+    .brand-hero h2 span { color: var(--teal-light); }
+    .brand-hero p {
+      font-size: .95rem;
+      line-height: 1.7;
+      color: rgba(255,255,255,.68);
+      max-width: 380px;
+    }
+
+    .brand-features {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+      position: relative;
+      z-index: 1;
+    }
+    .brand-feat {
+      display: flex;
+      align-items: flex-start;
+      gap: .6rem;
+    }
+    .brand-feat-icon {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-feat-icon svg { width: 16px; height: 16px; color: var(--teal-light); }
+    .brand-feat-text strong {
+      display: block;
+      font-size: .78rem;
+      font-weight: 700;
+      margin-bottom: .1rem;
+    }
+    .brand-feat-text span {
+      font-size: .72rem;
+      color: rgba(255,255,255,.5);
+    }
+
+    .brand-bottom {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,.1);
+      font-size: .78rem;
+      color: rgba(255,255,255,.4);
+    }
+    .brand-bottom a {
+      color: rgba(255,255,255,.55);
+      text-decoration: none;
+      transition: color .2s;
+    }
+    .brand-bottom a:hover { color: #fff; }
+
+    /* ---- RIGHT: form panel ---- */
+    .panel-form {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 2rem;
+      background: linear-gradient(180deg, #fafbfc 0%, #f1f5f9 100%);
+      position: relative;
+      overflow-y: auto;
+    }
+
+    .form-shell {
+      width: 100%;
+      max-width: 400px;
+      animation: fadeUp .5s var(--ease) both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-head {
+      margin-bottom: 1.75rem;
+    }
+    .form-head h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -.04em;
+      color: var(--navy);
+      margin-bottom: .3rem;
+    }
+    .form-head p {
+      font-size: .9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    /* Alert */
+    .alert {
+      display: none;
+      align-items: flex-start;
+      gap: .55rem;
+      padding: .75rem .9rem;
+      border-radius: var(--radius-sm);
+      font-size: .8rem;
+      font-weight: 600;
+      margin-bottom: 1.15rem;
+      line-height: 1.45;
+      background: rgba(220,38,38,.08);
+      border: 1px solid rgba(220,38,38,.2);
+      color: #991b1b;
+    }
+    .alert.is-visible { display: flex; }
+    .alert.is-info {
+      background: rgba(31,95,149,.08);
+      border-color: rgba(31,95,149,.2);
+      color: #0c4a6e;
+    }
+    .alert.is-success {
+      background: rgba(22,163,74,.08);
+      border-color: rgba(22,163,74,.2);
+      color: #14532d;
+    }
+
+    /* Fields */
+    .field { margin-bottom: 1.1rem; }
+    .field-label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: .4rem;
+      letter-spacing: .02em;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-wrap .ico {
+      position: absolute;
+      left: .55rem;
+      width: 2.15rem;
+      height: 2.15rem;
+      border-radius: 9px;
+      background: rgba(18,59,99,.07);
+      color: var(--navy-bright);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .input-wrap .ico svg { width: 1rem; height: 1rem; opacity: .8; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: .78rem .9rem .78rem 3rem;
+      font: inherit;
+      font-weight: 500;
+      font-size: .9rem;
+      color: var(--text);
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color .2s var(--ease), box-shadow .2s var(--ease), background .2s var(--ease);
+    }
+    select {
+      padding-left: 3rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%231f5f95' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right .85rem center;
+      background-color: #fff;
+      padding-right: 2.5rem;
+    }
+    input:hover, select:hover {
+      border-color: rgba(31,95,149,.28);
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--navy-bright);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(31,95,149,.14), 0 2px 8px rgba(31,95,149,.06);
+    }
+    input::placeholder { color: #94a3b8; font-weight: 450; }
+
+    .input-wrap.has-toggle input { padding-right: 3rem; }
+    .toggle-pass {
+      position: absolute;
+      right: .35rem;
+      padding: .42rem .55rem;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color .2s, background .2s;
+    }
+    .toggle-pass:hover {
+      color: var(--navy-bright);
+      background: rgba(31,95,149,.08);
+    }
+    .toggle-pass svg { width: 1.1rem; height: 1.1rem; }
+
+    .helper {
+      display: none;
+      font-size: .72rem;
+      font-weight: 600;
+      color: var(--error);
+      margin-top: .3rem;
+    }
+    .helper.is-visible { display: block; }
+    .field.has-error input,
+    .field.has-error select {
+      border-color: var(--error);
+      background: #fff5f5;
+    }
+    .field.has-error input:focus,
+    .field.has-error select:focus {
+      box-shadow: 0 0 0 4px rgba(220,38,38,.1);
+    }
+
+    /* Remember / forgot */
+    .row-inline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .remember input {
+      width: 1.05rem;
+      height: 1.05rem;
+      accent-color: var(--navy-bright);
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .link-forgot {
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--navy-bright);
+      text-decoration: none;
+      transition: color .2s;
+    }
+    .link-forgot:hover { color: var(--teal); }
+
+    /* Primary button */
+    .btn-primary {
+      width: 100%;
+      padding: .88rem 1.25rem;
+      font: inherit;
+      font-weight: 700;
+      font-size: .95rem;
+      letter-spacing: .01em;
+      color: #fff;
+      background: linear-gradient(135deg, var(--navy-mid) 0%, var(--navy-bright) 100%);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(255,255,255,.15) inset, 0 6px 20px rgba(18,59,99,.35);
+      transition: transform .18s var(--ease), box-shadow .2s var(--ease), filter .2s var(--ease);
+    }
+    .btn-primary::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 10px 32px rgba(18,59,99,.42);
+      filter: brightness(1.04);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled {
+      opacity: .65;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+      box-shadow: none;
+    }
+    .btn-primary .spinner {
+      display: none;
+      width: 1.15rem;
+      height: 1.15rem;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      vertical-align: middle;
+      margin-right: .45rem;
+    }
+    .btn-primary.is-loading .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+      margin: 1.35rem 0 1.15rem;
+      color: #94a3b8;
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+    }
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+
+    /* Social */
+    .social-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .65rem;
+    }
+    .btn-social {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      padding: .65rem .75rem;
+      font: inherit;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--navy);
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: not-allowed;
+      opacity: .7;
+      transition: border-color .2s, background .2s;
+    }
+    .btn-social svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+
+    .fineprint {
+      text-align: center;
+      font-size: .68rem;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-top: .65rem;
+      line-height: 1.4;
+    }
+
+    .footnote {
+      text-align: center;
+      margin-top: 1.35rem;
+      font-size: .85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .footnote a {
+      font-weight: 700;
+      color: var(--navy-bright);
+      text-decoration: none;
+    }
+    .footnote a:hover { color: var(--teal); text-decoration: underline; }
+
+    /* Secure badge below form */
+    .secure-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+      margin-top: 1.5rem;
+      font-size: .72rem;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: .03em;
+    }
+    .secure-badge svg { width: 13px; height: 13px; opacity: .6; }
+
+    /* ==================== RESPONSIVE ==================== */
+    @media (max-width: 900px) {
+      .signin-shell { grid-template-columns: 1fr; }
+      .panel-brand { display: none; }
+      .panel-form {
+        min-height: 100vh;
+        background:
+          linear-gradient(170deg, rgba(10,22,40,.88) 0%, rgba(15,45,73,.8) 50%, rgba(18,59,99,.75) 100%),
+          url("assets/images/classroom-hero-banner.png");
+        background-size: cover;
+        background-position: center;
+      }
+      .form-shell {
+        background: rgba(255,255,255,.96);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,.7);
+        box-shadow: 0 24px 48px -12px rgba(0,0,0,.35);
+        padding: 2rem 1.5rem 1.75rem;
+        max-width: 420px;
+      }
+      .mobile-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .65rem;
+        margin-bottom: 1.25rem;
+      }
+      .mobile-brand .brand-logo-mark {
+        background: linear-gradient(135deg, var(--navy-mid), var(--navy-bright));
+        border: none;
+        color: #fff;
+      }
+      .mobile-brand .brand-logo-text { color: var(--navy); }
+    }
+    @media (min-width: 901px) {
+      .mobile-brand { display: none; }
+    }
+    @media (max-width: 480px) {
+      .panel-form { padding: 1.25rem 1rem; }
+      .form-shell { padding: 1.5rem 1.15rem 1.35rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="signin-shell">
+  <!-- ========== LEFT PANEL ========== -->
+  <div class="panel-brand">
+    <div class="brand-top">
+      <a href="index.html" class="brand-logo">
+        <span class="brand-logo-mark">SR</span>
+        <span class="brand-logo-text">Student Record System</span>
+      </a>
+
+      <div class="brand-hero">
+        <div class="brand-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Secure Academic Portal
+        </div>
+        <h2>Manage your<br>academic records<br>with <span>confidence</span></h2>
+        <p>A centralized platform for administrators, teachers, and students to track grades, manage classes, and generate reports.</p>
+
+        <div class="brand-features">
+          <div class="brand-feat">
+            <div class="brand-feat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="brand-feat-text">
+              <strong>Multi-Role</strong>
+              <span>Admin, Teacher, Student</span>
+            </div>
+          </div>
+          <div class="brand-feat">
+            <div class="brand-feat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="brand-feat-text">
+              <strong>Encrypted</strong>
+              <span>Session & CSRF protected</span>
+            </div>
+          </div>
+          <div class="brand-feat">
+            <div class="brand-feat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <div class="brand-feat-text">
+              <strong>Reports</strong>
+              <span>Instant academic reports</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-bottom">
+      <span>&copy; 2026 Student Record System</span>
+      <span style="opacity:.3">·</span>
+      <a href="index.html">Home</a>
+      <span style="opacity:.3">·</span>
+      <a href="index.html#programs">Features</a>
+    </div>
+  </div>
+
+  <!-- ========== RIGHT PANEL ========== -->
+  <div class="panel-form">
+    <div class="form-shell">
+
+      <div class="mobile-brand">
+        <span class="brand-logo-mark">SR</span>
+        <span class="brand-logo-text">Student Record System</span>
+      </div>
+
+      <div class="form-head">
+        <h1>Welcome back</h1>
+        <p>Sign in to continue to your dashboard</p>
+      </div>
+
+      <div id="serverAlert" class="alert" role="alert" aria-live="polite"></div>
+
+      <form id="signinForm" method="POST" action="student-record-system/auth/login.php" novalidate>
+        <div class="field" id="field-email">
+          <label class="field-label" for="email">Email or Username</label>
+          <div class="input-wrap">
+            <span class="ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </span>
+            <input type="text" id="email" name="email" autocomplete="username" inputmode="email" placeholder="you@school.edu" />
+          </div>
+          <p class="helper" id="help-email"></p>
+        </div>
+
+        <div class="field" id="field-password">
+          <label class="field-label" for="password">Password</label>
+          <div class="input-wrap has-toggle">
+            <span class="ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password" />
+            <button type="button" class="toggle-pass" id="togglePass" aria-label="Show password" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <p class="helper" id="help-password"></p>
+        </div>
+
+        <div class="field" id="field-role">
+          <label class="field-label" for="role">Sign in as</label>
+          <div class="input-wrap">
+            <span class="ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <select id="role" name="role" required>
+              <option value="main_admin">Super Admin</option>
+              <option value="branch_admin">Branch Admin</option>
+              <option value="teacher">Teacher</option>
+              <option value="student" selected>Student</option>
+            </select>
+          </div>
+          <p class="helper" id="help-role"></p>
+        </div>
+
+        <div class="row-inline">
+          <label class="remember">
+            <input type="checkbox" id="remember" name="remember_me" value="1" />
+            Remember me
+          </label>
+          <a class="link-forgot" href="index.html" title="Contact your school administrator to reset your password">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="btn-label">Sign In</span>
+        </button>
+      </form>
+
+      <div class="divider" aria-hidden="true">or</div>
+
+      <div class="social-row">
+        <button type="button" class="btn-social" disabled title="Single sign-on is not enabled" aria-disabled="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.24H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google
+        </button>
+        <button type="button" class="btn-social" disabled title="Single sign-on is not enabled" aria-disabled="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </button>
+      </div>
+
+      <p class="fineprint">SSO can be enabled by your organization's IT administrator.</p>
+
+      <p class="footnote">
+        Don't have an account? <a href="index.html#programs">View programs</a>
+      </p>
+
+      <div class="secure-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Encrypted session · Role-based access
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('signinForm');
+  var email = document.getElementById('email');
+  var password = document.getElementById('password');
+  var role = document.getElementById('role');
+  var remember = document.getElementById('remember');
+  var submitBtn = document.getElementById('submitBtn');
+  var serverAlert = document.getElementById('serverAlert');
+  var togglePass = document.getElementById('togglePass');
+
+  var helpEmail = document.getElementById('help-email');
+  var helpPassword = document.getElementById('help-password');
+  var fieldEmail = document.getElementById('field-email');
+  var fieldPassword = document.getElementById('field-password');
+
+  function clearFieldErrors() {
+    [fieldEmail, fieldPassword].forEach(function (f) { f.classList.remove('has-error'); });
+    [helpEmail, helpPassword].forEach(function (h) { h.textContent = ''; h.classList.remove('is-visible'); });
+  }
+  function showFieldError(field, helper, message) {
+    field.classList.add('has-error');
+    helper.textContent = message;
+    helper.classList.add('is-visible');
+  }
+  function isValidEmail(value) {
+    if (!value || value.indexOf('@') === -1) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  try {
+    var saved = localStorage.getItem('srs_signin_email');
+    if (saved && email) email.value = saved;
+    var savedRole = localStorage.getItem('srs_signin_role');
+    if (savedRole && role) {
+      var opt = role.querySelector('option[value="' + savedRole.replace(/"/g, '') + '"]');
+      if (opt) role.value = savedRole;
+    }
+    if (localStorage.getItem('srs_remember') === '1') remember.checked = true;
+  } catch (e) {}
+
+  var params = new URLSearchParams(window.location.search);
+  var loginError = params.get('login_error');
+  var loginIdentity = params.get('login_identity');
+  var loginRole = params.get('login_role');
+  var timeout = params.get('timeout');
+  var loggedOut = params.get('logged_out');
+  var authRequired = params.get('auth_required');
+
+  if (loginIdentity) email.value = loginIdentity;
+  if (loginRole && role) {
+    var match = role.querySelector('option[value="' + loginRole.replace(/"/g, '') + '"]');
+    if (match) role.value = loginRole;
+  }
+
+  var alertMsg = '';
+  var alertClass = '';
+  if (loginError) {
+    alertMsg = loginError;
+    alertClass = '';
+  } else if (timeout) {
+    alertMsg = 'Your session has expired. Please sign in again.';
+    alertClass = 'is-info';
+  } else if (loggedOut) {
+    alertMsg = 'You have been signed out successfully.';
+    alertClass = 'is-success';
+  } else if (authRequired) {
+    alertMsg = 'Please sign in to continue.';
+    alertClass = 'is-info';
+  }
+
+  if (alertMsg && serverAlert) {
+    serverAlert.textContent = alertMsg;
+    serverAlert.classList.add('is-visible');
+    if (alertClass) serverAlert.classList.add(alertClass);
+  }
+
+  if (togglePass && password) {
+    togglePass.addEventListener('click', function () {
+      var hidden = password.getAttribute('type') === 'password';
+      password.setAttribute('type', hidden ? 'text' : 'password');
+      togglePass.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
+      togglePass.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+    });
+  }
+
+  form.addEventListener('submit', function (e) {
+    clearFieldErrors();
+    var ok = true;
+    var v = (email.value || '').trim();
+    if (!v) {
+      showFieldError(fieldEmail, helpEmail, 'Enter your email or username.');
+      ok = false;
+    } else if (v.indexOf('@') !== -1 && !isValidEmail(v)) {
+      showFieldError(fieldEmail, helpEmail, 'Please enter a valid email address.');
+      ok = false;
+    }
+    if (!(password.value || '')) {
+      showFieldError(fieldPassword, helpPassword, 'Enter your password.');
+      ok = false;
+    }
+    if (!ok) { e.preventDefault(); return; }
+
+    try {
+      if (remember.checked) {
+        localStorage.setItem('srs_signin_email', v);
+        localStorage.setItem('srs_signin_role', role.value);
+        localStorage.setItem('srs_remember', '1');
+      } else {
+        localStorage.removeItem('srs_signin_email');
+        localStorage.removeItem('srs_signin_role');
+        localStorage.removeItem('srs_remember');
+      }
+    } catch (err) {}
+
+    submitBtn.disabled = true;
+    submitBtn.classList.add('is-loading');
+  });
+})();
+</script>
+</body>
+</html>

@@ -235,101 +235,17 @@ if ($subjects) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars(currentLanguageTag(), ENT_QUOTES, 'UTF-8'); ?>">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academic Reports</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../assets/style.css" rel="stylesheet">
-    <style>
-        @media print {
-            .no-print { display: none !important; }
-            .report-card { box-shadow: none !important; }
-        }
-        .report-header {
-            background-color: #1f5f95;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .student-info {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .report-table th {
-            background-color: #1f5f95;
-            color: white;
-        }
-        .summary-card {
-            background-color: #e9ecef;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark no-print">
-        <div class="container">
-            <a class="navbar-brand" href="../index.php"><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="../index.php"><?php echo htmlspecialchars(t('Dashboard'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php if (canAccessStudentRecords()): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="students.php"><?php echo htmlspecialchars(t('Students'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php endif; ?>
-                    <?php if (canAccessTeacherDashboard()): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="subjects.php"><?php echo htmlspecialchars(t('Subjects'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php if ($is_admin): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="teachers.php"><?php echo htmlspecialchars(t('Teachers'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php endif; ?>
-                    <?php if (canManageMarks()): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="marks.php"><?php echo htmlspecialchars(t('Marks'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php endif; ?>
-                    <?php if (canAccessSummary()): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="summary.php"><?php echo htmlspecialchars(t('Summary'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php endif; ?>
-                    <?php endif; ?>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="report.php"><?php echo htmlspecialchars(t('Reports'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php if (canOnlyViewOwnRecords()): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="profile.php"><?php echo htmlspecialchars(t('Profile'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<?php
+$GLOBALS['dashboard_from_pages'] = true;
+$GLOBALS['dashboard_nav_active'] = 'reports';
+$GLOBALS['dashboard_page_title'] = t('Academic Reports') . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_heading'] = $page_title;
+$GLOBALS['dashboard_subtitle'] = null;
+$GLOBALS['dashboard_extra_head'] = '<link rel="stylesheet" href="../assets/report-page.css">';
+include __DIR__ . '/../includes/dashboard_shell_start.php';
+?>
 
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-12">
-                <h1 class="mb-4"><?php echo htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8'); ?></h1>
-            </div>
-        </div>
-
+    <div class="container py-2">
         <?php if ($error_message): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <?php echo htmlspecialchars($error_message, ENT_QUOTES, 'UTF-8'); ?>
@@ -653,10 +569,8 @@ if ($subjects) {
     </div>
 
     <?php
-    $footer_base_path = '../';
-    include __DIR__ . '/../includes/footer.php';
+    ob_start();
     ?>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <script>
         (function () {
@@ -694,8 +608,10 @@ if ($subjects) {
             }
         }());
     </script>
-</body>
-</html>
+    <?php
+    $GLOBALS['dashboard_extra_body_html'] = ob_get_clean();
+    include __DIR__ . '/../includes/dashboard_shell_end.php';
+    ?>
 
 
 

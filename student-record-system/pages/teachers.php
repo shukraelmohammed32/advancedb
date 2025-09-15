@@ -549,65 +549,16 @@ $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], 
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
 $csrf_token = urlencode(getCsrfToken());
 $edit_teacher_name_parts = splitPersonName($edit_teacher['teacher_name'] ?? '');
+
+$GLOBALS['dashboard_from_pages'] = true;
+$GLOBALS['dashboard_nav_active'] = 'teachers';
+$GLOBALS['dashboard_page_title'] = t('Teacher Management') . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_heading'] = t('Teacher Management');
+$GLOBALS['dashboard_subtitle'] = null;
+include __DIR__ . '/../includes/dashboard_shell_start.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars(currentLanguageTag(), ENT_QUOTES, 'UTF-8'); ?>">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Management</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../assets/style.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="../index.php"><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="../index.php"><?php echo htmlspecialchars(t('Dashboard'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="students.php"><?php echo htmlspecialchars(t('Students'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="subjects.php"><?php echo htmlspecialchars(t('Subjects'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="teachers.php"><?php echo htmlspecialchars(t('Teachers'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php if (canManageMarks()): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="marks.php"><?php echo htmlspecialchars(t('Marks'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php endif; ?>
-                    <?php if (canAccessSummary()): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="summary.php"><?php echo htmlspecialchars(t('Summary'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php endif; ?>
-                    <?php if (canViewStudentReports()): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="report.php"><?php echo htmlspecialchars(t('Reports'), ENT_QUOTES, 'UTF-8'); ?></a>
-                    </li>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-12">
-                <h1 class="mb-4">Teacher Management</h1>
-            </div>
-        </div>
-
+    <div class="container py-2">
         <?php if ($success_message): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <?php echo $success_message; ?>
@@ -812,8 +763,7 @@ $edit_teacher_name_parts = splitPersonName($edit_teacher['teacher_name'] ?? '');
     </div>
 
     <?php
-    $footer_base_path = '../';
-    include __DIR__ . '/../includes/footer.php';
+    ob_start();
     ?>
     <script>
         (function () {
@@ -846,6 +796,7 @@ $edit_teacher_name_parts = splitPersonName($edit_teacher['teacher_name'] ?? '');
             updatePreview();
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <?php
+    $GLOBALS['dashboard_extra_body_html'] = ob_get_clean();
+    include __DIR__ . '/../includes/dashboard_shell_end.php';
+    ?>

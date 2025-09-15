@@ -199,32 +199,24 @@
        HERO SECTION
     ============================================= */
     .hero {
-      background: linear-gradient(120deg, #0f2d49 0%, #123b63 60%, #1b537f 100%);
+      background-color: #0f2d49;
+      background-image:
+        linear-gradient(120deg, rgba(15, 45, 73, 0.88) 0%, rgba(18, 59, 99, 0.78) 55%, rgba(27, 83, 127, 0.72) 100%),
+        url("assets/images/classroom-hero-banner.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
       position: relative;
       overflow: hidden;
       padding: 96px 0 80px;
     }
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -80px; right: -80px;
-      width: 560px; height: 560px;
-      background: radial-gradient(circle, rgba(28,143,122,.2) 0%, transparent 70%);
-      border-radius: 50%;
-    }
-    .hero::after {
-      content: '';
-      position: absolute;
-      bottom: -120px; left: -60px;
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(31,95,149,.18) 0%, transparent 70%);
-      border-radius: 50%;
-    }
     .hero-inner {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       align-items: center;
-      gap: 60px;
+      gap: 0;
+      max-width: 720px;
+      margin: 0 auto;
       position: relative;
       z-index: 1;
     }
@@ -276,127 +268,6 @@
       font-size: .8rem;
       color: rgba(255,255,255,.6);
       margin-top: 2px;
-    }
-    /* Hero visual panel */
-    .hero-visual {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .hero-card-wrap {
-      position: relative;
-      width: 100%;
-      max-width: 440px;
-    }
-    .hero-img-container {
-      position: relative;
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      background: linear-gradient(145deg, #1e3a5f 0%, #0f2d52 100%);
-      border: 1px solid rgba(255,255,255,.1);
-      box-shadow: var(--shadow-strong), 0 0 0 1px rgba(255,255,255,.05);
-      min-height: 340px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 32px 24px;
-      gap: 20px;
-    }
-    /* Dashboard preview cards inside hero */
-    .hero-dash-preview {
-      width: 100%;
-    }
-    .hero-stat-preview {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .hsp-card {
-      border-radius: 10px;
-      padding: 14px 12px;
-      text-align: center;
-      color: #fff;
-    }
-    .hsp-card.blue  { background: linear-gradient(145deg, #1d4f86, #2a74bd); }
-    .hsp-card.green { background: linear-gradient(145deg, #14725d, #1eaa88); }
-    .hsp-card.amber { background: linear-gradient(145deg, #a85c18, #d58d2f); }
-    .hsp-num {
-      font-size: 1.6rem;
-      font-weight: 800;
-      line-height: 1;
-    }
-    .hsp-lbl {
-      font-size: .68rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      opacity: .85;
-      margin-top: 4px;
-    }
-    .hero-action-preview {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 10px;
-      padding: 14px;
-    }
-    .hap-title {
-      font-size: .72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: rgba(255,255,255,.6);
-      margin-bottom: 10px;
-    }
-    .hap-btns {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .hap-btn {
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-size: .78rem;
-      font-weight: 600;
-      border: none;
-      cursor: default;
-      color: #fff;
-    }
-    .hap-btn.p { background: linear-gradient(120deg,#1a4f80,#1f659d); }
-    .hap-btn.s { background: linear-gradient(120deg,#4e6278,#6a8099); }
-    .hap-btn.i { background: linear-gradient(120deg,#265f97,#2e7bbd); }
-    .hap-btn.d { background: linear-gradient(120deg,#157a63,#1ea889); }
-    /* Floating badges on hero */
-    .hero-float {
-      position: absolute;
-      background: var(--surface);
-      border-radius: var(--radius-md);
-      padding: 12px 16px;
-      box-shadow: var(--shadow-strong);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: .8125rem;
-      font-weight: 600;
-      color: var(--primary);
-      animation: floatBadge 3s ease-in-out infinite;
-    }
-    .hero-float:nth-child(2) { animation-delay: 1.5s; }
-    .hero-float-icon {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: .875rem;
-    }
-    .hero-float.top-left  { top: -18px; left: -24px; }
-    .hero-float.bottom-right { bottom: -18px; right: -24px; }
-    @keyframes floatBadge {
-      0%,100% { transform: translateY(0); }
-      50%      { transform: translateY(-8px); }
     }
 
     /* =============================================
@@ -738,17 +609,15 @@
     ============================================= */
     .cta-banner {
       padding: 80px 0;
-      background: linear-gradient(120deg, #0f2d49 0%, #123b63 60%, #1b537f 100%);
+      background-color: #0f2d49;
+      background-image:
+        linear-gradient(120deg, rgba(15, 45, 73, 0.9) 0%, rgba(18, 59, 99, 0.82) 55%, rgba(27, 83, 127, 0.76) 100%),
+        url("assets/images/classroom-hero-banner.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
       position: relative;
       overflow: hidden;
-    }
-    .cta-banner::before {
-      content: '';
-      position: absolute;
-      top: -100px; right: -100px;
-      width: 480px; height: 480px;
-      background: radial-gradient(circle, rgba(28,143,122,.15) 0%, transparent 65%);
-      border-radius: 50%;
     }
     .cta-inner {
       text-align: center;
@@ -851,167 +720,6 @@
     .footer-bottom-links a:hover { color: rgba(255,255,255,.7); }
 
     /* =============================================
-       LOGIN FORM CARD
-    ============================================= */
-    .login-card {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      padding: 32px 28px;
-      box-shadow: var(--shadow-strong);
-      border: 1px solid rgba(255,255,255,.12);
-      width: 100%;
-      max-width: 420px;
-    }
-    .login-card-header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .login-card-icon {
-      width: 52px; height: 52px;
-      background: linear-gradient(130deg, #c9e4ff 0%, #f3fbff 100%);
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 14px;
-      color: var(--primary);
-      font-size: 1.4rem;
-      font-weight: 800;
-    }
-    .login-card-title {
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: var(--primary);
-      margin-bottom: 4px;
-    }
-    .login-card-sub {
-      font-size: .85rem;
-      color: var(--text-muted);
-    }
-    .login-field {
-      margin-bottom: 16px;
-    }
-    .login-field label {
-      display: block;
-      font-size: .82rem;
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 6px;
-    }
-    .login-field-shell {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-    .login-field-icon {
-      position: absolute;
-      left: 12px;
-      color: var(--text-muted);
-      font-size: .9rem;
-      pointer-events: none;
-    }
-    .login-field input,
-    .login-field select {
-      width: 100%;
-      padding: .56rem .75rem .56rem 2.2rem;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-family: inherit;
-      font-size: .9rem;
-      color: var(--text);
-      background: var(--surface-muted);
-      outline: none;
-      transition: border-color var(--transition), box-shadow var(--transition);
-      appearance: none;
-      -webkit-appearance: none;
-    }
-    .login-field input:focus,
-    .login-field select:focus {
-      border-color: var(--primary-2);
-      box-shadow: 0 0 0 3px rgba(31,95,149,.12);
-      background: var(--surface);
-    }
-    .login-field select { cursor: pointer; }
-    .login-submit {
-      width: 100%;
-      padding: .7rem 1.5rem;
-      border-radius: 999px;
-      background: linear-gradient(120deg, #1a4f80 0%, #1f659d 100%);
-      color: #fff;
-      font-family: inherit;
-      font-size: .9375rem;
-      font-weight: 700;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin-top: 20px;
-      box-shadow: 0 4px 14px rgba(18,59,99,.28);
-      transition: transform var(--transition), box-shadow var(--transition);
-    }
-    .login-submit:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 22px rgba(18,59,99,.40);
-    }
-    .login-divider {
-      text-align: center;
-      font-size: .78rem;
-      color: var(--text-muted);
-      margin-top: 18px;
-    }
-    .login-divider a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .login-divider a:hover { text-decoration: underline; }
-    .login-error {
-      background: rgba(193,57,57,.1);
-      border: 1px solid rgba(193,57,57,.25);
-      color: #a03232;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: .84rem;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .login-status {
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-size: .84rem;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    .login-status[hidden] { display: none; }
-    .login-status i { margin-top: 2px; }
-    .login-status.is-success {
-      background: rgba(21,138,85,.1);
-      border: 1px solid rgba(21,138,85,.25);
-      color: #127548;
-    }
-    .login-status.is-warning {
-      background: rgba(168,92,24,.1);
-      border: 1px solid rgba(168,92,24,.25);
-      color: #98621a;
-    }
-    .login-status.is-info {
-      background: rgba(31,95,149,.1);
-      border: 1px solid rgba(31,95,149,.25);
-      color: #1f5f95;
-    }
-    .login-status.is-error {
-      background: rgba(193,57,57,.1);
-      border: 1px solid rgba(193,57,57,.25);
-      color: #a03232;
-    }
-
-    /* =============================================
        RESPONSIVE
     ============================================= */
     @media (max-width: 1024px) {
@@ -1023,9 +731,6 @@
       .footer-brand { grid-column: 1 / -1; }
     }
     @media (max-width: 768px) {
-      .hero-inner { grid-template-columns: 1fr; }
-      .hero-visual { display: flex; justify-content: center; }
-      .login-card { max-width: 100%; }
       .nav-links { display: none; }
       .hamburger { display: block; }
       .programs-grid,
@@ -1060,8 +765,8 @@
       <li><a href="#testimonials">Testimonials</a></li>
     </ul>
     <div class="nav-actions">
-      <a href="#hero-login" class="signin">Sign In</a>
-      <a href="#hero-login" class="btn btn-accent">
+      <a href="sign-in.html" class="signin">Sign In</a>
+      <a href="sign-in.html" class="btn btn-accent">
         <i class="fas fa-sign-in-alt"></i> Access Portal
       </a>
     </div>
@@ -1090,7 +795,7 @@
           academic reports — all in one place.
         </p>
         <div class="hero-actions">
-          <a href="#hero-login" class="btn btn-accent">
+          <a href="sign-in.html" class="btn btn-accent">
             <i class="fas fa-sign-in-alt"></i> Login to Portal
           </a>
           <a href="#programs" class="btn btn-outline-white">
@@ -1109,64 +814,6 @@
           <div>
             <div class="hero-stat-val">Reports</div>
             <div class="hero-stat-lbl">Instant Academic Reports</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Login Form -->
-      <div class="hero-visual" id="hero-login">
-        <div class="login-card">
-          <div class="login-card-header">
-            <div class="login-card-icon">SR</div>
-            <div class="login-card-title">Sign In to Your Portal</div>
-            <div class="login-card-sub">Enter your credentials to access the system</div>
-          </div>
-
-          <div id="loginStatus" class="login-status" hidden></div>
-
-          <form method="POST" action="student-record-system/auth/login.php">
-            <div class="login-field">
-              <label for="lf-email"><i class="fas fa-user" style="margin-right:4px;"></i> Email or Username</label>
-              <div class="login-field-shell">
-                <span class="login-field-icon"><i class="fas fa-envelope"></i></span>
-                <input type="text" id="lf-email" name="email"
-                       placeholder="Enter your email or username"
-                       autocomplete="username" required />
-              </div>
-            </div>
-
-            <div class="login-field">
-              <label for="lf-password"><i class="fas fa-lock" style="margin-right:4px;"></i> Password</label>
-              <div class="login-field-shell">
-                <span class="login-field-icon"><i class="fas fa-lock"></i></span>
-                <input type="password" id="lf-password" name="password"
-                       placeholder="Enter your password"
-                       autocomplete="current-password" required />
-              </div>
-            </div>
-
-            <div class="login-field">
-              <label for="lf-role"><i class="fas fa-id-badge" style="margin-right:4px;"></i> Sign In As</label>
-              <div class="login-field-shell">
-                <span class="login-field-icon"><i class="fas fa-user-tag"></i></span>
-                <select id="lf-role" name="role" required>
-                  <option value="main_admin">Super Admin</option>
-                  <option value="branch_admin">Branch Admin</option>
-                  <option value="teacher">Teacher</option>
-                  <option value="student" selected>Student</option>
-                </select>
-              </div>
-            </div>
-
-            <button type="submit" class="login-submit">
-              <i class="fas fa-sign-in-alt"></i> Sign In
-            </button>
-          </form>
-
-          <div class="login-divider">
-            <i class="fas fa-lock" style="margin-right:4px;font-size:.7rem;"></i>
-            Protected academic access &mdash;
-            <a href="#programs">Learn more</a>
           </div>
         </div>
       </div>
@@ -1343,7 +990,7 @@
     </div>
 
     <div style="text-align:center;margin-top:44px;">
-      <a href="#hero-login" class="btn btn-secondary">
+      <a href="sign-in.html" class="btn btn-secondary">
         Login to Access All Modules <i class="fas fa-arrow-right"></i>
       </a>
     </div>
@@ -1478,7 +1125,7 @@
         </div>
         <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
       </div>
-      <div class="cat-card" onclick="location.href='#hero-login'">
+      <div class="cat-card" onclick="location.href='sign-in.html'">
         <div class="cat-icon" style="background:rgba(15,45,73,.1);color:#0f2d49;"><i class="fas fa-sign-in-alt"></i></div>
         <div>
           <div class="cat-title">Portal Login</div>
@@ -1587,7 +1234,7 @@
         manage records, enter marks, and generate reports.
       </p>
       <div class="cta-actions">
-        <a href="#hero-login" class="btn btn-white">
+        <a href="sign-in.html" class="btn btn-white">
           <i class="fas fa-sign-in-alt"></i> Login Now
         </a>
         <a href="#programs" class="btn btn-outline-white">
@@ -1651,7 +1298,7 @@
         <h4>System</h4>
         <ul>
           <li><a href="student-record-system/index.php">Dashboard</a></li>
-          <li><a href="#hero-login">Login</a></li>
+          <li><a href="sign-in.html">Login</a></li>
           <li><a href="student-record-system/auth/logout.php">Logout</a></li>
           <li><a href="student-record-system/maintenance.php">Maintenance</a></li>
         </ul>
@@ -1681,12 +1328,16 @@
 </footer>
 
 <script>
+  (function () {
+    var p = new URLSearchParams(window.location.search);
+    if (p.has('login_error') || p.get('logged_out') === '1' || p.get('timeout') === '1' || p.get('auth_required') === '1') {
+      window.location.replace('sign-in.html' + window.location.search);
+    }
+  })();
+
   // Mobile menu toggle
   const hamburger = document.querySelector('.hamburger');
   const navLinks  = document.querySelector('.nav-links');
-  const loginStatus = document.getElementById('loginStatus');
-  const loginIdentityField = document.getElementById('lf-email');
-  const loginRoleField = document.getElementById('lf-role');
   hamburger.addEventListener('click', () => {
     const open = navLinks.style.display === 'flex';
     navLinks.style.cssText = open
@@ -1711,64 +1362,6 @@
       }
     });
   });
-
-  if (loginStatus) {
-    const params = new URLSearchParams(window.location.search);
-    const loginError = params.get('login_error');
-    const loginIdentity = params.get('login_identity');
-    const loginRole = params.get('login_role');
-    let message = '';
-    let icon = 'fa-circle-info';
-    let variant = 'is-info';
-
-    const renderLoginStatus = (statusMessage, statusIcon, statusVariant) => {
-      loginStatus.hidden = false;
-      loginStatus.className = `login-status ${statusVariant}`;
-      loginStatus.replaceChildren();
-
-      const iconNode = document.createElement('i');
-      iconNode.className = `fas ${statusIcon}`;
-      iconNode.setAttribute('aria-hidden', 'true');
-
-      const messageNode = document.createElement('div');
-      messageNode.textContent = statusMessage;
-
-      loginStatus.append(iconNode, messageNode);
-    };
-
-    if (loginIdentity && loginIdentityField) {
-      loginIdentityField.value = loginIdentity;
-    }
-
-    if (loginRole && loginRoleField) {
-      const hasMatchingRole = Array.from(loginRoleField.options).some(option => option.value === loginRole);
-      if (hasMatchingRole) {
-        loginRoleField.value = loginRole;
-      }
-    }
-
-    if (loginError) {
-      message = loginError;
-      icon = 'fa-triangle-exclamation';
-      variant = 'is-error';
-    } else if (params.get('logged_out') === '1') {
-      message = 'You have been signed out successfully. Sign in again any time below.';
-      icon = 'fa-circle-check';
-      variant = 'is-success';
-    } else if (params.get('timeout') === '1') {
-      message = 'Your session expired for security reasons. Please sign in again to continue.';
-      icon = 'fa-clock';
-      variant = 'is-warning';
-    } else if (params.get('auth_required') === '1') {
-      message = 'Please sign in to continue to the page you requested.';
-      icon = 'fa-lock';
-      variant = 'is-info';
-    }
-
-    if (message !== '') {
-      renderLoginStatus(message, icon, variant);
-    }
-  }
 </script>
 
 </body>

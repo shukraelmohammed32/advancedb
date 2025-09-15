@@ -1,0 +1,27 @@
+@media print {
+            .no-print { display: none !important; }
+            .report-card { box-shadow: none !important; }
+        }
+        .report-header {
+            background-color: #1f5f95;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .student-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .report-table th {
+            background-color: #1f5f95;
+            color: white;
+        }
+        .summary-card {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
