@@ -3,67 +3,192 @@ require_once '../config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
+function normalizeSubjectIds($raw_subject_ids) {
+    $subject_ids = [];
+
+    if (is_array($raw_subject_ids)) {
+        foreach ($raw_subject_ids as $raw_id) {
+            $subject_id = (int)$raw_id;
+            if ($subject_id > 0) {
+                $subject_ids[$subject_id] = $subject_id;
+            }
+        }
+    }
+
+    return array_values($subject_ids);
+}
+
+function saveTeacherSubjects($conn, $teacher_id, $subject_ids) {
+    if (!$conn->query("DELETE FROM teacher_subjects WHERE teacher_id = $teacher_id")) {
+        return false;
+    }
+
+    foreach ($subject_ids as $subject_id) {
+        if (!$conn->query("INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES ($teacher_id, $subject_id)")) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function getDepartmentLabel($conn, $subject_ids) {
+    if (count($subject_ids) === 0) {
+        return '';
+    }
+
+    if (count($subject_ids) > 1) {
+        return 'Multiple Subjects';
+    }
+
+    $subject_id = (int)$subject_ids[0];
+    $result = $conn->query("SELECT subject_name FROM subjects WHERE subject_id = $subject_id");
+
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        return $row['subject_name'];
+    }
+
+    return 'General';
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_teacher'])) {
         $teacher_name = $conn->real_escape_string($_POST['teacher_name']);
-        $department = $conn->real_escape_string($_POST['department']);
         $assigned_grade = $conn->real_escape_string($_POST['assigned_grade']);
         $is_homeroom = isset($_POST['is_homeroom']) ? 1 : 0;
-        
-        // If setting as homeroom teacher, unset previous homeroom teacher for that grade
+        $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
+
+        if (count($subject_ids) === 0) {
+            header("Location: teachers.php?error=Please assign at least one subject");
+            exit();
+        }
+
         if ($is_homeroom) {
             $conn->query("UPDATE teachers SET is_homeroom = 0 WHERE assigned_grade = '$assigned_grade'");
         }
-        
-        $sql = "INSERT INTO teachers (teacher_name, department, assigned_grade, is_homeroom) 
+
+        $department = $conn->real_escape_string(getDepartmentLabel($conn, $subject_ids));
+
+        $conn->begin_transaction();
+
+        $sql = "INSERT INTO teachers (teacher_name, department, assigned_grade, is_homeroom)
                 VALUES ('$teacher_name', '$department', '$assigned_grade', $is_homeroom)";
-        $conn->query($sql);
+
+        if (!$conn->query($sql)) {
+            $conn->rollback();
+            header("Location: teachers.php?error=Error adding teacher");
+            exit();
+        }
+
+        $teacher_id = (int)$conn->insert_id;
+
+        if (!saveTeacherSubjects($conn, $teacher_id, $subject_ids)) {
+            $conn->rollback();
+            header("Location: teachers.php?error=Teacher saved but subjects failed to save");
+            exit();
+        }
+
+        $conn->commit();
         header("Location: teachers.php?success=Teacher added successfully");
         exit();
     }
-    
+
     if (isset($_POST['edit_teacher'])) {
         $teacher_id = (int)$_POST['teacher_id'];
         $teacher_name = $conn->real_escape_string($_POST['teacher_name']);
-        $department = $conn->real_escape_string($_POST['department']);
         $assigned_grade = $conn->real_escape_string($_POST['assigned_grade']);
         $is_homeroom = isset($_POST['is_homeroom']) ? 1 : 0;
-        
-        // If setting as homeroom teacher, unset previous homeroom teacher for that grade
+        $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
+
+        if (count($subject_ids) === 0) {
+            header("Location: teachers.php?error=Please assign at least one subject");
+            exit();
+        }
+
         if ($is_homeroom) {
             $conn->query("UPDATE teachers SET is_homeroom = 0 WHERE assigned_grade = '$assigned_grade' AND teacher_id != $teacher_id");
         }
-        
-        $sql = "UPDATE teachers SET teacher_name='$teacher_name', department='$department', 
-                assigned_grade='$assigned_grade', is_homeroom=$is_homeroom 
+
+        $department = $conn->real_escape_string(getDepartmentLabel($conn, $subject_ids));
+
+        $conn->begin_transaction();
+
+        $sql = "UPDATE teachers SET teacher_name='$teacher_name', department='$department',
+                assigned_grade='$assigned_grade', is_homeroom=$is_homeroom
                 WHERE teacher_id=$teacher_id";
-        $conn->query($sql);
+
+        if (!$conn->query($sql)) {
+            $conn->rollback();
+            header("Location: teachers.php?error=Error updating teacher");
+            exit();
+        }
+
+        if (!saveTeacherSubjects($conn, $teacher_id, $subject_ids)) {
+            $conn->rollback();
+            header("Location: teachers.php?error=Teacher updated but subjects failed to save");
+            exit();
+        }
+
+        $conn->commit();
         header("Location: teachers.php?success=Teacher updated successfully");
         exit();
     }
-    
-    if (isset($_GET['delete'])) {
-        $teacher_id = (int)$_GET['delete'];
-        $conn->query("DELETE FROM teachers WHERE teacher_id=$teacher_id");
-        header("Location: teachers.php?success=Teacher deleted successfully");
-        exit();
-    }
+}
+
+if (isset($_GET['delete'])) {
+    $teacher_id = (int)$_GET['delete'];
+    $conn->query("DELETE FROM teachers WHERE teacher_id=$teacher_id");
+    header("Location: teachers.php?success=Teacher deleted successfully");
+    exit();
 }
 
 // Get teacher data for editing
 $edit_teacher = null;
+$selected_subject_ids = [];
 if (isset($_GET['edit'])) {
     $teacher_id = (int)$_GET['edit'];
     $result = $conn->query("SELECT * FROM teachers WHERE teacher_id=$teacher_id");
-    $edit_teacher = $result->fetch_assoc();
+    $edit_teacher = $result ? $result->fetch_assoc() : null;
+
+    if ($edit_teacher) {
+        $subject_result = $conn->query("SELECT subject_id FROM teacher_subjects WHERE teacher_id=$teacher_id");
+        if ($subject_result) {
+            while ($subject_row = $subject_result->fetch_assoc()) {
+                $selected_subject_ids[] = (int)$subject_row['subject_id'];
+            }
+        }
+
+        // Legacy fallback for older records that only used department
+        if (count($selected_subject_ids) === 0 && !empty($edit_teacher['department'])) {
+            $department = $conn->real_escape_string($edit_teacher['department']);
+            $legacy_subject = $conn->query("SELECT subject_id FROM subjects WHERE subject_name = '$department'");
+            if ($legacy_subject && $legacy_subject->num_rows > 0) {
+                $legacy_row = $legacy_subject->fetch_assoc();
+                $selected_subject_ids[] = (int)$legacy_row['subject_id'];
+            }
+        }
+    }
 }
 
-// Get all subjects for department dropdown
-$subjects = $conn->query("SELECT subject_name FROM subjects ORDER BY subject_name");
+// Get all subjects
+$subject_rows = [];
+$subjects_result = $conn->query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name");
+if ($subjects_result) {
+    while ($subject = $subjects_result->fetch_assoc()) {
+        $subject_rows[] = $subject;
+    }
+}
 
-// Get all teachers
-$teachers = $conn->query("SELECT * FROM teachers ORDER BY teacher_name");
+// Get all teachers with their assigned subjects
+$teachers = $conn->query("SELECT t.*, 
+                         COALESCE(GROUP_CONCAT(DISTINCT s.subject_name ORDER BY s.subject_name SEPARATOR ', '), t.department) AS subjects_taught
+                         FROM teachers t
+                         LEFT JOIN teacher_subjects ts ON t.teacher_id = ts.teacher_id
+                         LEFT JOIN subjects s ON ts.subject_id = s.subject_id
+                         GROUP BY t.teacher_id
+                         ORDER BY t.teacher_name");
 ?>
 
 <!DOCTYPE html>
@@ -123,6 +248,13 @@ $teachers = $conn->query("SELECT * FROM teachers ORDER BY teacher_name");
             </div>
         <?php endif; ?>
 
+        <?php if (isset($_GET['error'])): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php echo $_GET['error']; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
         <div class="row">
             <!-- Add/Edit Teacher Form -->
             <div class="col-md-4">
@@ -135,35 +267,35 @@ $teachers = $conn->query("SELECT * FROM teachers ORDER BY teacher_name");
                             <?php if ($edit_teacher): ?>
                                 <input type="hidden" name="teacher_id" value="<?php echo $edit_teacher['teacher_id']; ?>">
                             <?php endif; ?>
-                            
+
                             <div class="mb-3">
                                 <label for="teacher_name" class="form-label">Teacher Name</label>
-                                <input type="text" class="form-control" id="teacher_name" name="teacher_name" 
+                                <input type="text" class="form-control" id="teacher_name" name="teacher_name"
                                        value="<?php echo $edit_teacher ? $edit_teacher['teacher_name'] : ''; ?>" required>
                             </div>
-                            
+
                             <div class="mb-3">
-                                <label for="department" class="form-label">Department (Subject)</label>
-                                <select class="form-control" id="department" name="department" required>
-                                    <option value="">Select Department</option>
-                                    <?php while ($subject = $subjects->fetch_assoc()): ?>
-                                        <option value="<?php echo $subject['subject_name']; ?>" 
-                                                <?php echo $edit_teacher && $edit_teacher['department'] == $subject['subject_name'] ? 'selected' : ''; ?>>
+                                <label for="subject_ids" class="form-label">Subjects Taught</label>
+                                <select class="form-control" id="subject_ids" name="subject_ids[]" multiple size="6" required>
+                                    <?php foreach ($subject_rows as $subject): ?>
+                                        <option value="<?php echo $subject['subject_id']; ?>"
+                                                <?php echo in_array((int)$subject['subject_id'], $selected_subject_ids) ? 'selected' : ''; ?>>
                                             <?php echo $subject['subject_name']; ?>
                                         </option>
-                                    <?php endwhile; ?>
+                                    <?php endforeach; ?>
                                 </select>
+                                <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects.</small>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="assigned_grade" class="form-label">Assigned Grade</label>
-                                <input type="text" class="form-control" id="assigned_grade" name="assigned_grade" 
+                                <input type="text" class="form-control" id="assigned_grade" name="assigned_grade"
                                        value="<?php echo $edit_teacher ? $edit_teacher['assigned_grade'] : ''; ?>" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="is_homeroom" name="is_homeroom" 
+                                    <input class="form-check-input" type="checkbox" id="is_homeroom" name="is_homeroom"
                                            <?php echo $edit_teacher && $edit_teacher['is_homeroom'] ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="is_homeroom">
                                         Homeroom Teacher
@@ -171,7 +303,7 @@ $teachers = $conn->query("SELECT * FROM teachers ORDER BY teacher_name");
                                 </div>
                                 <small class="text-muted">Only one homeroom teacher per grade</small>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary" name="<?php echo $edit_teacher ? 'edit_teacher' : 'add_teacher'; ?>">
                                 <?php echo $edit_teacher ? 'Update Teacher' : 'Add Teacher'; ?>
                             </button>
@@ -196,7 +328,7 @@ $teachers = $conn->query("SELECT * FROM teachers ORDER BY teacher_name");
                                     <tr>
                                         <th>ID</th>
                                         <th>Name</th>
-                                        <th>Department</th>
+                                        <th>Subjects</th>
                                         <th>Assigned Grade</th>
                                         <th>Homeroom</th>
                                         <th>Created At</th>
@@ -204,15 +336,11 @@ $teachers = $conn->query("SELECT * FROM teachers ORDER BY teacher_name");
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php 
-                                    // Reset the subjects result set for reuse
-                                    $subjects->data_seek(0);
-                                    while ($teacher = $teachers->fetch_assoc()): 
-                                    ?>
+                                    <?php while ($teacher = $teachers->fetch_assoc()): ?>
                                         <tr>
                                             <td><?php echo $teacher['teacher_id']; ?></td>
                                             <td><?php echo $teacher['teacher_name']; ?></td>
-                                            <td><?php echo $teacher['department']; ?></td>
+                                            <td><?php echo $teacher['subjects_taught']; ?></td>
                                             <td><?php echo $teacher['assigned_grade']; ?></td>
                                             <td>
                                                 <?php if ($teacher['is_homeroom']): ?>
@@ -223,10 +351,10 @@ $teachers = $conn->query("SELECT * FROM teachers ORDER BY teacher_name");
                                             </td>
                                             <td><?php echo date('M d, Y', strtotime($teacher['created_at'])); ?></td>
                                             <td>
-                                                <a href="teachers.php?edit=<?php echo $teacher['teacher_id']; ?>" 
+                                                <a href="teachers.php?edit=<?php echo $teacher['teacher_id']; ?>"
                                                    class="btn btn-sm btn-warning">Edit</a>
-                                                <a href="teachers.php?delete=<?php echo $teacher['teacher_id']; ?>" 
-                                                   class="btn btn-sm btn-danger" 
+                                                <a href="teachers.php?delete=<?php echo $teacher['teacher_id']; ?>"
+                                                   class="btn btn-sm btn-danger"
                                                    onclick="return confirm('Are you sure you want to delete this teacher?')">Delete</a>
                                             </td>
                                         </tr>

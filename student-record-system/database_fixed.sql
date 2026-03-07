@@ -59,6 +59,14 @@ CREATE TABLE IF NOT EXISTS teachers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS teacher_subjects (
+    teacher_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (teacher_id, subject_id),
+    KEY idx_teacher_subjects_subject_id (subject_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS marks (
     mark_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
@@ -107,6 +115,16 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 
 -- Clean orphan legacy records before FK creation
+DELETE ts
+FROM teacher_subjects ts
+LEFT JOIN teachers t ON t.teacher_id = ts.teacher_id
+WHERE t.teacher_id IS NULL;
+
+DELETE ts
+FROM teacher_subjects ts
+LEFT JOIN subjects sub ON sub.subject_id = ts.subject_id
+WHERE sub.subject_id IS NULL;
+
 DELETE m
 FROM marks m
 LEFT JOIN students s ON s.student_id = m.student_id
@@ -177,6 +195,19 @@ SET @idx_exists = (
 );
 SET @sql_stmt = IF(@idx_exists = 0,
     'ALTER TABLE students ADD INDEX idx_students_grade (grade_id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE() AND table_name = 'teacher_subjects' AND index_name = 'idx_teacher_subjects_subject_id'
+);
+SET @sql_stmt = IF(@idx_exists = 0,
+    'ALTER TABLE teacher_subjects ADD INDEX idx_teacher_subjects_subject_id (subject_id)',
     'SELECT 1'
 );
 PREPARE stmt FROM @sql_stmt;
@@ -306,6 +337,40 @@ PREPARE stmt FROM @sql_stmt;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+SET @fk_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'teacher_subjects'
+      AND COLUMN_NAME = 'teacher_id'
+      AND REFERENCED_TABLE_NAME = 'teachers'
+      AND REFERENCED_COLUMN_NAME = 'teacher_id'
+);
+SET @sql_stmt = IF(@fk_exists = 0,
+    'ALTER TABLE teacher_subjects ADD CONSTRAINT fk_teacher_subjects_teacher FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id) ON DELETE CASCADE',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @fk_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'teacher_subjects'
+      AND COLUMN_NAME = 'subject_id'
+      AND REFERENCED_TABLE_NAME = 'subjects'
+      AND REFERENCED_COLUMN_NAME = 'subject_id'
+);
+SET @sql_stmt = IF(@fk_exists = 0,
+    'ALTER TABLE teacher_subjects ADD CONSTRAINT fk_teacher_subjects_subject FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 -- ============================================
 -- SEED DATA
 -- ============================================
@@ -339,6 +404,21 @@ WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE subject_name = 'Chemistry');
 INSERT INTO subjects (subject_name, total_mark)
 SELECT 'Physics', 100
 WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE subject_name = 'Physics');
+
+-- Migrate old one-subject teacher department into many-to-many mapping
+INSERT INTO teacher_subjects (teacher_id, subject_id)
+SELECT DISTINCT t.teacher_id, sub.subject_id
+FROM teachers t
+JOIN subjects sub ON LOWER(TRIM(t.department)) = LOWER(TRIM(sub.subject_name))
+ON DUPLICATE KEY UPDATE subject_id = VALUES(subject_id);
+
+-- Ensure any existing marks imply valid teaching assignments
+INSERT INTO teacher_subjects (teacher_id, subject_id)
+SELECT DISTINCT m.teacher_id, m.subject_id
+FROM marks m
+JOIN teachers t ON t.teacher_id = m.teacher_id
+JOIN subjects sub ON sub.subject_id = m.subject_id
+ON DUPLICATE KEY UPDATE subject_id = VALUES(subject_id);
 
 UPDATE students s
 JOIN grades g ON LOWER(TRIM(s.grade)) = LOWER(TRIM(g.grade_name))
@@ -417,6 +497,7 @@ GROUP BY sub.subject_id, sub.subject_name;
 SELECT 'Database setup/repair completed successfully.' AS message;
 SELECT COUNT(*) AS students_count FROM students;
 SELECT COUNT(*) AS teachers_count FROM teachers;
+SELECT COUNT(*) AS teacher_subject_links FROM teacher_subjects;
 SELECT COUNT(*) AS subjects_count FROM subjects;
 SELECT COUNT(*) AS marks_count FROM marks;
 SELECT username, role, is_active FROM users WHERE username = 'admin';

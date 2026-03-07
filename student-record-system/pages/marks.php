@@ -3,6 +3,14 @@ require_once '../config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
+function teacherCanTeachSubject($conn, $teacher_id, $subject_id) {
+    $teacher_id = (int)$teacher_id;
+    $subject_id = (int)$subject_id;
+
+    $result = $conn->query("SELECT 1 FROM teacher_subjects WHERE teacher_id = $teacher_id AND subject_id = $subject_id LIMIT 1");
+    return $result && $result->num_rows > 0;
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_mark'])) {
@@ -10,42 +18,68 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $subject_id = (int)$_POST['subject_id'];
         $teacher_id = (int)$_POST['teacher_id'];
         $score = (int)$_POST['score'];
-        
+
+        if ($score < 0 || $score > 100) {
+            header("Location: marks.php?error=Score must be between 0 and 100");
+            exit();
+        }
+
+        if (!teacherCanTeachSubject($conn, $teacher_id, $subject_id)) {
+            header("Location: marks.php?error=Selected teacher is not assigned to this subject");
+            exit();
+        }
+
         // Check if mark already exists for this student and subject
         $existing = $conn->query("SELECT mark_id FROM marks WHERE student_id=$student_id AND subject_id=$subject_id");
-        
-        if ($existing->num_rows > 0) {
+
+        if ($existing && $existing->num_rows > 0) {
             header("Location: marks.php?error=Mark already exists for this student and subject");
             exit();
         }
-        
-        $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, score) 
+
+        $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, score)
                 VALUES ($student_id, $subject_id, $teacher_id, $score)";
         $conn->query($sql);
         header("Location: marks.php?success=Mark added successfully");
         exit();
     }
-    
+
     if (isset($_POST['edit_mark'])) {
         $mark_id = (int)$_POST['mark_id'];
         $student_id = (int)$_POST['student_id'];
         $subject_id = (int)$_POST['subject_id'];
         $teacher_id = (int)$_POST['teacher_id'];
         $score = (int)$_POST['score'];
-        
-        $sql = "UPDATE marks SET student_id=$student_id, subject_id=$subject_id, 
+
+        if ($score < 0 || $score > 100) {
+            header("Location: marks.php?error=Score must be between 0 and 100");
+            exit();
+        }
+
+        if (!teacherCanTeachSubject($conn, $teacher_id, $subject_id)) {
+            header("Location: marks.php?error=Selected teacher is not assigned to this subject");
+            exit();
+        }
+
+        $existing = $conn->query("SELECT mark_id FROM marks WHERE student_id=$student_id AND subject_id=$subject_id AND mark_id != $mark_id");
+        if ($existing && $existing->num_rows > 0) {
+            header("Location: marks.php?error=Another mark already exists for this student and subject");
+            exit();
+        }
+
+        $sql = "UPDATE marks SET student_id=$student_id, subject_id=$subject_id,
                 teacher_id=$teacher_id, score=$score WHERE mark_id=$mark_id";
         $conn->query($sql);
         header("Location: marks.php?success=Mark updated successfully");
         exit();
     }
-    
-    if (isset($_GET['delete'])) {
-        $mark_id = (int)$_GET['delete'];
-        $conn->query("DELETE FROM marks WHERE mark_id=$mark_id");
-        header("Location: marks.php?success=Mark deleted successfully");
-        exit();
-    }
+}
+
+if (isset($_GET['delete'])) {
+    $mark_id = (int)$_GET['delete'];
+    $conn->query("DELETE FROM marks WHERE mark_id=$mark_id");
+    header("Location: marks.php?success=Mark deleted successfully");
+    exit();
 }
 
 // Get mark data for editing
@@ -53,21 +87,28 @@ $edit_mark = null;
 if (isset($_GET['edit'])) {
     $mark_id = (int)$_GET['edit'];
     $result = $conn->query("SELECT * FROM marks WHERE mark_id=$mark_id");
-    $edit_mark = $result->fetch_assoc();
+    $edit_mark = $result ? $result->fetch_assoc() : null;
 }
 
 // Get dropdown data
 $students = $conn->query("SELECT student_id, name, grade FROM students ORDER BY name");
 $subjects = $conn->query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name");
-$teachers = $conn->query("SELECT teacher_id, teacher_name FROM teachers ORDER BY teacher_name");
+$teachers = $conn->query("SELECT t.teacher_id, t.teacher_name,
+                         COALESCE(GROUP_CONCAT(DISTINCT ts.subject_id ORDER BY ts.subject_id SEPARATOR ','), '') AS subject_ids,
+                         COALESCE(GROUP_CONCAT(DISTINCT s.subject_name ORDER BY s.subject_name SEPARATOR ', '), 'No subjects assigned') AS subjects_taught
+                         FROM teachers t
+                         LEFT JOIN teacher_subjects ts ON t.teacher_id = ts.teacher_id
+                         LEFT JOIN subjects s ON ts.subject_id = s.subject_id
+                         GROUP BY t.teacher_id, t.teacher_name
+                         ORDER BY t.teacher_name");
 
 // Get all marks with student, subject, and teacher names
-$marks = $conn->query("SELECT m.*, s.name as student_name, s.grade, 
-                      sub.subject_name, t.teacher_name 
-                      FROM marks m 
-                      JOIN students s ON m.student_id = s.student_id 
-                      JOIN subjects sub ON m.subject_id = sub.subject_id 
-                      JOIN teachers t ON m.teacher_id = t.teacher_id 
+$marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
+                      sub.subject_name, t.teacher_name
+                      FROM marks m
+                      JOIN students s ON m.student_id = s.student_id
+                      JOIN subjects sub ON m.subject_id = sub.subject_id
+                      JOIN teachers t ON m.teacher_id = t.teacher_id
                       ORDER BY s.name, sub.subject_name");
 ?>
 
@@ -147,62 +188,56 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                             <?php if ($edit_mark): ?>
                                 <input type="hidden" name="mark_id" value="<?php echo $edit_mark['mark_id']; ?>">
                             <?php endif; ?>
-                            
+
                             <div class="mb-3">
                                 <label for="student_id" class="form-label">Student</label>
                                 <select class="form-control" id="student_id" name="student_id" required>
                                     <option value="">Select Student</option>
                                     <?php while ($student = $students->fetch_assoc()): ?>
-                                        <option value="<?php echo $student['student_id']; ?>" 
+                                        <option value="<?php echo $student['student_id']; ?>"
                                                 <?php echo $edit_mark && $edit_mark['student_id'] == $student['student_id'] ? 'selected' : ''; ?>>
                                             <?php echo $student['name'] . ' - Grade ' . $student['grade']; ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="subject_id" class="form-label">Subject</label>
                                 <select class="form-control" id="subject_id" name="subject_id" required>
                                     <option value="">Select Subject</option>
-                                    <?php 
-                                    // Reset students result set for reuse
-                                    $students->data_seek(0);
-                                    while ($subject = $subjects->fetch_assoc()): 
-                                    ?>
-                                        <option value="<?php echo $subject['subject_id']; ?>" 
+                                    <?php while ($subject = $subjects->fetch_assoc()): ?>
+                                        <option value="<?php echo $subject['subject_id']; ?>"
                                                 <?php echo $edit_mark && $edit_mark['subject_id'] == $subject['subject_id'] ? 'selected' : ''; ?>>
                                             <?php echo $subject['subject_name']; ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="teacher_id" class="form-label">Teacher</label>
                                 <select class="form-control" id="teacher_id" name="teacher_id" required>
                                     <option value="">Select Teacher</option>
-                                    <?php 
-                                    // Reset subjects result set for reuse
-                                    $subjects->data_seek(0);
-                                    while ($teacher = $teachers->fetch_assoc()): 
-                                    ?>
-                                        <option value="<?php echo $teacher['teacher_id']; ?>" 
+                                    <?php while ($teacher = $teachers->fetch_assoc()): ?>
+                                        <option value="<?php echo $teacher['teacher_id']; ?>"
+                                                data-subjects="<?php echo htmlspecialchars($teacher['subject_ids'], ENT_QUOTES); ?>"
                                                 <?php echo $edit_mark && $edit_mark['teacher_id'] == $teacher['teacher_id'] ? 'selected' : ''; ?>>
-                                            <?php echo $teacher['teacher_name']; ?>
+                                            <?php echo $teacher['teacher_name'] . ' (' . $teacher['subjects_taught'] . ')'; ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
+                                <small id="teacherHint" class="text-muted">Only teachers assigned to the selected subject are shown.</small>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="score" class="form-label">Score (0-100)</label>
-                                <input type="number" class="form-control" id="score" name="score" 
-                                       value="<?php echo $edit_mark ? $edit_mark['score'] : ''; ?>" 
+                                <input type="number" class="form-control" id="score" name="score"
+                                       value="<?php echo $edit_mark ? $edit_mark['score'] : ''; ?>"
                                        min="0" max="100" required>
                                 <small class="text-muted">Pass mark is 50</small>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary" name="<?php echo $edit_mark ? 'edit_mark' : 'add_mark'; ?>">
                                 <?php echo $edit_mark ? 'Update Mark' : 'Add Mark'; ?>
                             </button>
@@ -235,11 +270,7 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php 
-                                    // Reset teachers result set for reuse
-                                    $teachers->data_seek(0);
-                                    while ($mark = $marks->fetch_assoc()): 
-                                    ?>
+                                    <?php while ($mark = $marks->fetch_assoc()): ?>
                                         <tr>
                                             <td><?php echo $mark['student_name']; ?></td>
                                             <td><?php echo $mark['grade']; ?></td>
@@ -261,10 +292,10 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <a href="marks.php?edit=<?php echo $mark['mark_id']; ?>" 
+                                                <a href="marks.php?edit=<?php echo $mark['mark_id']; ?>"
                                                    class="btn btn-sm btn-warning">Edit</a>
-                                                <a href="marks.php?delete=<?php echo $mark['mark_id']; ?>" 
-                                                   class="btn btn-sm btn-danger" 
+                                                <a href="marks.php?delete=<?php echo $mark['mark_id']; ?>"
+                                                   class="btn btn-sm btn-danger"
                                                    onclick="return confirm('Are you sure you want to delete this mark?')">Delete</a>
                                             </td>
                                         </tr>
@@ -280,14 +311,65 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        function filterTeachersBySubject() {
+            var subjectSelect = document.getElementById('subject_id');
+            var teacherSelect = document.getElementById('teacher_id');
+            var teacherHint = document.getElementById('teacherHint');
+            var subjectId = subjectSelect.value;
+            var hasVisibleTeacher = false;
+
+            for (var i = 0; i < teacherSelect.options.length; i++) {
+                var option = teacherSelect.options[i];
+
+                // Keep placeholder visible
+                if (i === 0) {
+                    option.hidden = false;
+                    continue;
+                }
+
+                var subjectIds = option.getAttribute('data-subjects') || '';
+                var allowedSubjectIds = subjectIds ? subjectIds.split(',') : [];
+                var canTeach = subjectId === '' ? true : allowedSubjectIds.indexOf(subjectId) !== -1;
+
+                option.hidden = !canTeach;
+                if (!canTeach && option.selected) {
+                    option.selected = false;
+                }
+
+                if (canTeach) {
+                    hasVisibleTeacher = true;
+                }
+            }
+
+            if (subjectId !== '' && !hasVisibleTeacher) {
+                teacherHint.textContent = 'No teacher is assigned to this subject yet. Assign subjects in the Teachers page first.';
+                teacherHint.className = 'text-danger';
+            } else {
+                teacherHint.textContent = 'Only teachers assigned to the selected subject are shown.';
+                teacherHint.className = 'text-muted';
+            }
+        }
+
         // Form validation
         document.getElementById('markForm').addEventListener('submit', function(e) {
-            var score = document.getElementById('score').value;
-            if (score < 0 || score > 100) {
+            var score = parseInt(document.getElementById('score').value, 10);
+            var subjectId = document.getElementById('subject_id').value;
+            var teacherId = document.getElementById('teacher_id').value;
+
+            if (isNaN(score) || score < 0 || score > 100) {
                 e.preventDefault();
                 alert('Score must be between 0 and 100');
+                return;
+            }
+
+            if (subjectId && !teacherId) {
+                e.preventDefault();
+                alert('Please select a teacher assigned to the selected subject.');
             }
         });
+
+        document.getElementById('subject_id').addEventListener('change', filterTeachersBySubject);
+        filterTeachersBySubject();
     </script>
 </body>
 </html>
