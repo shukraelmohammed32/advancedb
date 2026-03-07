@@ -23,29 +23,38 @@ if ($conn->query($sql) === TRUE) {
 // Select the database
 $conn->select_db($database);
 
-// Read and execute the SQL file
+// Read and execute SQL file
 $sql_file = __DIR__ . '/database.sql';
+if (!file_exists($sql_file)) {
+    // Backward-compatible fallback
+    $fallback_file = __DIR__ . '/database_fixed.sql';
+    if (file_exists($fallback_file)) {
+        $sql_file = $fallback_file;
+    }
+}
+
 if (file_exists($sql_file)) {
     $sql = file_get_contents($sql_file);
-    
-    // Split SQL statements by semicolon
-    $statements = array_filter(array_map('trim', explode(';', $sql)));
-    
-    foreach ($statements as $statement) {
-        if (!empty($statement)) {
-            if ($conn->query($statement) === TRUE) {
-                echo "✓ Executed: " . substr($statement, 0, 50) . "...<br>";
-            } else {
-                echo "✗ Error: " . $conn->error . "<br>";
-                echo "Statement: " . $statement . "<br><br>";
+
+    if ($sql === false) {
+        echo "Error reading SQL file.<br>";
+    } elseif ($conn->multi_query($sql)) {
+        do {
+            if ($result = $conn->store_result()) {
+                $result->free();
             }
+        } while ($conn->more_results() && $conn->next_result());
+
+        if ($conn->error) {
+            echo "Database setup completed with errors: " . $conn->error . "<br>";
+        } else {
+            echo "<br><strong>Database setup completed successfully!</strong><br>";
+            echo "You can now login with: admin / admin123<br>";
+            echo '<a href="auth/login.php">Go to Login</a>';
         }
+    } else {
+        echo "Error executing SQL file: " . $conn->error . "<br>";
     }
-    
-    echo "<br><strong>Database setup completed!</strong><br>";
-    echo "You can now login with: admin / admin123<br>";
-    echo '<a href="auth/login.php">Go to Login</a>';
-    
 } else {
     echo "Error: database.sql file not found!";
 }
