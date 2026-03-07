@@ -96,8 +96,23 @@ if (isset($_GET['edit'])) {
     $edit_student = $result ? $result->fetch_assoc() : null;
 }
 
-// Get all students
-$students = $conn->query('SELECT * FROM students ORDER BY created_at DESC');
+// Get all students grouped by grade/class
+$students = $conn->query('SELECT * FROM students ORDER BY grade_id ASC, grade ASC, name ASC');
+$students_by_grade = [];
+if ($students) {
+    while ($student = $students->fetch_assoc()) {
+        $grade_label = normalizeGradeLabel($student['grade']);
+        if ($grade_label === '') {
+            $grade_label = 'Unassigned Grade';
+        }
+
+        if (!isset($students_by_grade[$grade_label])) {
+            $students_by_grade[$grade_label] = [];
+        }
+
+        $students_by_grade[$grade_label][] = $student;
+    }
+}
 
 $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
@@ -240,49 +255,58 @@ $csrf_token = urlencode(getCsrfToken());
                 </div>
             </div>
 
-            <!-- Students List -->
+            <!-- Students List Grouped by Grade -->
             <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        Students List
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Gender</th>
-                                        <th>Grade</th>
-                                        <th>Academic Year</th>
-                                        <th>Semester</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($student = $students->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo $student['student_id']; ?></td>
-                                            <td><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($student['gender'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars(normalizeGradeLabel($student['grade']), ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($student['academic_year'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($student['semester'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td>
-                                                <a href="students.php?edit=<?php echo $student['student_id']; ?>"
-                                                   class="btn btn-sm btn-warning">Edit</a>
-                                                <a href="students.php?delete=<?php echo $student['student_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
-                                                   class="btn btn-sm btn-danger"
-                                                   onclick="return confirm('Are you sure you want to delete this student?')">Delete</a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
+                <?php if (empty($students_by_grade)): ?>
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="mb-0 text-muted">No students found.</p>
                         </div>
                     </div>
-                </div>
+                <?php else: ?>
+                    <?php foreach ($students_by_grade as $grade_label => $grade_students): ?>
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><?php echo htmlspecialchars($grade_label, ENT_QUOTES, 'UTF-8'); ?></span>
+                                <span class="badge bg-primary"><?php echo count($grade_students); ?> Students</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Name</th>
+                                                <th>Gender</th>
+                                                <th>Academic Year</th>
+                                                <th>Semester</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($grade_students as $student): ?>
+                                                <tr>
+                                                    <td><?php echo $student['student_id']; ?></td>
+                                                    <td><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars($student['gender'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars($student['academic_year'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars($student['semester'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td>
+                                                        <a href="students.php?edit=<?php echo $student['student_id']; ?>"
+                                                           class="btn btn-sm btn-warning">Edit</a>
+                                                        <a href="students.php?delete=<?php echo $student['student_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
+                                                           class="btn btn-sm btn-danger"
+                                                           onclick="return confirm('Are you sure you want to delete this student?')">Delete</a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>
