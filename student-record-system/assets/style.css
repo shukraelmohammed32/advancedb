@@ -1,0 +1,87 @@
+/* Custom styles for Student Record Management System */
+body {
+    background-color: #f8f9fa;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.card {
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.card-header {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+}
+
+.stats-card {
+    text-align: center;
+    padding: 20px;
+}
+
+.stats-card h3 {
+    color: #007bff;
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+.stats-card p {
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.alert {
+    border-radius: 0;
+}
+
+.footer {
+    background-color: #343a40;
+    color: white;
+    text-align: center;
+    padding: 20px 0;
+    margin-top: 50px;
+}
+
+.report-table {
+    font-size: 0.9rem;
+}
+
+.report-table th {
+    background-color: #007bff;
+    color: white;
+}
+
+.pass {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.fail {
+    color: #dc3545;
+    font-weight: bold;
+}

@@ -1,0 +1,190 @@
+<?php
+require_once '../config/database.php';
+$db = new Database();
+$conn = $db->getConnection();
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (isset($_POST['add_subject'])) {
+        $subject_name = $conn->real_escape_string($_POST['subject_name']);
+        $total_mark = (int)$_POST['total_mark'];
+        
+        $sql = "INSERT INTO subjects (subject_name, total_mark) 
+                VALUES ('$subject_name', $total_mark)";
+        $conn->query($sql);
+        header("Location: subjects.php?success=Subject added successfully");
+        exit();
+    }
+    
+    if (isset($_POST['edit_subject'])) {
+        $subject_id = (int)$_POST['subject_id'];
+        $subject_name = $conn->real_escape_string($_POST['subject_name']);
+        $total_mark = (int)$_POST['total_mark'];
+        
+        $sql = "UPDATE subjects SET subject_name='$subject_name', total_mark=$total_mark 
+                WHERE subject_id=$subject_id";
+        $conn->query($sql);
+        header("Location: subjects.php?success=Subject updated successfully");
+        exit();
+    }
+    
+    if (isset($_GET['delete'])) {
+        $subject_id = (int)$_GET['delete'];
+        $conn->query("DELETE FROM subjects WHERE subject_id=$subject_id");
+        header("Location: subjects.php?success=Subject deleted successfully");
+        exit();
+    }
+}
+
+// Get subject data for editing
+$edit_subject = null;
+if (isset($_GET['edit'])) {
+    $subject_id = (int)$_GET['edit'];
+    $result = $conn->query("SELECT * FROM subjects WHERE subject_id=$subject_id");
+    $edit_subject = $result->fetch_assoc();
+}
+
+// Get all subjects
+$subjects = $conn->query("SELECT * FROM subjects ORDER BY subject_name");
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subject Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../assets/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="../index.php">Student Record System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="../index.php">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="students.php">Students</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="subjects.php">Subjects</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="teachers.php">Teachers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="marks.php">Marks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="report.php">Reports</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">Subject Management</h1>
+            </div>
+        </div>
+
+        <?php if (isset($_GET['success'])): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <?php echo $_GET['success']; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <div class="row">
+            <!-- Add/Edit Subject Form -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <?php echo $edit_subject ? 'Edit Subject' : 'Add New Subject'; ?>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <?php if ($edit_subject): ?>
+                                <input type="hidden" name="subject_id" value="<?php echo $edit_subject['subject_id']; ?>">
+                            <?php endif; ?>
+                            
+                            <div class="mb-3">
+                                <label for="subject_name" class="form-label">Subject Name</label>
+                                <input type="text" class="form-control" id="subject_name" name="subject_name" 
+                                       value="<?php echo $edit_subject ? $edit_subject['subject_name'] : ''; ?>" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="total_mark" class="form-label">Total Mark</label>
+                                <input type="number" class="form-control" id="total_mark" name="total_mark" 
+                                       value="<?php echo $edit_subject ? $edit_subject['total_mark'] : '100'; ?>" 
+                                       min="1" max="100" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" name="<?php echo $edit_subject ? 'edit_subject' : 'add_subject'; ?>">
+                                <?php echo $edit_subject ? 'Update Subject' : 'Add Subject'; ?>
+                            </button>
+                            <?php if ($edit_subject): ?>
+                                <a href="subjects.php" class="btn btn-secondary">Cancel</a>
+                            <?php endif; ?>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subjects List -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        Subjects List
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Subject Name</th>
+                                        <th>Total Mark</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($subject = $subjects->fetch_assoc()): ?>
+                                        <tr>
+                                            <td><?php echo $subject['subject_id']; ?></td>
+                                            <td><?php echo $subject['subject_name']; ?></td>
+                                            <td><?php echo $subject['total_mark']; ?></td>
+                                            <td><?php echo date('M d, Y', strtotime($subject['created_at'])); ?></td>
+                                            <td>
+                                                <a href="subjects.php?edit=<?php echo $subject['subject_id']; ?>" 
+                                                   class="btn btn-sm btn-warning">Edit</a>
+                                                <a href="subjects.php?delete=<?php echo $subject['subject_id']; ?>" 
+                                                   class="btn btn-sm btn-danger" 
+                                                   onclick="return confirm('Are you sure you want to delete this subject? This will also delete all related marks.')">Delete</a>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
