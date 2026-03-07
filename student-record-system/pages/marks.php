@@ -150,7 +150,23 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                       JOIN students s ON m.student_id = s.student_id
                       JOIN subjects sub ON m.subject_id = sub.subject_id
                       JOIN teachers t ON m.teacher_id = t.teacher_id
-                      ORDER BY s.name, sub.subject_name");
+                      ORDER BY s.grade, s.name, sub.subject_name");
+
+$marks_by_grade = [];
+if ($marks) {
+    while ($mark = $marks->fetch_assoc()) {
+        $grade_label = normalizeGradeLabel($mark['grade']);
+        if ($grade_label === '') {
+            $grade_label = 'Unassigned Grade';
+        }
+
+        if (!isset($marks_by_grade[$grade_label])) {
+            $marks_by_grade[$grade_label] = [];
+        }
+
+        $marks_by_grade[$grade_label][] = $mark;
+    }
+}
 
 $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
@@ -299,62 +315,71 @@ $csrf_token = urlencode(getCsrfToken());
                 </div>
             </div>
 
-            <!-- Marks List -->
+            <!-- Marks List Grouped by Grade -->
             <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        Marks List
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Student</th>
-                                        <th>Grade</th>
-                                        <th>Subject</th>
-                                        <th>Teacher</th>
-                                        <th>Score</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($mark = $marks->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($mark['student_name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars(normalizeGradeLabel($mark['grade']), ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($mark['subject_name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($mark['teacher_name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td>
-                                                <?php echo (int)$mark['score']; ?>
-                                                <?php if ($mark['score'] >= 50): ?>
-                                                    <span class="badge bg-success">Pass</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-danger">Fail</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <?php if ($mark['score'] >= 50): ?>
-                                                    <span class="pass">PASS</span>
-                                                <?php else: ?>
-                                                    <span class="fail">FAIL</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <a href="marks.php?edit=<?php echo $mark['mark_id']; ?>"
-                                                   class="btn btn-sm btn-warning">Edit</a>
-                                                <a href="marks.php?delete=<?php echo $mark['mark_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
-                                                   class="btn btn-sm btn-danger"
-                                                   onclick="return confirm('Are you sure you want to delete this mark?')">Delete</a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
+                <?php if (empty($marks_by_grade)): ?>
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="mb-0 text-muted">No marks found.</p>
                         </div>
                     </div>
-                </div>
+                <?php else: ?>
+                    <?php foreach ($marks_by_grade as $grade_label => $grade_marks): ?>
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><?php echo htmlspecialchars($grade_label, ENT_QUOTES, 'UTF-8'); ?></span>
+                                <span class="badge bg-primary"><?php echo count($grade_marks); ?> Marks</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Student</th>
+                                                <th>Subject</th>
+                                                <th>Teacher</th>
+                                                <th>Score</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($grade_marks as $mark): ?>
+                                                <tr>
+                                                    <td><?php echo htmlspecialchars($mark['student_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars($mark['subject_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars($mark['teacher_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td>
+                                                        <?php echo (int)$mark['score']; ?>
+                                                        <?php if ($mark['score'] >= 50): ?>
+                                                            <span class="badge bg-success">Pass</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-danger">Fail</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php if ($mark['score'] >= 50): ?>
+                                                            <span class="pass">PASS</span>
+                                                        <?php else: ?>
+                                                            <span class="fail">FAIL</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <a href="marks.php?edit=<?php echo $mark['mark_id']; ?>"
+                                                           class="btn btn-sm btn-warning">Edit</a>
+                                                        <a href="marks.php?delete=<?php echo $mark['mark_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
+                                                           class="btn btn-sm btn-danger"
+                                                           onclick="return confirm('Are you sure you want to delete this mark?')">Delete</a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>
