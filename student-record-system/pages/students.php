@@ -7,19 +7,61 @@ requireAnyRole(['admin', 'teacher']);
 $db = new Database();
 $conn = $db->getConnection();
 
+function normalizeGradeLabel($grade) {
+    $grade = trim((string)$grade);
+    if ($grade === '') {
+        return '';
+    }
+
+    if (preg_match('/^\d+$/', $grade)) {
+        return 'Grade ' . $grade;
+    }
+
+    if (preg_match('/^grade\s*(\d+)$/i', $grade, $matches)) {
+        return 'Grade ' . $matches[1];
+    }
+
+    return $grade;
+}
+
+// Get grade options
+$grade_rows = [];
+$grade_result = $conn->query('SELECT grade_id, grade_name FROM grades ORDER BY grade_id');
+if ($grade_result) {
+    while ($grade_row = $grade_result->fetch_assoc()) {
+        $grade_rows[] = $grade_row;
+    }
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();
 
-    if (isset($_POST['add_student'])) {
-        $name = $conn->real_escape_string($_POST['name']);
-        $gender = $conn->real_escape_string($_POST['gender']);
-        $grade = $conn->real_escape_string($_POST['grade']);
-        $academic_year = $conn->real_escape_string($_POST['academic_year']);
-        $semester = $conn->real_escape_string($_POST['semester']);
+    $name = $conn->real_escape_string($_POST['name']);
+    $gender = $conn->real_escape_string($_POST['gender']);
+    $selected_grade = normalizeGradeLabel($_POST['grade'] ?? '');
+    $academic_year = $conn->real_escape_string($_POST['academic_year']);
+    $semester = $conn->real_escape_string($_POST['semester']);
 
-        $sql = "INSERT INTO students (name, gender, grade, academic_year, semester)
-                VALUES ('$name', '$gender', '$grade', '$academic_year', '$semester')";
+    if ($selected_grade === '') {
+        header('Location: students.php?error=' . urlencode('Please select a grade'));
+        exit();
+    }
+
+    $grade_name_safe = $conn->real_escape_string($selected_grade);
+    $grade_lookup = $conn->query("SELECT grade_id, grade_name FROM grades WHERE grade_name = '$grade_name_safe' LIMIT 1");
+    if (!$grade_lookup || $grade_lookup->num_rows === 0) {
+        header('Location: students.php?error=' . urlencode('Selected grade is invalid'));
+        exit();
+    }
+
+    $grade_record = $grade_lookup->fetch_assoc();
+    $grade_id = (int)$grade_record['grade_id'];
+    $grade_name = $conn->real_escape_string($grade_record['grade_name']);
+
+    if (isset($_POST['add_student'])) {
+        $sql = "INSERT INTO students (name, gender, grade, grade_id, academic_year, semester)
+                VALUES ('$name', '$gender', '$grade_name', $grade_id, '$academic_year', '$semester')";
         $conn->query($sql);
         header('Location: students.php?success=' . urlencode('Student added successfully'));
         exit();
@@ -27,13 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (isset($_POST['edit_student'])) {
         $student_id = (int)$_POST['student_id'];
-        $name = $conn->real_escape_string($_POST['name']);
-        $gender = $conn->real_escape_string($_POST['gender']);
-        $grade = $conn->real_escape_string($_POST['grade']);
-        $academic_year = $conn->real_escape_string($_POST['academic_year']);
-        $semester = $conn->real_escape_string($_POST['semester']);
 
-        $sql = "UPDATE students SET name='$name', gender='$gender', grade='$grade',
+        $sql = "UPDATE students SET name='$name', gender='$gender', grade='$grade_name', grade_id=$grade_id,
                 academic_year='$academic_year', semester='$semester'
                 WHERE student_id=$student_id";
         $conn->query($sql);
@@ -162,8 +199,19 @@ $csrf_token = urlencode(getCsrfToken());
 
                             <div class="mb-3">
                                 <label for="grade" class="form-label">Grade</label>
-                                <input type="text" class="form-control" id="grade" name="grade"
-                                       value="<?php echo $edit_student ? htmlspecialchars($edit_student['grade'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+                                <select class="form-control" id="grade" name="grade" required>
+                                    <option value="">Select Grade</option>
+                                    <?php
+                                    $current_grade = $edit_student ? normalizeGradeLabel($edit_student['grade']) : '';
+                                    foreach ($grade_rows as $grade_row):
+                                        $grade_name = normalizeGradeLabel($grade_row['grade_name']);
+                                        $is_selected = strtolower($grade_name) === strtolower($current_grade);
+                                    ?>
+                                        <option value="<?php echo htmlspecialchars($grade_name, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $is_selected ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($grade_name, ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
 
                             <div class="mb-3">
@@ -218,7 +266,7 @@ $csrf_token = urlencode(getCsrfToken());
                                             <td><?php echo $student['student_id']; ?></td>
                                             <td><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td><?php echo htmlspecialchars($student['gender'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($student['grade'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars(normalizeGradeLabel($student['grade']), ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td><?php echo htmlspecialchars($student['academic_year'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td><?php echo htmlspecialchars($student['semester'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td>

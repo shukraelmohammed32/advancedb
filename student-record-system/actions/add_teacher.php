@@ -4,6 +4,23 @@ require_once '../auth/auth_helper.php';
 
 requireAnyRole(['admin', 'teacher']);
 
+function normalizeGradeLabel($grade) {
+    $grade = trim((string)$grade);
+    if ($grade === '') {
+        return '';
+    }
+
+    if (preg_match('/^\d+$/', $grade)) {
+        return 'Grade ' . $grade;
+    }
+
+    if (preg_match('/^grade\s*(\d+)$/i', $grade, $matches)) {
+        return 'Grade ' . $matches[1];
+    }
+
+    return $grade;
+}
+
 function normalizeSubjectIds($raw_subject_ids) {
     $subject_ids = [];
 
@@ -40,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $conn = $db->getConnection();
 
     $teacher_name = $conn->real_escape_string($_POST['teacher_name']);
-    $assigned_grade = $conn->real_escape_string($_POST['assigned_grade']);
+    $assigned_grade_input = normalizeGradeLabel($_POST['assigned_grade'] ?? '');
     $is_homeroom = isset($_POST['is_homeroom']) ? 1 : 0;
 
     $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
@@ -59,6 +76,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         header('Location: ../pages/teachers.php?error=' . urlencode('Please assign at least one subject'));
         exit();
     }
+
+    if ($assigned_grade_input === '') {
+        header('Location: ../pages/teachers.php?error=' . urlencode('Please select assigned grade'));
+        exit();
+    }
+
+    $grade_safe = $conn->real_escape_string($assigned_grade_input);
+    $grade_lookup = $conn->query("SELECT grade_name FROM grades WHERE grade_name = '$grade_safe' LIMIT 1");
+    if (!$grade_lookup || $grade_lookup->num_rows === 0) {
+        header('Location: ../pages/teachers.php?error=' . urlencode('Selected grade is invalid'));
+        exit();
+    }
+
+    $assigned_grade = $conn->real_escape_string($grade_lookup->fetch_assoc()['grade_name']);
 
     if ($is_homeroom) {
         $conn->query("UPDATE teachers SET is_homeroom = 0 WHERE assigned_grade = '$assigned_grade'");

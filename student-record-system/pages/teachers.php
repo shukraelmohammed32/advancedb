@@ -7,6 +7,23 @@ requireAnyRole(['admin', 'teacher']);
 $db = new Database();
 $conn = $db->getConnection();
 
+function normalizeGradeLabel($grade) {
+    $grade = trim((string)$grade);
+    if ($grade === '') {
+        return '';
+    }
+
+    if (preg_match('/^\d+$/', $grade)) {
+        return 'Grade ' . $grade;
+    }
+
+    if (preg_match('/^grade\s*(\d+)$/i', $grade, $matches)) {
+        return 'Grade ' . $matches[1];
+    }
+
+    return $grade;
+}
+
 function normalizeSubjectIds($raw_subject_ids) {
     $subject_ids = [];
 
@@ -56,21 +73,44 @@ function getDepartmentLabel($conn, $subject_ids) {
     return 'General';
 }
 
+// Get grade options
+$grade_rows = [];
+$grade_result = $conn->query('SELECT grade_id, grade_name FROM grades ORDER BY grade_id');
+if ($grade_result) {
+    while ($grade_row = $grade_result->fetch_assoc()) {
+        $grade_rows[] = $grade_row;
+    }
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();
 
+    $teacher_name = $conn->real_escape_string($_POST['teacher_name']);
+    $assigned_grade_input = normalizeGradeLabel($_POST['assigned_grade'] ?? '');
+    $is_homeroom = isset($_POST['is_homeroom']) ? 1 : 0;
+    $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
+
+    if (count($subject_ids) === 0) {
+        header('Location: teachers.php?error=' . urlencode('Please assign at least one subject'));
+        exit();
+    }
+
+    if ($assigned_grade_input === '') {
+        header('Location: teachers.php?error=' . urlencode('Please select assigned grade'));
+        exit();
+    }
+
+    $grade_safe = $conn->real_escape_string($assigned_grade_input);
+    $grade_lookup = $conn->query("SELECT grade_name FROM grades WHERE grade_name = '$grade_safe' LIMIT 1");
+    if (!$grade_lookup || $grade_lookup->num_rows === 0) {
+        header('Location: teachers.php?error=' . urlencode('Selected grade is invalid'));
+        exit();
+    }
+
+    $assigned_grade = $conn->real_escape_string($grade_lookup->fetch_assoc()['grade_name']);
+
     if (isset($_POST['add_teacher'])) {
-        $teacher_name = $conn->real_escape_string($_POST['teacher_name']);
-        $assigned_grade = $conn->real_escape_string($_POST['assigned_grade']);
-        $is_homeroom = isset($_POST['is_homeroom']) ? 1 : 0;
-        $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
-
-        if (count($subject_ids) === 0) {
-            header('Location: teachers.php?error=' . urlencode('Please assign at least one subject'));
-            exit();
-        }
-
         if ($is_homeroom) {
             $conn->query("UPDATE teachers SET is_homeroom = 0 WHERE assigned_grade = '$assigned_grade'");
         }
@@ -103,15 +143,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (isset($_POST['edit_teacher'])) {
         $teacher_id = (int)$_POST['teacher_id'];
-        $teacher_name = $conn->real_escape_string($_POST['teacher_name']);
-        $assigned_grade = $conn->real_escape_string($_POST['assigned_grade']);
-        $is_homeroom = isset($_POST['is_homeroom']) ? 1 : 0;
-        $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
-
-        if (count($subject_ids) === 0) {
-            header('Location: teachers.php?error=' . urlencode('Please assign at least one subject'));
-            exit();
-        }
 
         if ($is_homeroom) {
             $conn->query("UPDATE teachers SET is_homeroom = 0 WHERE assigned_grade = '$assigned_grade' AND teacher_id != $teacher_id");
@@ -301,8 +332,19 @@ $csrf_token = urlencode(getCsrfToken());
 
                             <div class="mb-3">
                                 <label for="assigned_grade" class="form-label">Assigned Grade</label>
-                                <input type="text" class="form-control" id="assigned_grade" name="assigned_grade"
-                                       value="<?php echo $edit_teacher ? htmlspecialchars($edit_teacher['assigned_grade'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+                                <select class="form-control" id="assigned_grade" name="assigned_grade" required>
+                                    <option value="">Select Grade</option>
+                                    <?php
+                                    $current_assigned_grade = $edit_teacher ? normalizeGradeLabel($edit_teacher['assigned_grade']) : '';
+                                    foreach ($grade_rows as $grade_row):
+                                        $grade_name = normalizeGradeLabel($grade_row['grade_name']);
+                                        $is_selected = strtolower($grade_name) === strtolower($current_assigned_grade);
+                                    ?>
+                                        <option value="<?php echo htmlspecialchars($grade_name, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $is_selected ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($grade_name, ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
 
                             <div class="mb-3">
@@ -353,7 +395,7 @@ $csrf_token = urlencode(getCsrfToken());
                                             <td><?php echo $teacher['teacher_id']; ?></td>
                                             <td><?php echo htmlspecialchars($teacher['teacher_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td><?php echo htmlspecialchars($teacher['subjects_taught'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($teacher['assigned_grade'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars(normalizeGradeLabel($teacher['assigned_grade']), ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td>
                                                 <?php if ($teacher['is_homeroom']): ?>
                                                     <span class="badge bg-success">Yes</span>

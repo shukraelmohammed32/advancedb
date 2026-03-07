@@ -4,12 +4,46 @@ require_once '../auth/auth_helper.php';
 
 requireAnyRole(['admin', 'teacher']);
 
-function teacherCanTeachSubject($conn, $teacher_id, $subject_id) {
+function normalizeGradeLabel($grade) {
+    $grade = trim((string)$grade);
+    if ($grade === '') {
+        return '';
+    }
+
+    if (preg_match('/^\d+$/', $grade)) {
+        return 'Grade ' . $grade;
+    }
+
+    if (preg_match('/^grade\s*(\d+)$/i', $grade, $matches)) {
+        return 'Grade ' . $matches[1];
+    }
+
+    return $grade;
+}
+
+function gradesMatch($left_grade, $right_grade) {
+    return strtolower(normalizeGradeLabel($left_grade)) === strtolower(normalizeGradeLabel($right_grade));
+}
+
+function teacherCanTeachSubjectAndGrade($conn, $teacher_id, $subject_id, $student_id) {
     $teacher_id = (int)$teacher_id;
     $subject_id = (int)$subject_id;
+    $student_id = (int)$student_id;
 
-    $result = $conn->query("SELECT 1 FROM teacher_subjects WHERE teacher_id = $teacher_id AND subject_id = $subject_id LIMIT 1");
-    return $result && $result->num_rows > 0;
+    $sql = "SELECT t.assigned_grade, s.grade
+            FROM teachers t
+            JOIN students s ON s.student_id = $student_id
+            JOIN teacher_subjects ts ON ts.teacher_id = t.teacher_id AND ts.subject_id = $subject_id
+            WHERE t.teacher_id = $teacher_id
+            LIMIT 1";
+
+    $result = $conn->query($sql);
+    if (!$result || $result->num_rows === 0) {
+        return false;
+    }
+
+    $row = $result->fetch_assoc();
+    return gradesMatch($row['assigned_grade'], $row['grade']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -29,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 
-    if (!teacherCanTeachSubject($conn, $teacher_id, $subject_id)) {
-        header('Location: ../pages/marks.php?error=' . urlencode('Selected teacher is not assigned to this subject'));
+    if (!teacherCanTeachSubjectAndGrade($conn, $teacher_id, $subject_id, $student_id)) {
+        header('Location: ../pages/marks.php?error=' . urlencode('Teacher must be assigned to both this subject and student grade'));
         exit();
     }
 

@@ -7,12 +7,46 @@ requireAnyRole(['admin', 'teacher']);
 $db = new Database();
 $conn = $db->getConnection();
 
-function teacherCanTeachSubject($conn, $teacher_id, $subject_id) {
+function normalizeGradeLabel($grade) {
+    $grade = trim((string)$grade);
+    if ($grade === '') {
+        return '';
+    }
+
+    if (preg_match('/^\d+$/', $grade)) {
+        return 'Grade ' . $grade;
+    }
+
+    if (preg_match('/^grade\s*(\d+)$/i', $grade, $matches)) {
+        return 'Grade ' . $matches[1];
+    }
+
+    return $grade;
+}
+
+function gradesMatch($left_grade, $right_grade) {
+    return strtolower(normalizeGradeLabel($left_grade)) === strtolower(normalizeGradeLabel($right_grade));
+}
+
+function teacherCanTeachSubjectAndGrade($conn, $teacher_id, $subject_id, $student_id) {
     $teacher_id = (int)$teacher_id;
     $subject_id = (int)$subject_id;
+    $student_id = (int)$student_id;
 
-    $result = $conn->query("SELECT 1 FROM teacher_subjects WHERE teacher_id = $teacher_id AND subject_id = $subject_id LIMIT 1");
-    return $result && $result->num_rows > 0;
+    $sql = "SELECT t.assigned_grade, s.grade
+            FROM teachers t
+            JOIN students s ON s.student_id = $student_id
+            JOIN teacher_subjects ts ON ts.teacher_id = t.teacher_id AND ts.subject_id = $subject_id
+            WHERE t.teacher_id = $teacher_id
+            LIMIT 1";
+
+    $result = $conn->query($sql);
+    if (!$result || $result->num_rows === 0) {
+        return false;
+    }
+
+    $row = $result->fetch_assoc();
+    return gradesMatch($row['assigned_grade'], $row['grade']);
 }
 
 // Handle form submission
@@ -30,8 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit();
         }
 
-        if (!teacherCanTeachSubject($conn, $teacher_id, $subject_id)) {
-            header('Location: marks.php?error=' . urlencode('Selected teacher is not assigned to this subject'));
+        if (!teacherCanTeachSubjectAndGrade($conn, $teacher_id, $subject_id, $student_id)) {
+            header('Location: marks.php?error=' . urlencode('Teacher must be assigned to both this subject and student grade'));
             exit();
         }
 
@@ -62,8 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit();
         }
 
-        if (!teacherCanTeachSubject($conn, $teacher_id, $subject_id)) {
-            header('Location: marks.php?error=' . urlencode('Selected teacher is not assigned to this subject'));
+        if (!teacherCanTeachSubjectAndGrade($conn, $teacher_id, $subject_id, $student_id)) {
+            header('Location: marks.php?error=' . urlencode('Teacher must be assigned to both this subject and student grade'));
             exit();
         }
 
@@ -100,13 +134,13 @@ if (isset($_GET['edit'])) {
 // Get dropdown data
 $students = $conn->query('SELECT student_id, name, grade FROM students ORDER BY name');
 $subjects = $conn->query('SELECT subject_id, subject_name FROM subjects ORDER BY subject_name');
-$teachers = $conn->query("SELECT t.teacher_id, t.teacher_name,
+$teachers = $conn->query("SELECT t.teacher_id, t.teacher_name, t.assigned_grade,
                          COALESCE(GROUP_CONCAT(DISTINCT ts.subject_id ORDER BY ts.subject_id SEPARATOR ','), '') AS subject_ids,
                          COALESCE(GROUP_CONCAT(DISTINCT s.subject_name ORDER BY s.subject_name SEPARATOR ', '), 'No subjects assigned') AS subjects_taught
                          FROM teachers t
                          LEFT JOIN teacher_subjects ts ON t.teacher_id = ts.teacher_id
                          LEFT JOIN subjects s ON ts.subject_id = s.subject_id
-                         GROUP BY t.teacher_id, t.teacher_name
+                         GROUP BY t.teacher_id, t.teacher_name, t.assigned_grade
                          ORDER BY t.teacher_name");
 
 // Get all marks with student, subject, and teacher names
@@ -206,9 +240,11 @@ $csrf_token = urlencode(getCsrfToken());
                                 <select class="form-control" id="student_id" name="student_id" required>
                                     <option value="">Select Student</option>
                                     <?php while ($student = $students->fetch_assoc()): ?>
+                                        <?php $student_grade = normalizeGradeLabel($student['grade']); ?>
                                         <option value="<?php echo $student['student_id']; ?>"
+                                                data-grade="<?php echo htmlspecialchars($student_grade, ENT_QUOTES, 'UTF-8'); ?>"
                                                 <?php echo $edit_mark && $edit_mark['student_id'] == $student['student_id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($student['name'] . ' - Grade ' . $student['grade'], ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo htmlspecialchars($student['name'] . ' - ' . $student_grade, ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
@@ -232,14 +268,16 @@ $csrf_token = urlencode(getCsrfToken());
                                 <select class="form-control" id="teacher_id" name="teacher_id" required>
                                     <option value="">Select Teacher</option>
                                     <?php while ($teacher = $teachers->fetch_assoc()): ?>
+                                        <?php $teacher_grade = normalizeGradeLabel($teacher['assigned_grade']); ?>
                                         <option value="<?php echo $teacher['teacher_id']; ?>"
                                                 data-subjects="<?php echo htmlspecialchars($teacher['subject_ids'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-grade="<?php echo htmlspecialchars($teacher_grade, ENT_QUOTES, 'UTF-8'); ?>"
                                                 <?php echo $edit_mark && $edit_mark['teacher_id'] == $teacher['teacher_id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($teacher['teacher_name'] . ' (' . $teacher['subjects_taught'] . ')', ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo htmlspecialchars($teacher['teacher_name'] . ' (' . $teacher['subjects_taught'] . ' | ' . $teacher_grade . ')', ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
-                                <small id="teacherHint" class="text-muted">Only teachers assigned to the selected subject are shown.</small>
+                                <small id="teacherHint" class="text-muted">Teacher must match selected subject and student grade/class.</small>
                             </div>
 
                             <div class="mb-3">
@@ -285,7 +323,7 @@ $csrf_token = urlencode(getCsrfToken());
                                     <?php while ($mark = $marks->fetch_assoc()): ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($mark['student_name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($mark['grade'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars(normalizeGradeLabel($mark['grade']), ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td><?php echo htmlspecialchars($mark['subject_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td><?php echo htmlspecialchars($mark['teacher_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td>
@@ -323,17 +361,20 @@ $csrf_token = urlencode(getCsrfToken());
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function filterTeachersBySubject() {
+        function filterTeachersBySubjectAndGrade() {
             var subjectSelect = document.getElementById('subject_id');
+            var studentSelect = document.getElementById('student_id');
             var teacherSelect = document.getElementById('teacher_id');
             var teacherHint = document.getElementById('teacherHint');
+
             var subjectId = subjectSelect.value;
+            var studentOption = studentSelect.options[studentSelect.selectedIndex];
+            var studentGrade = studentOption ? (studentOption.getAttribute('data-grade') || '') : '';
             var hasVisibleTeacher = false;
 
             for (var i = 0; i < teacherSelect.options.length; i++) {
                 var option = teacherSelect.options[i];
 
-                // Keep placeholder visible
                 if (i === 0) {
                     option.hidden = false;
                     continue;
@@ -341,7 +382,11 @@ $csrf_token = urlencode(getCsrfToken());
 
                 var subjectIds = option.getAttribute('data-subjects') || '';
                 var allowedSubjectIds = subjectIds ? subjectIds.split(',') : [];
-                var canTeach = subjectId === '' ? true : allowedSubjectIds.indexOf(subjectId) !== -1;
+                var teacherGrade = option.getAttribute('data-grade') || '';
+
+                var canTeachSubject = subjectId === '' ? true : allowedSubjectIds.indexOf(subjectId) !== -1;
+                var canTeachGrade = studentGrade === '' ? true : (teacherGrade === studentGrade);
+                var canTeach = canTeachSubject && canTeachGrade;
 
                 option.hidden = !canTeach;
                 if (!canTeach && option.selected) {
@@ -353,11 +398,11 @@ $csrf_token = urlencode(getCsrfToken());
                 }
             }
 
-            if (subjectId !== '' && !hasVisibleTeacher) {
-                teacherHint.textContent = 'No teacher is assigned to this subject yet. Assign subjects in the Teachers page first.';
+            if ((subjectId !== '' || studentGrade !== '') && !hasVisibleTeacher) {
+                teacherHint.textContent = 'No teacher matches this subject + class. Assign the correct teacher grade/subject first.';
                 teacherHint.className = 'text-danger';
             } else {
-                teacherHint.textContent = 'Only teachers assigned to the selected subject are shown.';
+                teacherHint.textContent = 'Teacher must match selected subject and student grade/class.';
                 teacherHint.className = 'text-muted';
             }
         }
@@ -367,6 +412,7 @@ $csrf_token = urlencode(getCsrfToken());
             var score = parseInt(document.getElementById('score').value, 10);
             var subjectId = document.getElementById('subject_id').value;
             var teacherId = document.getElementById('teacher_id').value;
+            var studentId = document.getElementById('student_id').value;
 
             if (isNaN(score) || score < 0 || score > 100) {
                 e.preventDefault();
@@ -374,14 +420,15 @@ $csrf_token = urlencode(getCsrfToken());
                 return;
             }
 
-            if (subjectId && !teacherId) {
+            if (!studentId || !subjectId || !teacherId) {
                 e.preventDefault();
-                alert('Please select a teacher assigned to the selected subject.');
+                alert('Please select student, subject, and teacher.');
             }
         });
 
-        document.getElementById('subject_id').addEventListener('change', filterTeachersBySubject);
-        filterTeachersBySubject();
+        document.getElementById('subject_id').addEventListener('change', filterTeachersBySubjectAndGrade);
+        document.getElementById('student_id').addEventListener('change', filterTeachersBySubjectAndGrade);
+        filterTeachersBySubjectAndGrade();
     </script>
 </body>
 </html>

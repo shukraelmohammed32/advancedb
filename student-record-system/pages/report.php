@@ -7,6 +7,23 @@ requireLogin();
 $db = new Database();
 $conn = $db->getConnection();
 
+function normalizeGradeLabel($grade) {
+    $grade = trim((string)$grade);
+    if ($grade === '') {
+        return '';
+    }
+
+    if (preg_match('/^\d+$/', $grade)) {
+        return 'Grade ' . $grade;
+    }
+
+    if (preg_match('/^grade\s*(\d+)$/i', $grade, $matches)) {
+        return 'Grade ' . $matches[1];
+    }
+
+    return $grade;
+}
+
 // Handle form submission for generating report
 $report_data = null;
 $selected_student = null;
@@ -68,16 +85,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
 
             $average = $subject_count > 0 ? round($total_score / $subject_count, 2) : 0;
 
-            // Get rank using window function
+            // Rank inside same grade/class instead of whole school
+            $student_grade = $conn->real_escape_string($selected_student['grade']);
             $rank_query = "SELECT student_rank
-                       FROM (
-                           SELECT
-                               student_id,
-                               RANK() OVER (ORDER BY COALESCE(SUM(score), 0) DESC) as student_rank
-                           FROM marks
-                           GROUP BY student_id
-                       ) ranked
-                       WHERE student_id = $student_id";
+                           FROM (
+                               SELECT
+                                   s.student_id,
+                                   s.grade,
+                                   RANK() OVER (PARTITION BY s.grade ORDER BY COALESCE(SUM(m.score), 0) DESC) AS student_rank
+                               FROM students s
+                               LEFT JOIN marks m ON s.student_id = m.student_id
+                               WHERE s.grade = '$student_grade'
+                               GROUP BY s.student_id, s.grade
+                           ) ranked
+                           WHERE student_id = $student_id";
 
             $rank_result = $conn->query($rank_query);
             $rank_row = $rank_result ? $rank_result->fetch_assoc() : null;
@@ -94,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
                 'total' => $total_score,
                 'average' => $average,
                 'rank' => $rank,
+                'rank_label' => 'Rank in ' . normalizeGradeLabel($selected_student['grade']),
                 'status' => ($has_all_marks && $all_passed && $subject_count > 0) ? 'PASS' : 'FAIL'
             ];
         } else {
@@ -227,7 +249,7 @@ if ($subjects) {
                                     <?php while ($student = $students->fetch_assoc()): ?>
                                         <option value="<?php echo $student['student_id']; ?>"
                                                 <?php echo isset($_POST['student_id']) && $_POST['student_id'] == $student['student_id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($student['name'] . ' - Grade ' . $student['grade'], ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo htmlspecialchars($student['name'] . ' - ' . normalizeGradeLabel($student['grade']), ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
@@ -266,7 +288,7 @@ if ($subjects) {
                                 <div class="col-md-6">
                                     <strong>Name:</strong> <?php echo htmlspecialchars($report_data['student']['name'], ENT_QUOTES, 'UTF-8'); ?><br>
                                     <strong>Student ID:</strong> <?php echo (int)$report_data['student']['student_id']; ?><br>
-                                    <strong>Grade:</strong> <?php echo htmlspecialchars($report_data['student']['grade'], ENT_QUOTES, 'UTF-8'); ?>
+                                    <strong>Grade:</strong> <?php echo htmlspecialchars(normalizeGradeLabel($report_data['student']['grade']), ENT_QUOTES, 'UTF-8'); ?>
                                 </div>
                                 <div class="col-md-6">
                                     <strong>Gender:</strong> <?php echo htmlspecialchars($report_data['student']['gender'], ENT_QUOTES, 'UTF-8'); ?><br>
@@ -343,7 +365,7 @@ if ($subjects) {
                                     <h3><?php echo htmlspecialchars((string)$report_data['average'], ENT_QUOTES, 'UTF-8'); ?></h3>
                                 </div>
                                 <div class="col-md-3">
-                                    <strong>Rank:</strong><br>
+                                    <strong><?php echo htmlspecialchars($report_data['rank_label'], ENT_QUOTES, 'UTF-8'); ?>:</strong><br>
                                     <h3><?php echo htmlspecialchars((string)$report_data['rank'], ENT_QUOTES, 'UTF-8'); ?></h3>
                                 </div>
                                 <div class="col-md-3">
