@@ -1,24 +1,30 @@
 <?php
 require_once '../config/database.php';
+require_once '../auth/auth_helper.php';
+
+requireAnyRole(['admin', 'teacher']);
+
 $db = new Database();
 $conn = $db->getConnection();
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    requireValidCsrfToken();
+
     if (isset($_POST['add_student'])) {
         $name = $conn->real_escape_string($_POST['name']);
         $gender = $conn->real_escape_string($_POST['gender']);
         $grade = $conn->real_escape_string($_POST['grade']);
         $academic_year = $conn->real_escape_string($_POST['academic_year']);
         $semester = $conn->real_escape_string($_POST['semester']);
-        
-        $sql = "INSERT INTO students (name, gender, grade, academic_year, semester) 
+
+        $sql = "INSERT INTO students (name, gender, grade, academic_year, semester)
                 VALUES ('$name', '$gender', '$grade', '$academic_year', '$semester')";
         $conn->query($sql);
-        header("Location: students.php?success=Student added successfully");
+        header('Location: students.php?success=' . urlencode('Student added successfully'));
         exit();
     }
-    
+
     if (isset($_POST['edit_student'])) {
         $student_id = (int)$_POST['student_id'];
         $name = $conn->real_escape_string($_POST['name']);
@@ -26,21 +32,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $grade = $conn->real_escape_string($_POST['grade']);
         $academic_year = $conn->real_escape_string($_POST['academic_year']);
         $semester = $conn->real_escape_string($_POST['semester']);
-        
-        $sql = "UPDATE students SET name='$name', gender='$gender', grade='$grade', 
-                academic_year='$academic_year', semester='$semester' 
+
+        $sql = "UPDATE students SET name='$name', gender='$gender', grade='$grade',
+                academic_year='$academic_year', semester='$semester'
                 WHERE student_id=$student_id";
         $conn->query($sql);
-        header("Location: students.php?success=Student updated successfully");
+        header('Location: students.php?success=' . urlencode('Student updated successfully'));
         exit();
     }
-    
-    if (isset($_GET['delete'])) {
-        $student_id = (int)$_GET['delete'];
-        $conn->query("DELETE FROM students WHERE student_id=$student_id");
-        header("Location: students.php?success=Student deleted successfully");
-        exit();
-    }
+}
+
+// Handle delete action (CSRF protected)
+if (isset($_GET['delete'])) {
+    requireValidCsrfToken();
+    $student_id = (int)$_GET['delete'];
+    $conn->query("DELETE FROM students WHERE student_id=$student_id");
+    header('Location: students.php?success=' . urlencode('Student deleted successfully'));
+    exit();
 }
 
 // Get student data for editing
@@ -48,11 +56,15 @@ $edit_student = null;
 if (isset($_GET['edit'])) {
     $student_id = (int)$_GET['edit'];
     $result = $conn->query("SELECT * FROM students WHERE student_id=$student_id");
-    $edit_student = $result->fetch_assoc();
+    $edit_student = $result ? $result->fetch_assoc() : null;
 }
 
 // Get all students
-$students = $conn->query("SELECT * FROM students ORDER BY created_at DESC");
+$students = $conn->query('SELECT * FROM students ORDER BY created_at DESC');
+
+$success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
+$error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
+$csrf_token = urlencode(getCsrfToken());
 ?>
 
 <!DOCTYPE html>
@@ -105,9 +117,16 @@ $students = $conn->query("SELECT * FROM students ORDER BY created_at DESC");
             </div>
         </div>
 
-        <?php if (isset($_GET['success'])): ?>
+        <?php if ($success_message): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo $_GET['success']; ?>
+                <?php echo $success_message; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($error_message): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php echo $error_message; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -121,46 +140,47 @@ $students = $conn->query("SELECT * FROM students ORDER BY created_at DESC");
                     </div>
                     <div class="card-body">
                         <form method="POST">
+                            <?php csrfInput(); ?>
                             <?php if ($edit_student): ?>
                                 <input type="hidden" name="student_id" value="<?php echo $edit_student['student_id']; ?>">
                             <?php endif; ?>
-                            
+
                             <div class="mb-3">
                                 <label for="name" class="form-label">Name</label>
-                                <input type="text" class="form-control" id="name" name="name" 
-                                       value="<?php echo $edit_student ? $edit_student['name'] : ''; ?>" required>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       value="<?php echo $edit_student ? htmlspecialchars($edit_student['name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="gender" class="form-label">Gender</label>
                                 <select class="form-control" id="gender" name="gender" required>
                                     <option value="">Select Gender</option>
-                                    <option value="Male" <?php echo $edit_student && $edit_student['gender'] == 'Male' ? 'selected' : ''; ?>>Male</option>
-                                    <option value="Female" <?php echo $edit_student && $edit_student['gender'] == 'Female' ? 'selected' : ''; ?>>Female</option>
+                                    <option value="Male" <?php echo $edit_student && $edit_student['gender'] === 'Male' ? 'selected' : ''; ?>>Male</option>
+                                    <option value="Female" <?php echo $edit_student && $edit_student['gender'] === 'Female' ? 'selected' : ''; ?>>Female</option>
                                 </select>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="grade" class="form-label">Grade</label>
-                                <input type="text" class="form-control" id="grade" name="grade" 
-                                       value="<?php echo $edit_student ? $edit_student['grade'] : ''; ?>" required>
+                                <input type="text" class="form-control" id="grade" name="grade"
+                                       value="<?php echo $edit_student ? htmlspecialchars($edit_student['grade'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="academic_year" class="form-label">Academic Year</label>
-                                <input type="text" class="form-control" id="academic_year" name="academic_year" 
-                                       value="<?php echo $edit_student ? $edit_student['academic_year'] : ''; ?>" required>
+                                <input type="text" class="form-control" id="academic_year" name="academic_year"
+                                       value="<?php echo $edit_student ? htmlspecialchars($edit_student['academic_year'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="semester" class="form-label">Semester</label>
                                 <select class="form-control" id="semester" name="semester" required>
                                     <option value="">Select Semester</option>
-                                    <option value="First" <?php echo $edit_student && $edit_student['semester'] == 'First' ? 'selected' : ''; ?>>First</option>
-                                    <option value="Second" <?php echo $edit_student && $edit_student['semester'] == 'Second' ? 'selected' : ''; ?>>Second</option>
+                                    <option value="First" <?php echo $edit_student && $edit_student['semester'] === 'First' ? 'selected' : ''; ?>>First</option>
+                                    <option value="Second" <?php echo $edit_student && $edit_student['semester'] === 'Second' ? 'selected' : ''; ?>>Second</option>
                                 </select>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary" name="<?php echo $edit_student ? 'edit_student' : 'add_student'; ?>">
                                 <?php echo $edit_student ? 'Update Student' : 'Add Student'; ?>
                             </button>
@@ -196,16 +216,16 @@ $students = $conn->query("SELECT * FROM students ORDER BY created_at DESC");
                                     <?php while ($student = $students->fetch_assoc()): ?>
                                         <tr>
                                             <td><?php echo $student['student_id']; ?></td>
-                                            <td><?php echo $student['name']; ?></td>
-                                            <td><?php echo $student['gender']; ?></td>
-                                            <td><?php echo $student['grade']; ?></td>
-                                            <td><?php echo $student['academic_year']; ?></td>
-                                            <td><?php echo $student['semester']; ?></td>
+                                            <td><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($student['gender'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($student['grade'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($student['academic_year'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($student['semester'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td>
-                                                <a href="students.php?edit=<?php echo $student['student_id']; ?>" 
+                                                <a href="students.php?edit=<?php echo $student['student_id']; ?>"
                                                    class="btn btn-sm btn-warning">Edit</a>
-                                                <a href="students.php?delete=<?php echo $student['student_id']; ?>" 
-                                                   class="btn btn-sm btn-danger" 
+                                                <a href="students.php?delete=<?php echo $student['student_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
+                                                   class="btn btn-sm btn-danger"
                                                    onclick="return confirm('Are you sure you want to delete this student?')">Delete</a>
                                             </td>
                                         </tr>

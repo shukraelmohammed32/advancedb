@@ -1,39 +1,47 @@
 <?php
 require_once '../config/database.php';
+require_once '../auth/auth_helper.php';
+
+requireAnyRole(['admin', 'teacher']);
+
 $db = new Database();
 $conn = $db->getConnection();
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    requireValidCsrfToken();
+
     if (isset($_POST['add_subject'])) {
         $subject_name = $conn->real_escape_string($_POST['subject_name']);
         $total_mark = (int)$_POST['total_mark'];
-        
-        $sql = "INSERT INTO subjects (subject_name, total_mark) 
+
+        $sql = "INSERT INTO subjects (subject_name, total_mark)
                 VALUES ('$subject_name', $total_mark)";
         $conn->query($sql);
-        header("Location: subjects.php?success=Subject added successfully");
+        header('Location: subjects.php?success=' . urlencode('Subject added successfully'));
         exit();
     }
-    
+
     if (isset($_POST['edit_subject'])) {
         $subject_id = (int)$_POST['subject_id'];
         $subject_name = $conn->real_escape_string($_POST['subject_name']);
         $total_mark = (int)$_POST['total_mark'];
-        
-        $sql = "UPDATE subjects SET subject_name='$subject_name', total_mark=$total_mark 
+
+        $sql = "UPDATE subjects SET subject_name='$subject_name', total_mark=$total_mark
                 WHERE subject_id=$subject_id";
         $conn->query($sql);
-        header("Location: subjects.php?success=Subject updated successfully");
+        header('Location: subjects.php?success=' . urlencode('Subject updated successfully'));
         exit();
     }
-    
-    if (isset($_GET['delete'])) {
-        $subject_id = (int)$_GET['delete'];
-        $conn->query("DELETE FROM subjects WHERE subject_id=$subject_id");
-        header("Location: subjects.php?success=Subject deleted successfully");
-        exit();
-    }
+}
+
+// Handle delete action (CSRF protected)
+if (isset($_GET['delete'])) {
+    requireValidCsrfToken();
+    $subject_id = (int)$_GET['delete'];
+    $conn->query("DELETE FROM subjects WHERE subject_id=$subject_id");
+    header('Location: subjects.php?success=' . urlencode('Subject deleted successfully'));
+    exit();
 }
 
 // Get subject data for editing
@@ -41,11 +49,15 @@ $edit_subject = null;
 if (isset($_GET['edit'])) {
     $subject_id = (int)$_GET['edit'];
     $result = $conn->query("SELECT * FROM subjects WHERE subject_id=$subject_id");
-    $edit_subject = $result->fetch_assoc();
+    $edit_subject = $result ? $result->fetch_assoc() : null;
 }
 
 // Get all subjects
-$subjects = $conn->query("SELECT * FROM subjects ORDER BY subject_name");
+$subjects = $conn->query('SELECT * FROM subjects ORDER BY subject_name');
+
+$success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
+$error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
+$csrf_token = urlencode(getCsrfToken());
 ?>
 
 <!DOCTYPE html>
@@ -98,9 +110,16 @@ $subjects = $conn->query("SELECT * FROM subjects ORDER BY subject_name");
             </div>
         </div>
 
-        <?php if (isset($_GET['success'])): ?>
+        <?php if ($success_message): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo $_GET['success']; ?>
+                <?php echo $success_message; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($error_message): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php echo $error_message; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -114,23 +133,24 @@ $subjects = $conn->query("SELECT * FROM subjects ORDER BY subject_name");
                     </div>
                     <div class="card-body">
                         <form method="POST">
+                            <?php csrfInput(); ?>
                             <?php if ($edit_subject): ?>
                                 <input type="hidden" name="subject_id" value="<?php echo $edit_subject['subject_id']; ?>">
                             <?php endif; ?>
-                            
+
                             <div class="mb-3">
                                 <label for="subject_name" class="form-label">Subject Name</label>
-                                <input type="text" class="form-control" id="subject_name" name="subject_name" 
-                                       value="<?php echo $edit_subject ? $edit_subject['subject_name'] : ''; ?>" required>
+                                <input type="text" class="form-control" id="subject_name" name="subject_name"
+                                       value="<?php echo $edit_subject ? htmlspecialchars($edit_subject['subject_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="total_mark" class="form-label">Total Mark</label>
-                                <input type="number" class="form-control" id="total_mark" name="total_mark" 
-                                       value="<?php echo $edit_subject ? $edit_subject['total_mark'] : '100'; ?>" 
+                                <input type="number" class="form-control" id="total_mark" name="total_mark"
+                                       value="<?php echo $edit_subject ? (int)$edit_subject['total_mark'] : '100'; ?>"
                                        min="1" max="100" required>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary" name="<?php echo $edit_subject ? 'edit_subject' : 'add_subject'; ?>">
                                 <?php echo $edit_subject ? 'Update Subject' : 'Add Subject'; ?>
                             </button>
@@ -164,14 +184,14 @@ $subjects = $conn->query("SELECT * FROM subjects ORDER BY subject_name");
                                     <?php while ($subject = $subjects->fetch_assoc()): ?>
                                         <tr>
                                             <td><?php echo $subject['subject_id']; ?></td>
-                                            <td><?php echo $subject['subject_name']; ?></td>
-                                            <td><?php echo $subject['total_mark']; ?></td>
+                                            <td><?php echo htmlspecialchars($subject['subject_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo (int)$subject['total_mark']; ?></td>
                                             <td><?php echo date('M d, Y', strtotime($subject['created_at'])); ?></td>
                                             <td>
-                                                <a href="subjects.php?edit=<?php echo $subject['subject_id']; ?>" 
+                                                <a href="subjects.php?edit=<?php echo $subject['subject_id']; ?>"
                                                    class="btn btn-sm btn-warning">Edit</a>
-                                                <a href="subjects.php?delete=<?php echo $subject['subject_id']; ?>" 
-                                                   class="btn btn-sm btn-danger" 
+                                                <a href="subjects.php?delete=<?php echo $subject['subject_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
+                                                   class="btn btn-sm btn-danger"
                                                    onclick="return confirm('Are you sure you want to delete this subject? This will also delete all related marks.')">Delete</a>
                                             </td>
                                         </tr>

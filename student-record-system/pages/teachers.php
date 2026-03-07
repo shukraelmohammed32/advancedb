@@ -1,5 +1,9 @@
 <?php
 require_once '../config/database.php';
+require_once '../auth/auth_helper.php';
+
+requireAnyRole(['admin', 'teacher']);
+
 $db = new Database();
 $conn = $db->getConnection();
 
@@ -54,6 +58,8 @@ function getDepartmentLabel($conn, $subject_ids) {
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    requireValidCsrfToken();
+
     if (isset($_POST['add_teacher'])) {
         $teacher_name = $conn->real_escape_string($_POST['teacher_name']);
         $assigned_grade = $conn->real_escape_string($_POST['assigned_grade']);
@@ -61,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
 
         if (count($subject_ids) === 0) {
-            header("Location: teachers.php?error=Please assign at least one subject");
+            header('Location: teachers.php?error=' . urlencode('Please assign at least one subject'));
             exit();
         }
 
@@ -78,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         if (!$conn->query($sql)) {
             $conn->rollback();
-            header("Location: teachers.php?error=Error adding teacher");
+            header('Location: teachers.php?error=' . urlencode('Error adding teacher'));
             exit();
         }
 
@@ -86,12 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         if (!saveTeacherSubjects($conn, $teacher_id, $subject_ids)) {
             $conn->rollback();
-            header("Location: teachers.php?error=Teacher saved but subjects failed to save");
+            header('Location: teachers.php?error=' . urlencode('Teacher saved but subjects failed to save'));
             exit();
         }
 
         $conn->commit();
-        header("Location: teachers.php?success=Teacher added successfully");
+        header('Location: teachers.php?success=' . urlencode('Teacher added successfully'));
         exit();
     }
 
@@ -103,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
 
         if (count($subject_ids) === 0) {
-            header("Location: teachers.php?error=Please assign at least one subject");
+            header('Location: teachers.php?error=' . urlencode('Please assign at least one subject'));
             exit();
         }
 
@@ -121,26 +127,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         if (!$conn->query($sql)) {
             $conn->rollback();
-            header("Location: teachers.php?error=Error updating teacher");
+            header('Location: teachers.php?error=' . urlencode('Error updating teacher'));
             exit();
         }
 
         if (!saveTeacherSubjects($conn, $teacher_id, $subject_ids)) {
             $conn->rollback();
-            header("Location: teachers.php?error=Teacher updated but subjects failed to save");
+            header('Location: teachers.php?error=' . urlencode('Teacher updated but subjects failed to save'));
             exit();
         }
 
         $conn->commit();
-        header("Location: teachers.php?success=Teacher updated successfully");
+        header('Location: teachers.php?success=' . urlencode('Teacher updated successfully'));
         exit();
     }
 }
 
 if (isset($_GET['delete'])) {
+    requireValidCsrfToken();
     $teacher_id = (int)$_GET['delete'];
     $conn->query("DELETE FROM teachers WHERE teacher_id=$teacher_id");
-    header("Location: teachers.php?success=Teacher deleted successfully");
+    header('Location: teachers.php?success=' . urlencode('Teacher deleted successfully'));
     exit();
 }
 
@@ -174,7 +181,7 @@ if (isset($_GET['edit'])) {
 
 // Get all subjects
 $subject_rows = [];
-$subjects_result = $conn->query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name");
+$subjects_result = $conn->query('SELECT subject_id, subject_name FROM subjects ORDER BY subject_name');
 if ($subjects_result) {
     while ($subject = $subjects_result->fetch_assoc()) {
         $subject_rows[] = $subject;
@@ -182,13 +189,17 @@ if ($subjects_result) {
 }
 
 // Get all teachers with their assigned subjects
-$teachers = $conn->query("SELECT t.*, 
+$teachers = $conn->query("SELECT t.*,
                          COALESCE(GROUP_CONCAT(DISTINCT s.subject_name ORDER BY s.subject_name SEPARATOR ', '), t.department) AS subjects_taught
                          FROM teachers t
                          LEFT JOIN teacher_subjects ts ON t.teacher_id = ts.teacher_id
                          LEFT JOIN subjects s ON ts.subject_id = s.subject_id
                          GROUP BY t.teacher_id
                          ORDER BY t.teacher_name");
+
+$success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
+$error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
+$csrf_token = urlencode(getCsrfToken());
 ?>
 
 <!DOCTYPE html>
@@ -241,16 +252,16 @@ $teachers = $conn->query("SELECT t.*,
             </div>
         </div>
 
-        <?php if (isset($_GET['success'])): ?>
+        <?php if ($success_message): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo $_GET['success']; ?>
+                <?php echo $success_message; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
 
-        <?php if (isset($_GET['error'])): ?>
+        <?php if ($error_message): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo $_GET['error']; ?>
+                <?php echo $error_message; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -264,6 +275,7 @@ $teachers = $conn->query("SELECT t.*,
                     </div>
                     <div class="card-body">
                         <form method="POST">
+                            <?php csrfInput(); ?>
                             <?php if ($edit_teacher): ?>
                                 <input type="hidden" name="teacher_id" value="<?php echo $edit_teacher['teacher_id']; ?>">
                             <?php endif; ?>
@@ -271,7 +283,7 @@ $teachers = $conn->query("SELECT t.*,
                             <div class="mb-3">
                                 <label for="teacher_name" class="form-label">Teacher Name</label>
                                 <input type="text" class="form-control" id="teacher_name" name="teacher_name"
-                                       value="<?php echo $edit_teacher ? $edit_teacher['teacher_name'] : ''; ?>" required>
+                                       value="<?php echo $edit_teacher ? htmlspecialchars($edit_teacher['teacher_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
                             </div>
 
                             <div class="mb-3">
@@ -279,8 +291,8 @@ $teachers = $conn->query("SELECT t.*,
                                 <select class="form-control" id="subject_ids" name="subject_ids[]" multiple size="6" required>
                                     <?php foreach ($subject_rows as $subject): ?>
                                         <option value="<?php echo $subject['subject_id']; ?>"
-                                                <?php echo in_array((int)$subject['subject_id'], $selected_subject_ids) ? 'selected' : ''; ?>>
-                                            <?php echo $subject['subject_name']; ?>
+                                                <?php echo in_array((int)$subject['subject_id'], $selected_subject_ids, true) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($subject['subject_name'], ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -290,7 +302,7 @@ $teachers = $conn->query("SELECT t.*,
                             <div class="mb-3">
                                 <label for="assigned_grade" class="form-label">Assigned Grade</label>
                                 <input type="text" class="form-control" id="assigned_grade" name="assigned_grade"
-                                       value="<?php echo $edit_teacher ? $edit_teacher['assigned_grade'] : ''; ?>" required>
+                                       value="<?php echo $edit_teacher ? htmlspecialchars($edit_teacher['assigned_grade'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
                             </div>
 
                             <div class="mb-3">
@@ -339,9 +351,9 @@ $teachers = $conn->query("SELECT t.*,
                                     <?php while ($teacher = $teachers->fetch_assoc()): ?>
                                         <tr>
                                             <td><?php echo $teacher['teacher_id']; ?></td>
-                                            <td><?php echo $teacher['teacher_name']; ?></td>
-                                            <td><?php echo $teacher['subjects_taught']; ?></td>
-                                            <td><?php echo $teacher['assigned_grade']; ?></td>
+                                            <td><?php echo htmlspecialchars($teacher['teacher_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($teacher['subjects_taught'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($teacher['assigned_grade'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td>
                                                 <?php if ($teacher['is_homeroom']): ?>
                                                     <span class="badge bg-success">Yes</span>
@@ -353,7 +365,7 @@ $teachers = $conn->query("SELECT t.*,
                                             <td>
                                                 <a href="teachers.php?edit=<?php echo $teacher['teacher_id']; ?>"
                                                    class="btn btn-sm btn-warning">Edit</a>
-                                                <a href="teachers.php?delete=<?php echo $teacher['teacher_id']; ?>"
+                                                <a href="teachers.php?delete=<?php echo $teacher['teacher_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
                                                    class="btn btn-sm btn-danger"
                                                    onclick="return confirm('Are you sure you want to delete this teacher?')">Delete</a>
                                             </td>

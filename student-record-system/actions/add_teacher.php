@@ -1,5 +1,8 @@
 <?php
 require_once '../config/database.php';
+require_once '../auth/auth_helper.php';
+
+requireAnyRole(['admin', 'teacher']);
 
 function normalizeSubjectIds($raw_subject_ids) {
     $subject_ids = [];
@@ -31,6 +34,8 @@ function saveTeacherSubjects($conn, $teacher_id, $subject_ids) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    requireValidCsrfToken();
+
     $db = new Database();
     $conn = $db->getConnection();
 
@@ -51,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if (count($subject_ids) === 0) {
-        header("Location: ../pages/teachers.php?error=Please assign at least one subject");
+        header('Location: ../pages/teachers.php?error=' . urlencode('Please assign at least one subject'));
         exit();
     }
 
@@ -77,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (!$conn->query($sql)) {
         $conn->rollback();
-        header("Location: ../pages/teachers.php?error=Error adding teacher");
+        header('Location: ../pages/teachers.php?error=' . urlencode('Error adding teacher'));
         exit();
     }
 
@@ -85,12 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (!saveTeacherSubjects($conn, $teacher_id, $subject_ids)) {
         $conn->rollback();
-        header("Location: ../pages/teachers.php?error=Teacher added but subject mapping failed");
+        header('Location: ../pages/teachers.php?error=' . urlencode('Teacher added but subject mapping failed'));
         exit();
     }
 
     $conn->commit();
-    header("Location: ../pages/teachers.php?success=Teacher added successfully");
+    header('Location: ../pages/teachers.php?success=' . urlencode('Teacher added successfully'));
     exit();
 }
 ?>

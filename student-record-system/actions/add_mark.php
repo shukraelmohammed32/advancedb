@@ -13,6 +13,8 @@ function teacherCanTeachSubject($conn, $teacher_id, $subject_id) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    requireValidCsrfToken();
+
     $db = new Database();
     $conn = $db->getConnection();
 
@@ -23,12 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Validate score
     if ($score < 0 || $score > 100) {
-        header("Location: ../pages/marks.php?error=Score must be between 0 and 100");
+        header('Location: ../pages/marks.php?error=' . urlencode('Score must be between 0 and 100'));
         exit();
     }
 
     if (!teacherCanTeachSubject($conn, $teacher_id, $subject_id)) {
-        header("Location: ../pages/marks.php?error=Selected teacher is not assigned to this subject");
+        header('Location: ../pages/marks.php?error=' . urlencode('Selected teacher is not assigned to this subject'));
         exit();
     }
 
@@ -36,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $existing = $conn->query("SELECT mark_id FROM marks WHERE student_id=$student_id AND subject_id=$subject_id");
 
     if ($existing && $existing->num_rows > 0) {
-        header("Location: ../pages/marks.php?error=Mark already exists for this student and subject");
+        header('Location: ../pages/marks.php?error=' . urlencode('Mark already exists for this student and subject'));
         exit();
     }
 
@@ -44,9 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             VALUES ($student_id, $subject_id, $teacher_id, $score)";
 
     if ($conn->query($sql)) {
-        header("Location: ../pages/marks.php?success=Mark added successfully");
+        header('Location: ../pages/marks.php?success=' . urlencode('Mark added successfully'));
     } else {
-        header("Location: ../pages/marks.php?error=Error adding mark");
+        header('Location: ../pages/marks.php?error=' . urlencode('Error adding mark'));
     }
     exit();
 }

@@ -1,5 +1,9 @@
 <?php
 require_once '../config/database.php';
+require_once '../auth/auth_helper.php';
+
+requireAnyRole(['admin', 'teacher']);
+
 $db = new Database();
 $conn = $db->getConnection();
 
@@ -13,6 +17,8 @@ function teacherCanTeachSubject($conn, $teacher_id, $subject_id) {
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    requireValidCsrfToken();
+
     if (isset($_POST['add_mark'])) {
         $student_id = (int)$_POST['student_id'];
         $subject_id = (int)$_POST['subject_id'];
@@ -20,12 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $score = (int)$_POST['score'];
 
         if ($score < 0 || $score > 100) {
-            header("Location: marks.php?error=Score must be between 0 and 100");
+            header('Location: marks.php?error=' . urlencode('Score must be between 0 and 100'));
             exit();
         }
 
         if (!teacherCanTeachSubject($conn, $teacher_id, $subject_id)) {
-            header("Location: marks.php?error=Selected teacher is not assigned to this subject");
+            header('Location: marks.php?error=' . urlencode('Selected teacher is not assigned to this subject'));
             exit();
         }
 
@@ -33,14 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $existing = $conn->query("SELECT mark_id FROM marks WHERE student_id=$student_id AND subject_id=$subject_id");
 
         if ($existing && $existing->num_rows > 0) {
-            header("Location: marks.php?error=Mark already exists for this student and subject");
+            header('Location: marks.php?error=' . urlencode('Mark already exists for this student and subject'));
             exit();
         }
 
         $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, score)
                 VALUES ($student_id, $subject_id, $teacher_id, $score)";
         $conn->query($sql);
-        header("Location: marks.php?success=Mark added successfully");
+        header('Location: marks.php?success=' . urlencode('Mark added successfully'));
         exit();
     }
 
@@ -52,33 +58,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $score = (int)$_POST['score'];
 
         if ($score < 0 || $score > 100) {
-            header("Location: marks.php?error=Score must be between 0 and 100");
+            header('Location: marks.php?error=' . urlencode('Score must be between 0 and 100'));
             exit();
         }
 
         if (!teacherCanTeachSubject($conn, $teacher_id, $subject_id)) {
-            header("Location: marks.php?error=Selected teacher is not assigned to this subject");
+            header('Location: marks.php?error=' . urlencode('Selected teacher is not assigned to this subject'));
             exit();
         }
 
         $existing = $conn->query("SELECT mark_id FROM marks WHERE student_id=$student_id AND subject_id=$subject_id AND mark_id != $mark_id");
         if ($existing && $existing->num_rows > 0) {
-            header("Location: marks.php?error=Another mark already exists for this student and subject");
+            header('Location: marks.php?error=' . urlencode('Another mark already exists for this student and subject'));
             exit();
         }
 
         $sql = "UPDATE marks SET student_id=$student_id, subject_id=$subject_id,
                 teacher_id=$teacher_id, score=$score WHERE mark_id=$mark_id";
         $conn->query($sql);
-        header("Location: marks.php?success=Mark updated successfully");
+        header('Location: marks.php?success=' . urlencode('Mark updated successfully'));
         exit();
     }
 }
 
 if (isset($_GET['delete'])) {
+    requireValidCsrfToken();
     $mark_id = (int)$_GET['delete'];
     $conn->query("DELETE FROM marks WHERE mark_id=$mark_id");
-    header("Location: marks.php?success=Mark deleted successfully");
+    header('Location: marks.php?success=' . urlencode('Mark deleted successfully'));
     exit();
 }
 
@@ -91,8 +98,8 @@ if (isset($_GET['edit'])) {
 }
 
 // Get dropdown data
-$students = $conn->query("SELECT student_id, name, grade FROM students ORDER BY name");
-$subjects = $conn->query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name");
+$students = $conn->query('SELECT student_id, name, grade FROM students ORDER BY name');
+$subjects = $conn->query('SELECT subject_id, subject_name FROM subjects ORDER BY subject_name');
 $teachers = $conn->query("SELECT t.teacher_id, t.teacher_name,
                          COALESCE(GROUP_CONCAT(DISTINCT ts.subject_id ORDER BY ts.subject_id SEPARATOR ','), '') AS subject_ids,
                          COALESCE(GROUP_CONCAT(DISTINCT s.subject_name ORDER BY s.subject_name SEPARATOR ', '), 'No subjects assigned') AS subjects_taught
@@ -110,6 +117,10 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                       JOIN subjects sub ON m.subject_id = sub.subject_id
                       JOIN teachers t ON m.teacher_id = t.teacher_id
                       ORDER BY s.name, sub.subject_name");
+
+$success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
+$error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
+$csrf_token = urlencode(getCsrfToken());
 ?>
 
 <!DOCTYPE html>
@@ -162,16 +173,16 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
             </div>
         </div>
 
-        <?php if (isset($_GET['success'])): ?>
+        <?php if ($success_message): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo $_GET['success']; ?>
+                <?php echo $success_message; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
 
-        <?php if (isset($_GET['error'])): ?>
+        <?php if ($error_message): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo $_GET['error']; ?>
+                <?php echo $error_message; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -185,6 +196,7 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                     </div>
                     <div class="card-body">
                         <form method="POST" id="markForm">
+                            <?php csrfInput(); ?>
                             <?php if ($edit_mark): ?>
                                 <input type="hidden" name="mark_id" value="<?php echo $edit_mark['mark_id']; ?>">
                             <?php endif; ?>
@@ -196,7 +208,7 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                                     <?php while ($student = $students->fetch_assoc()): ?>
                                         <option value="<?php echo $student['student_id']; ?>"
                                                 <?php echo $edit_mark && $edit_mark['student_id'] == $student['student_id'] ? 'selected' : ''; ?>>
-                                            <?php echo $student['name'] . ' - Grade ' . $student['grade']; ?>
+                                            <?php echo htmlspecialchars($student['name'] . ' - Grade ' . $student['grade'], ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
@@ -209,7 +221,7 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                                     <?php while ($subject = $subjects->fetch_assoc()): ?>
                                         <option value="<?php echo $subject['subject_id']; ?>"
                                                 <?php echo $edit_mark && $edit_mark['subject_id'] == $subject['subject_id'] ? 'selected' : ''; ?>>
-                                            <?php echo $subject['subject_name']; ?>
+                                            <?php echo htmlspecialchars($subject['subject_name'], ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
@@ -221,9 +233,9 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                                     <option value="">Select Teacher</option>
                                     <?php while ($teacher = $teachers->fetch_assoc()): ?>
                                         <option value="<?php echo $teacher['teacher_id']; ?>"
-                                                data-subjects="<?php echo htmlspecialchars($teacher['subject_ids'], ENT_QUOTES); ?>"
+                                                data-subjects="<?php echo htmlspecialchars($teacher['subject_ids'], ENT_QUOTES, 'UTF-8'); ?>"
                                                 <?php echo $edit_mark && $edit_mark['teacher_id'] == $teacher['teacher_id'] ? 'selected' : ''; ?>>
-                                            <?php echo $teacher['teacher_name'] . ' (' . $teacher['subjects_taught'] . ')'; ?>
+                                            <?php echo htmlspecialchars($teacher['teacher_name'] . ' (' . $teacher['subjects_taught'] . ')', ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
@@ -233,7 +245,7 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                             <div class="mb-3">
                                 <label for="score" class="form-label">Score (0-100)</label>
                                 <input type="number" class="form-control" id="score" name="score"
-                                       value="<?php echo $edit_mark ? $edit_mark['score'] : ''; ?>"
+                                       value="<?php echo $edit_mark ? (int)$edit_mark['score'] : ''; ?>"
                                        min="0" max="100" required>
                                 <small class="text-muted">Pass mark is 50</small>
                             </div>
@@ -272,12 +284,12 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                                 <tbody>
                                     <?php while ($mark = $marks->fetch_assoc()): ?>
                                         <tr>
-                                            <td><?php echo $mark['student_name']; ?></td>
-                                            <td><?php echo $mark['grade']; ?></td>
-                                            <td><?php echo $mark['subject_name']; ?></td>
-                                            <td><?php echo $mark['teacher_name']; ?></td>
+                                            <td><?php echo htmlspecialchars($mark['student_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($mark['grade'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($mark['subject_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($mark['teacher_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td>
-                                                <?php echo $mark['score']; ?>
+                                                <?php echo (int)$mark['score']; ?>
                                                 <?php if ($mark['score'] >= 50): ?>
                                                     <span class="badge bg-success">Pass</span>
                                                 <?php else: ?>
@@ -294,7 +306,7 @@ $marks = $conn->query("SELECT m.*, s.name as student_name, s.grade,
                                             <td>
                                                 <a href="marks.php?edit=<?php echo $mark['mark_id']; ?>"
                                                    class="btn btn-sm btn-warning">Edit</a>
-                                                <a href="marks.php?delete=<?php echo $mark['mark_id']; ?>"
+                                                <a href="marks.php?delete=<?php echo $mark['mark_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
                                                    class="btn btn-sm btn-danger"
                                                    onclick="return confirm('Are you sure you want to delete this mark?')">Delete</a>
                                             </td>

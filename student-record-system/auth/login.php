@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($result->num_rows == 1) {
                 $user = $result->fetch_assoc();
                 if (password_verify($password, $user['password'])) {
+                    session_regenerate_id(true);
                     $_SESSION['user_id'] = $user['user_id'];
                     $_SESSION['username'] = $user['username'];
                     $_SESSION['role'] = $user['role'];
@@ -234,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="login-body">
                 <?php if ($error): ?>
                     <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle"></i> <?php echo $error; ?>
+                        <i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
                 
@@ -266,3 +267,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
+
+
