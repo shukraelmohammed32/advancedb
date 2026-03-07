@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1f5f95 0%, #123b63 100%);
             position: relative;
             overflow: hidden;
         }
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1f5f95 0%, #123b63 100%);
             color: white;
             text-align: center;
             padding: 30px 20px;
@@ -121,15 +121,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .login-header::before {
-            content: "🎓";
+            content: "SR";
             position: absolute;
-            top: -20px;
+            top: -18px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 3rem;
-            background: white;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #123b63;
+            background: #eef6ff;
             border-radius: 50%;
-            padding: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
@@ -150,8 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            border-color: #1f5f95;
+            box-shadow: 0 0 0 0.2rem rgba(31, 95, 149, 0.25);
             background: white;
         }
         
@@ -160,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1f5f95 0%, #123b63 100%);
             border: none;
             border-radius: 25px;
             padding: 12px 30px;
@@ -176,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 20px rgba(31, 95, 149, 0.3);
             color: white;
         }
         
@@ -207,14 +214,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .login-footer {
             text-align: center;
             padding: 20px;
-            background: rgba(102, 126, 234, 0.05);
+            background: rgba(31, 95, 149, 0.08);
             border-radius: 0 0 20px 20px;
             font-size: 0.85rem;
             color: #6c757d;
         }
         
         .login-footer a {
-            color: #667eea;
+            color: #1f5f95;
             text-decoration: none;
             font-weight: 600;
         }
@@ -224,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     </style>
 </head>
-<body>
+<body class="auth-page">
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
@@ -267,6 +274,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
-
-
 

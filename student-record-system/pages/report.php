@@ -156,7 +156,7 @@ if ($subjects) {
             .report-card { box-shadow: none !important; }
         }
         .report-header {
-            background-color: #007bff;
+            background-color: #1f5f95;
             color: white;
             padding: 20px;
             text-align: center;
@@ -169,7 +169,7 @@ if ($subjects) {
             margin-bottom: 20px;
         }
         .report-table th {
-            background-color: #007bff;
+            background-color: #1f5f95;
             color: white;
         }
         .summary-card {
@@ -212,6 +212,11 @@ if ($subjects) {
                     <li class="nav-item">
                         <a class="nav-link active" href="report.php">Reports</a>
                     </li>
+                    <?php if (canOnlyViewOwnRecords()): ?>
+                    <li class="nav-item">
+                        <a class="nav-link" href="profile.php">Profile</a>
+                    </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -403,7 +408,13 @@ if ($subjects) {
         </div>
     </div>
 
+    
+    <?php
+    $footer_base_path = '../';
+    include __DIR__ . '/../includes/footer.php';
+    ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+

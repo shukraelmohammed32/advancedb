@@ -54,6 +54,11 @@ $totalSubjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_a
                     <li class="nav-item">
                         <a class="nav-link" href="pages/report.php">Reports</a>
                     </li>
+                    <?php if (canOnlyViewOwnRecords()): ?>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pages/profile.php">Profile</a>
+                    </li>
+                    <?php endif; ?>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <?php echo $_SESSION['display_name']; ?> (<?php echo ucfirst($_SESSION['role']); ?>)
@@ -137,6 +142,13 @@ $totalSubjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_a
                                         <i class="fas fa-chart-bar"></i> Generate Reports
                                     </a>
                                 </div>
+                                <?php if (canOnlyViewOwnRecords()): ?>
+                                <div class="col-md-6 mb-2">
+                                    <a href="pages/profile.php" class="btn btn-primary btn-lg w-100">
+                                        <i class="fas fa-user"></i> Update Profile
+                                    </a>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -144,44 +156,13 @@ $totalSubjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_a
             </div>
         </div>
     </div>
-
-    <!-- Professional Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>About System</h4>
-                    <p>Professional Student Record Management System designed to streamline academic administration and enhance educational efficiency.</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <ul>
-                        <li><a href="index.php">Dashboard</a></li>
-                        <li><a href="pages/students.php">Students</a></li>
-                        <li><a href="pages/report.php">Reports</a></li>
-                        <li><a href="auth/logout.php">Logout</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Contact Info</h4>
-                    <p>&#x1F4E7; support@school.edu<br>
-                       &#x1F4F1; +1 (555) 123-4567<br>
-                       &#x1F4CD; 123 Education Street</p>
-                </div>
-                <div class="footer-section">
-                    <h4>System Info</h4>
-                    <p>Version 2.0<br>
-                       Last Updated: 2024<br>
-                       Powered by PHP & MySQL</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 Student Record Management System. All rights reserved. | Designed with &#x2764; for Education</p>
-            </div>
-        </div>
-    </footer>
+    <?php
+    $footer_base_path = '';
+    include __DIR__ . '/includes/footer.php';
+    ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+

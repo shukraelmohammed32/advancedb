@@ -95,6 +95,17 @@ CREATE TABLE IF NOT EXISTS users (
     UNIQUE KEY uq_users_username (username),
     UNIQUE KEY uq_users_email (email)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS student_profiles (
+    student_id INT PRIMARY KEY,
+    phone VARCHAR(30) NULL,
+    address VARCHAR(255) NULL,
+    date_of_birth DATE NULL,
+    guardian_name VARCHAR(100) NULL,
+    guardian_phone VARCHAR(30) NULL,
+    bio TEXT NULL,
+    profile_photo VARCHAR(255) NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
 -- ============================================
 -- UPGRADE SUPPORT FOR OLDER/PARTIAL IMPORTS
@@ -113,6 +124,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS teacher_id INT NULL AFTER student_id;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER teacher_id;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS profile_photo VARCHAR(255) NULL AFTER bio;
 
 -- Clean orphan legacy records before FK creation
 DELETE ts
@@ -370,6 +382,22 @@ SET @sql_stmt = IF(@fk_exists = 0,
 PREPARE stmt FROM @sql_stmt;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+SET @fk_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'student_profiles'
+      AND COLUMN_NAME = 'student_id'
+      AND REFERENCED_TABLE_NAME = 'students'
+      AND REFERENCED_COLUMN_NAME = 'student_id'
+);
+SET @sql_stmt = IF(@fk_exists = 0,
+    'ALTER TABLE student_profiles ADD CONSTRAINT fk_student_profiles_student FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ============================================
 -- SEED DATA
@@ -500,4 +528,6 @@ SELECT COUNT(*) AS teachers_count FROM teachers;
 SELECT COUNT(*) AS teacher_subject_links FROM teacher_subjects;
 SELECT COUNT(*) AS subjects_count FROM subjects;
 SELECT COUNT(*) AS marks_count FROM marks;
+SELECT COUNT(*) AS student_profiles_count FROM student_profiles;
 SELECT username, role, is_active FROM users WHERE username = 'admin';
+
