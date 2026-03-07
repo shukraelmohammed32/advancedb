@@ -23,8 +23,8 @@ $totalSubjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_a
     <link href="assets/style.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Professional Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="index.php">Student Record System</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -68,73 +68,75 @@ $totalSubjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_a
     </nav>
 
     <!-- Main Content -->
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-12">
-                <h1 class="mb-4">Dashboard</h1>
+    <div class="main-container">
+        <div class="container mt-4">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="dashboard-title">Dashboard</h1>
+                </div>
             </div>
-        </div>
 
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-4 mb-3">
-                <div class="card stats-card">
-                    <div class="card-body">
-                        <h3><?php echo $totalStudents; ?></h3>
-                        <p>Total Students</p>
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <h3><?php echo $totalStudents; ?></h3>
+                            <p>Total Students</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <h3><?php echo $totalTeachers; ?></h3>
+                            <p>Total Teachers</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <h3><?php echo $totalSubjects; ?></h3>
+                            <p>Total Subjects</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card stats-card">
-                    <div class="card-body">
-                        <h3><?php echo $totalTeachers; ?></h3>
-                        <p>Total Teachers</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card stats-card">
-                    <div class="card-body">
-                        <h3><?php echo $totalSubjects; ?></h3>
-                        <p>Total Subjects</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Quick Actions -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        Quick Actions
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <?php if (canAccessStudentRecords()): ?>
-                            <div class="col-md-6 mb-2">
-                                <a href="pages/students.php" class="btn btn-primary btn-lg w-100">
-                                    <i class="fas fa-user-plus"></i> Add Student
-                                </a>
-                            </div>
-                            <?php endif; ?>
-                            <?php if (canAccessTeacherDashboard()): ?>
-                            <div class="col-md-6 mb-2">
-                                <a href="pages/marks.php" class="btn btn-success btn-lg w-100">
-                                    <i class="fas fa-edit"></i> Enter Marks
-                                </a>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <a href="pages/teachers.php" class="btn btn-info btn-lg w-100">
-                                    <i class="fas fa-chalkboard-teacher"></i> Manage Teachers
-                                </a>
-                            </div>
-                            <?php endif; ?>
-                            <div class="col-md-6 mb-2">
-                                <a href="pages/report.php" class="btn btn-warning btn-lg w-100">
-                                    <i class="fas fa-chart-bar"></i> Generate Reports
-                                </a>
+            <!-- Quick Actions -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card quick-actions">
+                        <div class="card-header">
+                            Quick Actions
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <?php if (canAccessStudentRecords()): ?>
+                                <div class="col-md-6 mb-2">
+                                    <a href="pages/students.php" class="btn btn-primary btn-lg w-100">
+                                        <i class="fas fa-user-plus"></i> Add Student
+                                    </a>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (canAccessTeacherDashboard()): ?>
+                                <div class="col-md-6 mb-2">
+                                    <a href="pages/marks.php" class="btn btn-success btn-lg w-100">
+                                        <i class="fas fa-edit"></i> Enter Marks
+                                    </a>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <a href="pages/teachers.php" class="btn btn-info btn-lg w-100">
+                                        <i class="fas fa-chalkboard-teacher"></i> Manage Teachers
+                                    </a>
+                                </div>
+                                <?php endif; ?>
+                                <div class="col-md-6 mb-2">
+                                    <a href="pages/report.php" class="btn btn-warning btn-lg w-100">
+                                        <i class="fas fa-chart-bar"></i> Generate Reports
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -143,10 +145,39 @@ $totalSubjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_a
         </div>
     </div>
 
-    <!-- Footer -->
+    <!-- Professional Footer -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2024 Student Record Management System. All rights reserved.</p>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>About System</h4>
+                    <p>Professional Student Record Management System designed to streamline academic administration and enhance educational efficiency.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.php">Dashboard</a></li>
+                        <li><a href="pages/students.php">Students</a></li>
+                        <li><a href="pages/report.php">Reports</a></li>
+                        <li><a href="auth/logout.php">Logout</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact Info</h4>
+                    <p>&#x1F4E7; support@school.edu<br>
+                       &#x1F4F1; +1 (555) 123-4567<br>
+                       &#x1F4CD; 123 Education Street</p>
+                </div>
+                <div class="footer-section">
+                    <h4>System Info</h4>
+                    <p>Version 2.0<br>
+                       Last Updated: 2024<br>
+                       Powered by PHP & MySQL</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Student Record Management System. All rights reserved. | Designed with &#x2764; for Education</p>
+            </div>
         </div>
     </footer>
 
