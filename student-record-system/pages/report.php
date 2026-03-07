@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
         $total_score = 0;
         $subject_count = 0;
         $all_passed = true;
+        $failed_subjects = 0;
         
         while ($mark = $marks_result->fetch_assoc()) {
             $marks[$mark['subject_name']] = $mark;
@@ -42,7 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
                 
                 if ($mark['score'] < 50) {
                     $all_passed = false;
+                    $failed_subjects++;
                 }
+            } else {
+                // Student has no marks for this subject - consider as fail
+                $all_passed = false;
+                $failed_subjects++;
             }
         }
         
@@ -63,13 +69,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
         $rank_row = $rank_result->fetch_assoc();
         $rank = $rank_row ? $rank_row['student_rank'] : 'N/A';
         
+        // Overall status: PASS only if student has marks for ALL subjects and ALL are >= 50
+        $total_subjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_assoc()['count'];
+        $has_all_marks = $subject_count >= $total_subjects;
+        
         $report_data = [
             'student' => $selected_student,
             'marks' => $marks,
             'total' => $total_score,
             'average' => $average,
             'rank' => $rank,
-            'status' => $all_passed && $subject_count > 0 ? 'PASS' : 'FAIL'
+            'status' => ($has_all_marks && $all_passed && $subject_count > 0) ? 'PASS' : 'FAIL'
         ];
     }
 }
@@ -243,9 +253,14 @@ while ($subject = $subjects->fetch_assoc()) {
                                             <td>
                                                 <?php 
                                                 if (isset($report_data['marks'][$subject])) {
-                                                    echo $report_data['marks'][$subject]['score'];
+                                                    $score = $report_data['marks'][$subject]['score'];
+                                                    if ($score !== null) {
+                                                        echo $score;
+                                                    } else {
+                                                        echo '<span class="text-danger">No Marks</span>';
+                                                    }
                                                 } else {
-                                                    echo '<span class="text-muted">Not Available</span>';
+                                                    echo '<span class="text-danger">No Marks</span>';
                                                 }
                                                 ?>
                                             </td>
@@ -255,13 +270,17 @@ while ($subject = $subjects->fetch_assoc()) {
                                                     $status = $report_data['marks'][$subject]['status'];
                                                     $score = $report_data['marks'][$subject]['score'];
                                                     
-                                                    if ($score >= 50) {
-                                                        echo '<span class="badge bg-success">' . $status . '</span>';
+                                                    if ($score !== null) {
+                                                        if ($score >= 50) {
+                                                            echo '<span class="badge bg-success">' . $status . '</span>';
+                                                        } else {
+                                                            echo '<span class="badge bg-danger">' . $status . '</span>';
+                                                        }
                                                     } else {
-                                                        echo '<span class="badge bg-danger">' . $status . '</span>';
+                                                        echo '<span class="badge bg-danger">FAIL</span>';
                                                     }
                                                 } else {
-                                                    echo '<span class="text-muted">N/A</span>';
+                                                    echo '<span class="badge bg-danger">FAIL</span>';
                                                 }
                                                 ?>
                                             </td>
