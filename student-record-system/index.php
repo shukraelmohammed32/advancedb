@@ -84,26 +84,32 @@ $totalSubjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_a
             <!-- Statistics Cards -->
             <div class="row mb-4">
                 <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
+                    <div class="card stats-card students-card">
                         <div class="card-body">
+                            <span class="stats-label">Students</span>
                             <h3><?php echo $totalStudents; ?></h3>
-                            <p>Total Students</p>
+                            <p class="stats-title">Total Students</p>
+                            <p class="stats-description">All registered learners currently stored in the system.</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
+                    <div class="card stats-card teachers-card">
                         <div class="card-body">
+                            <span class="stats-label">Teachers</span>
                             <h3><?php echo $totalTeachers; ?></h3>
-                            <p>Total Teachers</p>
+                            <p class="stats-title">Total Teachers</p>
+                            <p class="stats-description">Faculty members available to manage classes and marks.</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <div class="card stats-card">
+                    <div class="card stats-card subjects-card">
                         <div class="card-body">
+                            <span class="stats-label">Subjects</span>
                             <h3><?php echo $totalSubjects; ?></h3>
-                            <p>Total Subjects</p>
+                            <p class="stats-title">Total Subjects</p>
+                            <p class="stats-description">Courses prepared for learning records, marks, and reports.</p>
                         </div>
                     </div>
                 </div>

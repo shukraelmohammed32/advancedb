@@ -213,21 +213,67 @@ body {
 }
 
 .stats-card {
-    text-align: center;
+    text-align: left;
     border: 0;
     color: #ffffff;
-    background: linear-gradient(140deg, #194671 0%, #1f5f95 45%, #249f88 100%);
+    position: relative;
+    min-height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-card .card-body {
+    height: 100%;
+    padding: 1.5rem;
+    background: transparent;
+}
+
+.students-card {
+    background: linear-gradient(145deg, #1d4f86 0%, #2a74bd 100%);
+}
+
+.teachers-card {
+    background: linear-gradient(145deg, #14725d 0%, #1eaa88 100%);
+}
+
+.subjects-card {
+    background: linear-gradient(145deg, #a85c18 0%, #d58d2f 100%);
+}
+
+.stats-label {
+    display: inline-block;
+    margin-bottom: 0.8rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.18);
 }
 
 .stats-card h3 {
-    margin-bottom: 8px;
-    font-size: 2.6rem;
+    margin-bottom: 0.35rem;
+    font-size: 2.8rem;
     font-weight: 700;
+    line-height: 1;
 }
 
 .stats-card p {
     margin: 0;
-    opacity: 0.94;
+}
+
+.stats-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    opacity: 0.98;
+}
+
+.stats-description {
+    margin-top: 0.7rem !important;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.84);
 }
 
 /* Buttons */
