@@ -12,6 +12,7 @@ $totalStudents = $conn->query("SELECT COUNT(*) as count FROM students")->fetch_a
 $totalTeachers = $conn->query("SELECT COUNT(*) as count FROM teachers")->fetch_assoc()['count'];
 $totalSubjects = $conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_assoc()['count'];
 $totalMarks = $conn->query("SELECT COUNT(*) as count FROM marks")->fetch_assoc()['count'];
+$totalStudentProfiles = $conn->query("SELECT COUNT(*) as count FROM student_profiles")->fetch_assoc()['count'];
 
 // Get recent activity
 $recentMarks = $conn->query("
@@ -71,11 +72,12 @@ $subjectStats = $conn->query("
             opacity: 0.9;
         }
         .activity-card {
-            background: white;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             padding: 0;
             margin-bottom: 20px;
+            border: 2px solid #dee2e6;
         }
         .activity-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -91,12 +93,17 @@ $subjectStats = $conn->query("
         .recent-activity .list-group-item {
             border-left: 4px solid #667eea;
             margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            padding: 12px 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         .top-students {
-            background: white;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             padding: 0;
+            border: 2px solid #dee2e6;
         }
         .top-students .card-body {
             padding: 0;
@@ -107,6 +114,11 @@ $subjectStats = $conn->query("
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: white;
+            transition: background-color 0.3s ease;
+        }
+        .top-student-item:hover {
+            background-color: #f8f9fa;
         }
         .top-student-item:last-child {
             border-bottom: none;
@@ -124,10 +136,11 @@ $subjectStats = $conn->query("
             font-size: 0.9rem;
         }
         .subject-performance {
-            background: white;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             padding: 0;
+            border: 2px solid #dee2e6;
         }
         .subject-performance .card-body {
             padding: 0;
@@ -138,6 +151,11 @@ $subjectStats = $conn->query("
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: white;
+            transition: background-color 0.3s ease;
+        }
+        .subject-item:hover {
+            background-color: #f8f9fa;
         }
         .subject-item:last-child {
             border-bottom: none;
@@ -167,6 +185,24 @@ $subjectStats = $conn->query("
             background: #dc3545;
             color: white;
         }
+        .quick-actions {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 2px solid #dee2e6;
+        }
+        .quick-actions .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            font-weight: 600;
+            border: none;
+        }
+        .quick-actions .card-body {
+            background: white;
+            border-radius: 0 0 15px 15px;
+            padding: 20px;
+        }
         .empty-stats {
             background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
             opacity: 0.7;
@@ -180,17 +216,69 @@ $subjectStats = $conn->query("
             margin-bottom: 10px;
         }
         .empty-stats .stats-description {
-            color: #6c757d;
+            color: #ffffff !important;
             font-style: italic;
         }
         .stats-label {
-            color: #6c757d !important;
+            color: rgba(255, 255, 255, 0.9) !important;
         }
         .stats-title {
-            color: #6c757d !important;
+            color: rgba(255, 255, 255, 0.8) !important;
         }
         .stats-description {
-            color: #6c757d !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+        .empty-stats .stats-label {
+            color: #ffffff !important;
+        }
+        .empty-stats .stats-title {
+            color: #ffffff !important;
+        }
+        .empty-stats h3 {
+            color: #ffffff !important;
+        }
+        .profiles-card {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+        }
+        .col-lg-2-4 {
+            flex: 0 0 auto;
+            width: 20%;
+        }
+        @media (max-width: 992px) {
+            .col-lg-2-4 {
+                width: 50%;
+            }
+        }
+        @media (max-width: 768px) {
+            .col-lg-2-4 {
+                width: 100%;
+            }
+        }
+        .stats-card .card-body {
+            padding: 20px 15px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .stats-card h3 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stats-card .stats-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stats-card .stats-title {
+            font-size: 0.8rem;
+            margin: 5px 0;
+        }
+        .stats-card .stats-description {
+            font-size: 0.7rem;
+            margin: 0;
         }
     </style>
 </head>
@@ -286,9 +374,9 @@ $subjectStats = $conn->query("
 
             <!-- Statistics Cards -->
             <div class="row mb-4">
-                <div class="col-md-3 mb-3">
+                <div class="col-lg-2-4 col-md-6 col-sm-12 mb-3">
                     <div class="card stats-card <?php echo $totalStudents == 0 ? 'empty-stats' : 'students-card'; ?>">
-                        <div class="card-body">
+                        <div class="card-body text-center">
                             <span class="stats-label">Students</span>
                             <h3><?php echo $totalStudents; ?></h3>
                             <p class="stats-title">Total Students</p>
@@ -301,9 +389,10 @@ $subjectStats = $conn->query("
                             </p>
                         </div>
                     </div>
-                <div class="col-md-3 mb-3">
+                </div>
+                <div class="col-lg-2-4 col-md-6 col-sm-12 mb-3">
                     <div class="card stats-card <?php echo $totalTeachers == 0 ? 'empty-stats' : 'teachers-card'; ?>">
-                        <div class="card-body">
+                        <div class="card-body text-center">
                             <span class="stats-label">Teachers</span>
                             <h3><?php echo $totalTeachers; ?></h3>
                             <p class="stats-title">Total Teachers</p>
@@ -316,9 +405,10 @@ $subjectStats = $conn->query("
                             </p>
                         </div>
                     </div>
-                <div class="col-md-3 mb-3">
+                </div>
+                <div class="col-lg-2-4 col-md-6 col-sm-12 mb-3">
                     <div class="card stats-card <?php echo $totalSubjects == 0 ? 'empty-stats' : 'subjects-card'; ?>">
-                        <div class="card-body">
+                        <div class="card-body text-center">
                             <span class="stats-label">Subjects</span>
                             <h3><?php echo $totalSubjects; ?></h3>
                             <p class="stats-title">Total Subjects</p>
@@ -331,9 +421,10 @@ $subjectStats = $conn->query("
                             </p>
                         </div>
                     </div>
-                <div class="col-md-3 mb-3">
+                </div>
+                <div class="col-lg-2-4 col-md-6 col-sm-12 mb-3">
                     <div class="card stats-card <?php echo $totalMarks == 0 ? 'empty-stats' : 'marks-card'; ?>">
-                        <div class="card-body">
+                        <div class="card-body text-center">
                             <span class="stats-label">Marks</span>
                             <h3><?php echo $totalMarks; ?></h3>
                             <p class="stats-title">Total Marks</p>
@@ -342,6 +433,22 @@ $subjectStats = $conn->query("
                                     <i class="fas fa-exclamation-triangle"></i> No marks recorded
                                 <?php else: ?>
                                     <i class="fas fa-edit"></i> Recorded assessments
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-2-4 col-md-6 col-sm-12 mb-3">
+                    <div class="card stats-card <?php echo $totalStudentProfiles == 0 ? 'empty-stats' : 'profiles-card'; ?>">
+                        <div class="card-body text-center">
+                            <span class="stats-label">Profiles</span>
+                            <h3><?php echo $totalStudentProfiles; ?></h3>
+                            <p class="stats-title">Student Profiles</p>
+                            <p class="stats-description">
+                                <?php if ($totalStudentProfiles == 0): ?>
+                                    <i class="fas fa-exclamation-triangle"></i> No profiles created
+                                <?php else: ?>
+                                    <i class="fas fa-id-card"></i> Student details
                                 <?php endif; ?>
                             </p>
                         </div>
