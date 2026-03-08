@@ -2,8 +2,16 @@
 require_once 'config/database.php';
 require_once 'auth/auth_helper.php';
 require_once 'includes/distributed_coordinator.php';
+require_once 'config/app_config.php';
 
 requireLogin();
+
+// Check maintenance mode
+if (AppConfig::isMaintenanceMode()) {
+    http_response_code(503);
+    include 'maintenance.php';
+    exit;
+}
 
 $db = new Database();
 $conn = $db->getConnection();

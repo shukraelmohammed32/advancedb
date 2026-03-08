@@ -1,41 +1,57 @@
 <?php
-require_once 'config/database.php';
+require_once 'config/app_config.php';
 
-$db = new Database();
-$conn = $db->getConnection();
+// Use secure database connection
+$host = AppConfig::getDatabaseHost();
+$username = AppConfig::getDatabaseUsername();
+$password = AppConfig::getDatabasePassword();
+$database = AppConfig::getDatabaseName();
+
+$conn = new mysqli($host, $username, $password, $database);
+if ($conn->connect_error) {
+    die('Connection failed');
+}
+
+$conn->set_charset('utf8mb4');
+
+// Get admin credentials from secure configuration
+$admin_username = AppConfig::getAdminUsername();
+$admin_password = AppConfig::getAdminPassword();
+$admin_email = AppConfig::getAdminEmail();
 
 // Delete the broken admin user
-$conn->query("DELETE FROM users WHERE username = 'admin'");
+$stmt = $conn->prepare("DELETE FROM users WHERE username = ?");
+$stmt->bind_param("s", $admin_username);
+$stmt->execute();
 
-// Create proper password hash for "admin123"
-$password = 'admin123';
-$proper_hash = password_hash($password, PASSWORD_DEFAULT);
-
-echo "Creating admin with proper hash: " . $proper_hash . "<br>";
+// Create proper password hash
+$proper_hash = password_hash($admin_password, PASSWORD_DEFAULT);
 
 // Insert new admin user with correct hash
 $sql = "INSERT INTO users (username, password, email, role, is_active) VALUES (?, ?, ?, 'admin', 1)";
 $stmt = $conn->prepare($sql);
 
-$username = 'admin';
-$email = 'admin@school.edu';
-$stmt->bind_param("sss", $username, $proper_hash, $email);
+$stmt->bind_param("sss", $admin_username, $proper_hash, $admin_email);
 
 if ($stmt->execute()) {
     echo "✅ Admin user created with proper password hash!<br><br>";
     
     // Test it immediately
-    $test = $conn->query("SELECT password FROM users WHERE username = 'admin'");
-    $user = $test->fetch_assoc();
+    $test = $conn->prepare("SELECT password FROM users WHERE username = ?");
+    $test->bind_param("s", $admin_username);
+    $test->execute();
+    $result = $test->get_result();
+    $user = $result->fetch_assoc();
     
-    if (password_verify('admin123', $user['password'])) {
+    if (password_verify($admin_password, $user['password'])) {
         echo "✅ Password verification SUCCESSFUL!<br>";
-        echo "✅ You can now login with: admin / admin123<br><br>";
-        echo '<a href="auth/login.php">Go to Login</a>';
+        echo "✅ Login credentials configured securely<br>";
     } else {
-        echo "❌ Still having issues with password verification<br>";
+        echo "❌ Password verification FAILED!<br>";
     }
 } else {
-    echo "❌ Error: " . $conn->error;
+    echo "❌ Error creating admin: " . $stmt->error . "<br>";
 }
+
+$conn->close();
 ?>

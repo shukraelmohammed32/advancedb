@@ -3,10 +3,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$host = 'localhost';
-$username = 'root';
-$password = '';
-$database = 'student_record_system';
+require_once 'config/app_config.php';
+
+$host = AppConfig::getDatabaseHost();
+$username = AppConfig::getDatabaseUsername();
+$password = AppConfig::getDatabasePassword();
+$database = AppConfig::getDatabaseName();
 
 $conn = new mysqli($host, $username, $password);
 if ($conn->connect_error) {

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -9,7 +9,11 @@ function isLoggedIn() {
 
 function requireLogin() {
     if (!isLoggedIn()) {
-        header("Location: auth/login.php");
+        $script_name = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+        $login_path = (strpos($script_name, '/pages/') !== false || strpos($script_name, '/actions/') !== false || strpos($script_name, '/auth/') !== false)
+            ? '../auth/login.php'
+            : 'auth/login.php';
+        header('Location: ' . $login_path);
         exit();
     }
 }
