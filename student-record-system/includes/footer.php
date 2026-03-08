@@ -24,6 +24,7 @@ if ($footer_base_path !== '') {
                     <?php else: ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/students.php', ENT_QUOTES, 'UTF-8'); ?>">Students</a></li>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/marks.php', ENT_QUOTES, 'UTF-8'); ?>">Marks</a></li>
+                    <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/summary.php', ENT_QUOTES, 'UTF-8'); ?>">Summary</a></li>
                     <?php endif; ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/report.php', ENT_QUOTES, 'UTF-8'); ?>">Reports</a></li>
                 </ul>

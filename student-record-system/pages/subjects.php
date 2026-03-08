@@ -95,6 +95,9 @@ $csrf_token = urlencode(getCsrfToken());
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="summary.php">Summary</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="report.php">Reports</a>
                     </li>
                 </ul>

@@ -208,6 +208,9 @@ if ($subjects) {
                     <li class="nav-item">
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="summary.php">Summary</a>
+                    </li>
                     <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link active" href="report.php">Reports</a>
