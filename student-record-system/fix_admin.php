@@ -1,5 +1,7 @@
 <?php
-require_once 'config/app_config.php';
+
+// Bootstrap the application
+require_once 'config/bootstrap.php';
 
 // Use secure database connection
 $host = AppConfig::getDatabaseHost();

@@ -1,9 +1,10 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
-require_once 'config/app_config.php';
+// Bootstrap the application
+require_once 'config/bootstrap.php';
+
+// Load database configuration
+require_once 'config/database.php';
 
 $host = AppConfig::getDatabaseHost();
 $username = AppConfig::getDatabaseUsername();

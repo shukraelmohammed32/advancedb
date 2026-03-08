@@ -1,15 +1,36 @@
-﻿<?php
+<?php
+
+// Bootstrap the application
+require_once 'config/bootstrap.php';
+
+// Load core files
 require_once 'config/database.php';
 require_once 'auth/auth_helper.php';
-require_once 'includes/distributed_coordinator.php';
-require_once 'config/app_config.php';
 
+// Check if distributed coordinator exists before including
+if (file_exists('includes/distributed_coordinator.php')) {
+    require_once 'includes/distributed_coordinator.php';
+} else {
+    // Create a dummy coordinator class if file doesn't exist
+    class DistributedCoordinator {
+        private $database;
+        public function __construct($db) { $this->database = $db; }
+        public function isDistributedReady() { return false; }
+        public function getSiteStats() { return []; }
+    }
+}
+
+// Check authentication
 requireLogin();
 
 // Check maintenance mode
 if (AppConfig::isMaintenanceMode()) {
     http_response_code(503);
-    include 'maintenance.php';
+    if (file_exists('maintenance.php')) {
+        include 'maintenance.php';
+    } else {
+        echo '<h1>System Under Maintenance</h1><p>Please try again later.</p>';
+    }
     exit;
 }
 
@@ -24,16 +45,6 @@ $totalStudents = (int)$conn->query("SELECT COUNT(*) as count FROM students")->fe
 $totalTeachers = (int)$conn->query("SELECT COUNT(*) as count FROM teachers")->fetch_assoc()['count'];
 $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_assoc()['count'];
 
-$role_focus_message = '';
-if (isAdmin()) {
-    $role_focus_message = 'Admin manages teachers, subjects, academic year, classes, grades, and school-wide reports.';
-} elseif (isHomeroomTeacher()) {
-    $role_focus_message = 'Homeroom teachers collect all subject marks for their assigned grade, compile final results, and generate student reports.';
-} elseif (isTeacher()) {
-    $role_focus_message = 'Subject teachers enter, update, and submit marks only for their assigned subjects and students.';
-} elseif (isStudent()) {
-    $role_focus_message = 'Students can view their academic report, marks, rank, and pass or fail status. They cannot edit academic data.';
-}
 ?>
 
 <!DOCTYPE html>
@@ -113,15 +124,6 @@ if (isAdmin()) {
                 </div>
             </div>
 
-            <?php if ($role_focus_message !== ''): ?>
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-info" role="alert">
-                        <?php echo htmlspecialchars($role_focus_message, ENT_QUOTES, 'UTF-8'); ?>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
 
             <div class="row mb-4">
                 <div class="col-md-4 mb-3">

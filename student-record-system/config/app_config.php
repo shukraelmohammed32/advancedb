@@ -87,6 +87,23 @@ class AppConfig {
         return env('MAINTENANCE_MODE', false);
     }
     
+    // Application environment
+    public static function getAppEnv() {
+        return env('APP_ENV', 'local');
+    }
+    
+    public static function getAppName() {
+        return env('APP_NAME', 'Student Record System');
+    }
+    
+    public static function getAppUrl() {
+        return env('APP_URL', 'http://localhost/student-record-system');
+    }
+    
+    public static function isAppDebug() {
+        return env('APP_DEBUG', true);
+    }
+    
     // File upload
     public static function getMaxFileSize() {
         return env('MAX_FILE_SIZE', 5242880);

@@ -58,7 +58,7 @@
         <div class="maintenance-contact">
             <h5>Need Assistance?</h5>
             <p class="mb-0">
-                <strong>Email:</strong> <?php echo htmlspecialchars(AppConfig::getAdminEmail()); ?><br>
+                <strong>Email:</strong> admin@school.edu<br>
                 <strong>System Administrator:</strong> Available during business hours
             </p>
         </div>
