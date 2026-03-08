@@ -24,6 +24,14 @@ function normalizeGradeLabel($grade) {
     return $grade;
 }
 
+function highSchoolGrades() {
+    return ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+}
+
+function isHighSchoolGrade($grade) {
+    return in_array(normalizeGradeLabel($grade), highSchoolGrades(), true);
+}
+
 function normalizeSubjectIds($raw_subject_ids) {
     $subject_ids = [];
 
@@ -77,9 +85,18 @@ function getDepartmentLabel($conn, $subject_ids) {
 $grade_rows = [];
 $grade_result = $conn->query('SELECT grade_id, grade_name FROM grades ORDER BY grade_id');
 if ($grade_result) {
+    $grade_order = array_flip(highSchoolGrades());
     while ($grade_row = $grade_result->fetch_assoc()) {
-        $grade_rows[] = $grade_row;
+        $grade_name = normalizeGradeLabel($grade_row['grade_name']);
+        if (!isset($grade_order[$grade_name])) {
+            continue;
+        }
+
+        $grade_rows[$grade_order[$grade_name]] = $grade_row;
     }
+
+    ksort($grade_rows);
+    $grade_rows = array_values($grade_rows);
 }
 
 // Handle form submissions
@@ -98,6 +115,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($assigned_grade_input === '') {
         header('Location: teachers.php?error=' . urlencode('Please select assigned grade'));
+        exit();
+    }
+
+    if (!isHighSchoolGrade($assigned_grade_input)) {
+        header('Location: teachers.php?error=' . urlencode('Only high school grades 9 to 12 are allowed'));
         exit();
     }
 
