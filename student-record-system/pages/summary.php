@@ -181,7 +181,7 @@ if ($subjectPerformance === false) {
         }
 
         .summary-shell {
-            max-width: 1180px;
+            max-width: 100%;
             margin: 0 auto;
         }
 
