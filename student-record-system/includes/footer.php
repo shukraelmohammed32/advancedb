@@ -23,10 +23,14 @@ if ($footer_base_path !== '') {
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/profile.php', ENT_QUOTES, 'UTF-8'); ?>">Profile</a></li>
                     <?php else: ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/students.php', ENT_QUOTES, 'UTF-8'); ?>">Students</a></li>
+                    <?php if (function_exists('canManageMarks') && canManageMarks()): ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/marks.php', ENT_QUOTES, 'UTF-8'); ?>">Marks</a></li>
+                    <?php endif; ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/summary.php', ENT_QUOTES, 'UTF-8'); ?>">Summary</a></li>
                     <?php endif; ?>
+                    <?php if (function_exists('canViewStudentReports') && canViewStudentReports()): ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/report.php', ENT_QUOTES, 'UTF-8'); ?>">Reports</a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
             <div class="footer-section">
@@ -43,5 +47,6 @@ if ($footer_base_path !== '') {
         </div>
     </div>
 </footer>
+
 
 

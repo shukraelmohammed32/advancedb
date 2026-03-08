@@ -620,15 +620,19 @@ if ($subjectPerformance === false) {
                         <a class="nav-link" href="teachers.php">Teachers</a>
                     </li>
                     <?php endif; ?>
+                    <?php if (canManageMarks()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link active" href="summary.php">Summary</a>
                     </li>
+                    <?php if (canViewStudentReports()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="report.php">Reports</a>
                     </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -641,10 +645,16 @@ if ($subjectPerformance === false) {
                     <span class="summary-kicker">Academic Summary</span>
                     <h1 class="summary-title">A cleaner view of student progress and subject health.</h1>
                     <p class="summary-intro">This page brings together completion, averages, pass rate, and subject trends so teachers and admins can review the school picture quickly without opening multiple reports.</p>
+                    <?php if (canManageMarks() || canViewStudentReports()): ?>
                     <div class="summary-actions">
+                        <?php if (canManageMarks()): ?>
                         <a href="marks.php" class="summary-action summary-action-primary">Manage Marks</a>
+                        <?php endif; ?>
+                        <?php if (canViewStudentReports()): ?>
                         <a href="report.php" class="summary-action summary-action-secondary">Open Reports</a>
+                        <?php endif; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <div class="summary-stats">
                     <div class="summary-stat-card summary-stat-card-emerald">
@@ -801,3 +811,4 @@ if ($subjectPerformance === false) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

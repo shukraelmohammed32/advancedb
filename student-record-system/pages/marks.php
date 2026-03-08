@@ -2,7 +2,7 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireAnyRole(['admin', 'teacher']);
+requireRole('teacher');
 
 $db = new Database();
 $conn = $db->getConnection();
@@ -593,3 +593,4 @@ $csrf_token = urlencode(getCsrfToken());
     </script>
 </body>
 </html>
+

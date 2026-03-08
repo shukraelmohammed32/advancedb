@@ -60,6 +60,14 @@ function canOnlyViewOwnRecords() {
     return hasRole('student');
 }
 
+function canManageMarks() {
+    return hasRole('teacher');
+}
+
+function canViewStudentReports() {
+    return hasRole('teacher') || hasRole('student');
+}
+
 function getCsrfToken() {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -90,3 +98,4 @@ function requireValidCsrfToken() {
     }
 }
 ?>
+

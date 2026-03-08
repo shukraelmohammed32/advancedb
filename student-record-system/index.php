@@ -49,16 +49,20 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                         <a class="nav-link" href="pages/teachers.php">Teachers</a>
                     </li>
                     <?php endif; ?>
+                    <?php if (canManageMarks()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="pages/marks.php">Marks</a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link" href="pages/summary.php">Summary</a>
                     </li>
                     <?php endif; ?>
+                    <?php if (canViewStudentReports()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="pages/report.php">Reports</a>
                     </li>
+                    <?php endif; ?>
                     <?php if (canOnlyViewOwnRecords()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="pages/profile.php">Profile</a>
@@ -143,11 +147,13 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                                 </div>
                                 <?php endif; ?>
                                 <?php if (canAccessTeacherDashboard()): ?>
+                                <?php if (canManageMarks()): ?>
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/marks.php" class="btn btn-success btn-lg w-100">
                                         <i class="fas fa-edit"></i> Enter Marks
                                     </a>
                                 </div>
+                                <?php endif; ?>
                                 <?php if (hasRole('admin')): ?>
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/teachers.php" class="btn btn-info btn-lg w-100">
@@ -161,11 +167,13 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                                     </a>
                                 </div>
                                 <?php endif; ?>
+                                <?php if (canViewStudentReports()): ?>
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/report.php" class="btn btn-warning btn-lg w-100">
                                         <i class="fas fa-chart-bar"></i> Generate Reports
                                     </a>
                                 </div>
+                                <?php endif; ?>
                                 <?php if (canOnlyViewOwnRecords()): ?>
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/profile.php" class="btn btn-primary btn-lg w-100">
@@ -189,3 +197,4 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+

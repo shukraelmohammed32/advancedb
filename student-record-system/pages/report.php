@@ -2,7 +2,7 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireLogin();
+requireAnyRole(['teacher', 'student']);
 
 $db = new Database();
 $conn = $db->getConnection();
@@ -481,3 +481,4 @@ if ($subjects) {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
