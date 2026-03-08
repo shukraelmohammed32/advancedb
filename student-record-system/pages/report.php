@@ -134,12 +134,14 @@ if ($should_generate_report) {
             $marks_query = "SELECT
                             s.subject_name,
                             m.score,
+                            COALESCE(t.teacher_name, '') AS teacher_name,
                             CASE
                                 WHEN m.score >= 50 THEN 'PASS'
                                 ELSE 'FAIL'
                             END as status
                         FROM subjects s
                         LEFT JOIN marks m ON s.subject_id = m.subject_id AND m.student_id = $student_id
+                        LEFT JOIN teachers t ON t.teacher_id = m.teacher_id
                         ORDER BY s.subject_name";
 
             $marks_result = $conn->query($marks_query);
@@ -414,6 +416,7 @@ if ($subjects) {
                                 <thead>
                                     <tr>
                                         <th>Subject</th>
+                                        <th>Teacher</th>
                                         <th>Score</th>
                                         <th>Status</th>
                                     </tr>
@@ -422,6 +425,16 @@ if ($subjects) {
                                     <?php foreach ($all_subjects as $subject): ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($subject, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td>
+                                                <?php
+                                                $teacherName = isset($report_data['marks'][$subject]) ? trim((string)($report_data['marks'][$subject]['teacher_name'] ?? '')) : '';
+                                                if ($teacherName !== '') {
+                                                    echo htmlspecialchars($teacherName, ENT_QUOTES, 'UTF-8');
+                                                } else {
+                                                    echo '<span class="text-muted">Not Available</span>';
+                                                }
+                                                ?>
+                                            </td>
                                             <td>
                                                 <?php
                                                 if (isset($report_data['marks'][$subject])) {
