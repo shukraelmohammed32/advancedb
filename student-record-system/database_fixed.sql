@@ -493,17 +493,24 @@ SELECT
     s.academic_year,
     s.semester,
     COUNT(m.mark_id) AS total_marks,
+    subject_totals.total_subjects AS total_subjects,
     COALESCE(ROUND(AVG(m.score), 2), 0) AS average_score,
     SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_subjects,
-    COUNT(m.mark_id) AS total_subjects,
+    GREATEST(subject_totals.total_subjects - COUNT(m.mark_id), 0) AS missing_marks,
     CASE
+        WHEN subject_totals.total_subjects = 0 THEN 'NO SUBJECTS'
         WHEN COUNT(m.mark_id) = 0 THEN 'NO MARKS'
-        WHEN SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) = COUNT(m.mark_id) THEN 'PASS'
+        WHEN COUNT(m.mark_id) < subject_totals.total_subjects THEN 'INCOMPLETE'
+        WHEN SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) = subject_totals.total_subjects THEN 'PASS'
         ELSE 'FAIL'
     END AS overall_status
 FROM students s
+CROSS JOIN (
+    SELECT COUNT(*) AS total_subjects
+    FROM subjects
+) subject_totals
 LEFT JOIN marks m ON s.student_id = m.student_id
-GROUP BY s.student_id, s.name, s.grade, s.academic_year, s.semester;
+GROUP BY s.student_id, s.name, s.grade, s.academic_year, s.semester, subject_totals.total_subjects;
 
 CREATE OR REPLACE VIEW subject_performance AS
 SELECT
@@ -511,9 +518,21 @@ SELECT
     sub.subject_name,
     COUNT(m.mark_id) AS total_students,
     COALESCE(ROUND(AVG(m.score), 2), 0) AS average_score,
-    MAX(m.score) AS highest_score,
-    MIN(m.score) AS lowest_score,
-    SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_count
+    COALESCE(MAX(m.score), 0) AS highest_score,
+    COALESCE(MIN(m.score), 0) AS lowest_score,
+    SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_count,
+    SUM(CASE WHEN m.score < 50 THEN 1 ELSE 0 END) AS failed_count,
+    COALESCE(
+        ROUND((SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) / NULLIF(COUNT(m.mark_id), 0)) * 100, 2),
+        0
+    ) AS pass_rate,
+    CASE
+        WHEN COUNT(m.mark_id) = 0 THEN 'NO DATA'
+        WHEN AVG(m.score) >= 80 THEN 'EXCELLENT'
+        WHEN AVG(m.score) >= 60 THEN 'GOOD'
+        WHEN AVG(m.score) >= 50 THEN 'FAIR'
+        ELSE 'NEEDS IMPROVEMENT'
+    END AS performance_band
 FROM subjects sub
 LEFT JOIN marks m ON sub.subject_id = m.subject_id
 GROUP BY sub.subject_id, sub.subject_name;

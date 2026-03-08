@@ -374,7 +374,11 @@ $subjectStats = $conn->query("
                                     <?php endwhile; ?>
                                 </div>
                             <?php else: ?>
-                                <p class="text-muted text-center">No recent activity found.</p>
+                                <div class="text-center text-muted p-4">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                                    <p class="mb-0">No recent activity found.</p>
+                                    <small>Start adding students and marks to see activity here.</small>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -402,7 +406,11 @@ $subjectStats = $conn->query("
                                     </div>
                                 <?php endwhile; ?>
                             <?php else: ?>
-                                <p class="text-muted text-center">No student performance data available.</p>
+                                <div class="text-center text-muted p-4">
+                                    <i class="fas fa-trophy fa-3x mb-3"></i>
+                                    <p class="mb-0">No student performance data available.</p>
+                                    <small>Add students and marks to see top performers here.</small>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -422,28 +430,33 @@ $subjectStats = $conn->query("
                                             <strong><?php echo $subject['subject_name']; ?></strong>
                                             <div class="subject-stats">
                                                 <?php 
-                                                $avgScore = round($subject['avg_score'], 1);
-                                                $badgeClass = '';
-                                                if ($avgScore >= 80) {
-                                                    $badgeClass = 'performance-excellent';
-                                                    $badgeText = 'Excellent';
-                                                } elseif ($avgScore >= 60) {
-                                                    $badgeClass = 'performance-good';
-                                                    $badgeText = 'Good';
-                                                } else {
-                                                    $badgeClass = 'performance-poor';
-                                                    $badgeText = 'Needs Improvement';
-                                                }
-                                                ?>
-                                                <span class="performance-badge <?php echo $badgeClass; ?>"><?php echo $badgeText; ?></span>
-                                                <small><?php echo $avgScore; ?>% avg</small><br>
-                                                <small><?php echo $subject['student_count']; ?> students</small>
-                                            </div>
+                                                    $avgScore = round($subject['avg_score'], 1);
+                                                    $badgeClass = '';
+                                                    $badgeText = '';
+                                                    if ($avgScore >= 80) {
+                                                        $badgeClass = 'performance-excellent';
+                                                        $badgeText = 'Excellent';
+                                                    } elseif ($avgScore >= 60) {
+                                                        $badgeClass = 'performance-good';
+                                                        $badgeText = 'Good';
+                                                    } else {
+                                                        $badgeClass = 'performance-poor';
+                                                        $badgeText = 'Needs Improvement';
+                                                    }
+                                                    ?>
+                                                    <span class="performance-badge <?php echo $badgeClass; ?>"><?php echo $badgeText; ?></span>
+                                                    <small><?php echo $avgScore; ?>% avg</small><br>
+                                                    <small><?php echo $subject['student_count']; ?> students</small>
+                                                </div>
                                         </div>
                                     </div>
                                 <?php endwhile; ?>
                             <?php else: ?>
-                                <p class="text-muted text-center">No subject performance data available.</p>
+                                <div class="text-center text-muted p-4">
+                                    <i class="fas fa-chart-line fa-3x mb-3"></i>
+                                    <p class="mb-0">No subject performance data available.</p>
+                                    <small>Add subjects and marks to see performance analytics here.</small>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
