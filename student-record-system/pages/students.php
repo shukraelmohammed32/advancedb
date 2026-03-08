@@ -6,6 +6,8 @@ requireAnyRole(['admin', 'teacher']);
 
 $db = new Database();
 $conn = $db->getConnection();
+$is_admin = hasRole('admin');
+$is_teacher = hasRole('teacher');
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);
@@ -30,6 +32,30 @@ function highSchoolGrades() {
 
 function isHighSchoolGrade($grade) {
     return in_array(normalizeGradeLabel($grade), highSchoolGrades(), true);
+}
+
+function gradesMatch($left_grade, $right_grade) {
+    return strtolower(normalizeGradeLabel($left_grade)) === strtolower(normalizeGradeLabel($right_grade));
+}
+
+function getTeacherScope($conn, $teacher_id) {
+    $teacher_id = (int)$teacher_id;
+    if ($teacher_id <= 0) {
+        return null;
+    }
+
+    $stmt = $conn->prepare("SELECT teacher_id, teacher_name, assigned_grade FROM teachers WHERE teacher_id = ? LIMIT 1");
+    if (!$stmt) {
+        return null;
+    }
+
+    $stmt->bind_param('i', $teacher_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $teacher = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+
+    return $teacher ?: null;
 }
 
 function normalizeLoginUsername($value) {
@@ -141,9 +167,23 @@ if ($grade_result) {
     $grade_rows = array_values($grade_rows);
 }
 
+$teacher_scope = null;
+$teacher_grade = '';
+if ($is_teacher) {
+    $teacher_scope = getTeacherScope($conn, (int)($_SESSION['teacher_id'] ?? 0));
+    if ($teacher_scope) {
+        $teacher_grade = normalizeGradeLabel($teacher_scope['assigned_grade']);
+    }
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();
+
+    if (!$is_admin) {
+        header('Location: students.php?error=' . urlencode('Only admin can add or update student records'));
+        exit();
+    }
 
     $name = trim((string)($_POST['name'] ?? ''));
     $gender = trim((string)($_POST['gender'] ?? ''));
@@ -264,6 +304,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // Handle delete action (CSRF protected)
 if (isset($_GET['delete'])) {
     requireValidCsrfToken();
+
+    if (!$is_admin) {
+        header('Location: students.php?error=' . urlencode('Only admin can delete student records'));
+        exit();
+    }
+
     $student_id = (int)$_GET['delete'];
 
     if ($student_id > 0) {
@@ -279,7 +325,7 @@ if (isset($_GET['delete'])) {
 
 // Get student data for editing
 $edit_student = null;
-if (isset($_GET['edit'])) {
+if ($is_admin && isset($_GET['edit'])) {
     $student_id = (int)$_GET['edit'];
     $result = $conn->query("SELECT
                                 s.*,
@@ -308,6 +354,10 @@ if ($students) {
             $grade_label = 'Unassigned Grade';
         }
 
+        if ($is_teacher && ($teacher_grade === '' || !gradesMatch($grade_label, $teacher_grade))) {
+            continue;
+        }
+
         if (!isset($students_by_grade[$grade_label])) {
             $students_by_grade[$grade_label] = [];
         }
@@ -318,6 +368,19 @@ if ($students) {
 
 $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
+$info_message = '';
+$page_title = $is_admin ? 'Student Management' : 'My Students';
+
+if ($is_teacher) {
+    if ($teacher_scope && $teacher_grade !== '') {
+        $info_message = 'You can view only students in ' . $teacher_grade . '. Student accounts are created by admin.';
+    } else {
+        $error_message = $error_message !== ''
+            ? $error_message
+            : 'Your teacher account is not linked to an assigned grade. Contact admin.';
+    }
+}
+
 $csrf_token = urlencode(getCsrfToken());
 ?>
 
@@ -348,9 +411,11 @@ $csrf_token = urlencode(getCsrfToken());
                     <li class="nav-item">
                         <a class="nav-link" href="subjects.php">Subjects</a>
                     </li>
+                    <?php if ($is_admin): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="teachers.php">Teachers</a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
@@ -368,7 +433,7 @@ $csrf_token = urlencode(getCsrfToken());
     <div class="container mt-4">
         <div class="row">
             <div class="col-12">
-                <h1 class="mb-4">Student Management</h1>
+                <h1 class="mb-4"><?php echo htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8'); ?></h1>
             </div>
         </div>
 
@@ -386,7 +451,14 @@ $csrf_token = urlencode(getCsrfToken());
             </div>
         <?php endif; ?>
 
+        <?php if ($info_message): ?>
+            <div class="alert alert-info" role="alert">
+                <?php echo htmlspecialchars($info_message, ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+        <?php endif; ?>
+
         <div class="row">
+            <?php if ($is_admin): ?>
             <div class="col-lg-4 mb-4">
                 <div class="card">
                     <div class="card-header">
@@ -490,12 +562,13 @@ $csrf_token = urlencode(getCsrfToken());
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
 
-            <div class="col-lg-8">
+            <div class="<?php echo $is_admin ? 'col-lg-8' : 'col-12'; ?>">
                 <?php if (empty($students_by_grade)): ?>
                     <div class="card">
                         <div class="card-body">
-                            <p class="mb-0 text-muted">No students found.</p>
+                            <p class="mb-0 text-muted"><?php echo $is_teacher ? 'No students found in your assigned grade.' : 'No students found.'; ?></p>
                         </div>
                     </div>
                 <?php else: ?>
@@ -512,12 +585,16 @@ $csrf_token = urlencode(getCsrfToken());
                                             <tr>
                                                 <th>ID</th>
                                                 <th>Name</th>
+                                                <?php if ($is_admin): ?>
                                                 <th>Username</th>
                                                 <th>Email</th>
+                                                <?php endif; ?>
                                                 <th>Academic Year</th>
                                                 <th>Semester</th>
+                                                <?php if ($is_admin): ?>
                                                 <th>Account</th>
                                                 <th>Actions</th>
+                                                <?php endif; ?>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -525,10 +602,13 @@ $csrf_token = urlencode(getCsrfToken());
                                                 <tr>
                                                     <td><?php echo (int)$student['student_id']; ?></td>
                                                     <td><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <?php if ($is_admin): ?>
                                                     <td><?php echo htmlspecialchars((string)($student['login_username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars((string)($student['login_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <?php endif; ?>
                                                     <td><?php echo htmlspecialchars($student['academic_year'], ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars($student['semester'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <?php if ($is_admin): ?>
                                                     <td>
                                                         <?php if (!empty($student['has_login'])): ?>
                                                             <span class="badge bg-success">Secured</span>
@@ -543,6 +623,7 @@ $csrf_token = urlencode(getCsrfToken());
                                                            class="btn btn-sm btn-danger"
                                                            onclick="return confirm('Are you sure you want to delete this student and login account?')">Delete</a>
                                                     </td>
+                                                    <?php endif; ?>
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>

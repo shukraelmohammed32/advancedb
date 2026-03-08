@@ -88,9 +88,11 @@ $csrf_token = urlencode(getCsrfToken());
                     <li class="nav-item">
                         <a class="nav-link active" href="subjects.php">Subjects</a>
                     </li>
+                    <?php if (hasRole('admin')): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="teachers.php">Teachers</a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
@@ -216,5 +218,6 @@ $csrf_token = urlencode(getCsrfToken());
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
 

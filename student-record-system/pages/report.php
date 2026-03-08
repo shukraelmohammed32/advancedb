@@ -6,6 +6,9 @@ requireLogin();
 
 $db = new Database();
 $conn = $db->getConnection();
+$is_admin = hasRole('admin');
+$is_teacher = hasRole('teacher');
+$session_teacher_id = $is_teacher ? (int)($_SESSION['teacher_id'] ?? 0) : 0;
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);
@@ -24,10 +27,64 @@ function normalizeGradeLabel($grade) {
     return $grade;
 }
 
+function gradesMatch($left_grade, $right_grade) {
+    return strtolower(normalizeGradeLabel($left_grade)) === strtolower(normalizeGradeLabel($right_grade));
+}
+
+function getTeacherAssignedGrade($conn, $teacher_id) {
+    $teacher_id = (int)$teacher_id;
+    if ($teacher_id <= 0) {
+        return '';
+    }
+
+    $result = $conn->query("SELECT assigned_grade FROM teachers WHERE teacher_id = $teacher_id LIMIT 1");
+    if (!$result || $result->num_rows === 0) {
+        return '';
+    }
+
+    $row = $result->fetch_assoc();
+    return normalizeGradeLabel($row['assigned_grade']);
+}
+
+function teacherCanAccessStudent($conn, $teacher_id, $student_id) {
+    $teacher_id = (int)$teacher_id;
+    $student_id = (int)$student_id;
+
+    if ($teacher_id <= 0 || $student_id <= 0) {
+        return false;
+    }
+
+    $sql = "SELECT t.assigned_grade, s.grade
+            FROM teachers t
+            JOIN students s ON s.student_id = $student_id
+            WHERE t.teacher_id = $teacher_id
+            LIMIT 1";
+    $result = $conn->query($sql);
+
+    if (!$result || $result->num_rows === 0) {
+        return false;
+    }
+
+    $row = $result->fetch_assoc();
+    return gradesMatch($row['assigned_grade'], $row['grade']);
+}
+
+$teacher_grade = $is_teacher ? getTeacherAssignedGrade($conn, $session_teacher_id) : '';
+$page_title = $is_teacher ? 'My Student Reports' : 'Academic Reports';
+
 // Handle form submission for generating report
 $report_data = null;
 $selected_student = null;
 $error_message = '';
+$info_message = '';
+
+if ($is_teacher) {
+    if ($teacher_grade !== '') {
+        $info_message = 'You can generate reports only for students in ' . $teacher_grade . '.';
+    } else {
+        $error_message = 'Your teacher account is not linked to an assigned grade. Contact admin.';
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
     requireValidCsrfToken();
@@ -38,16 +95,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
             $error_message = 'Your account is not linked to a student record.';
         }
     } else {
-        $student_id = (int)$_POST['student_id'];
+        $student_id = (int)($_POST['student_id'] ?? 0);
+    }
+
+    if (empty($error_message) && $is_teacher && !teacherCanAccessStudent($conn, $session_teacher_id, $student_id)) {
+        $error_message = 'You can generate reports only for students in your assigned grade.';
     }
 
     if (empty($error_message) && $student_id > 0) {
-        // Get student information
         $student_result = $conn->query("SELECT * FROM students WHERE student_id = $student_id");
         $selected_student = $student_result ? $student_result->fetch_assoc() : null;
 
         if ($selected_student) {
-            // Get marks for all subjects for this student
             $marks_query = "SELECT
                             s.subject_name,
                             m.score,
@@ -77,7 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
                             $all_passed = false;
                         }
                     } else {
-                        // Student has no marks for this subject - consider as fail
                         $all_passed = false;
                     }
                 }
@@ -85,7 +143,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
 
             $average = $subject_count > 0 ? round($total_score / $subject_count, 2) : 0;
 
-            // Rank inside same grade/class instead of whole school
             $student_grade = $conn->real_escape_string($selected_student['grade']);
             $rank_query = "SELECT student_rank
                            FROM (
@@ -104,7 +161,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
             $rank_row = $rank_result ? $rank_result->fetch_assoc() : null;
             $rank = $rank_row ? $rank_row['student_rank'] : 'N/A';
 
-            // Overall status: PASS only if student has marks for ALL subjects and ALL are >= 50
             $subject_count_result = $conn->query('SELECT COUNT(*) as count FROM subjects');
             $total_subjects = $subject_count_result ? (int)$subject_count_result->fetch_assoc()['count'] : 0;
             $has_all_marks = $subject_count >= $total_subjects;
@@ -124,15 +180,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
     }
 }
 
-// Get all students for dropdown
-if (canOnlyViewOwnRecords()) {
-    $own_student_id = (int)($_SESSION['student_id'] ?? 0);
-    $students = $conn->query("SELECT student_id, name, grade FROM students WHERE student_id = $own_student_id ORDER BY name");
-} else {
-    $students = $conn->query('SELECT student_id, name, grade FROM students ORDER BY name');
+$student_rows = [];
+$students_query = $conn->query('SELECT student_id, name, grade FROM students ORDER BY name');
+if ($students_query) {
+    while ($student = $students_query->fetch_assoc()) {
+        if (canOnlyViewOwnRecords() && (int)$student['student_id'] !== (int)($_SESSION['student_id'] ?? 0)) {
+            continue;
+        }
+
+        if ($is_teacher && ($teacher_grade === '' || !gradesMatch($student['grade'], $teacher_grade))) {
+            continue;
+        }
+
+        $student_rows[] = $student;
+    }
 }
 
-// Get all subjects for display
 $subjects = $conn->query('SELECT subject_name FROM subjects ORDER BY subject_name');
 $all_subjects = [];
 if ($subjects) {
@@ -181,7 +244,6 @@ if ($subjects) {
     </style>
 </head>
 <body>
-    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark no-print">
         <div class="container">
             <a class="navbar-brand" href="../index.php">Student Record System</a>
@@ -202,9 +264,11 @@ if ($subjects) {
                     <li class="nav-item">
                         <a class="nav-link" href="subjects.php">Subjects</a>
                     </li>
+                    <?php if ($is_admin): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="teachers.php">Teachers</a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
@@ -225,11 +289,10 @@ if ($subjects) {
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container mt-4">
         <div class="row">
             <div class="col-12">
-                <h1 class="mb-4">Academic Reports</h1>
+                <h1 class="mb-4"><?php echo htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8'); ?></h1>
             </div>
         </div>
 
@@ -240,8 +303,13 @@ if ($subjects) {
             </div>
         <?php endif; ?>
 
+        <?php if ($info_message): ?>
+            <div class="alert alert-info no-print" role="alert">
+                <?php echo htmlspecialchars($info_message, ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+        <?php endif; ?>
+
         <div class="row">
-            <!-- Report Generation Form -->
             <div class="col-md-4 no-print">
                 <div class="card">
                     <div class="card-header">
@@ -254,12 +322,12 @@ if ($subjects) {
                                 <label for="student_id" class="form-label">Select Student</label>
                                 <select class="form-control" id="student_id" name="student_id" required <?php echo canOnlyViewOwnRecords() ? 'disabled' : ''; ?>>
                                     <option value="">Select Student</option>
-                                    <?php while ($student = $students->fetch_assoc()): ?>
-                                        <option value="<?php echo $student['student_id']; ?>"
-                                                <?php echo isset($_POST['student_id']) && $_POST['student_id'] == $student['student_id'] ? 'selected' : ''; ?>>
+                                    <?php foreach ($student_rows as $student): ?>
+                                        <option value="<?php echo (int)$student['student_id']; ?>"
+                                                <?php echo isset($_POST['student_id']) && (int)$_POST['student_id'] === (int)$student['student_id'] ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($student['name'] . ' - ' . normalizeGradeLabel($student['grade']), ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
-                                    <?php endwhile; ?>
+                                    <?php endforeach; ?>
                                 </select>
                                 <?php if (canOnlyViewOwnRecords()): ?>
                                     <input type="hidden" name="student_id" value="<?php echo (int)($_SESSION['student_id'] ?? 0); ?>">
@@ -279,17 +347,14 @@ if ($subjects) {
                 </div>
             </div>
 
-            <!-- Report Display -->
             <div class="col-md-8">
                 <?php if ($report_data): ?>
                     <div class="card report-card">
-                        <!-- Report Header -->
                         <div class="report-header">
                             <h2>Student Academic Report</h2>
                             <p>Academic Year: <?php echo htmlspecialchars($report_data['student']['academic_year'], ENT_QUOTES, 'UTF-8'); ?> - Semester: <?php echo htmlspecialchars($report_data['student']['semester'], ENT_QUOTES, 'UTF-8'); ?></p>
                         </div>
 
-                        <!-- Student Information -->
                         <div class="student-info">
                             <h4>Student Information</h4>
                             <div class="row">
@@ -306,7 +371,6 @@ if ($subjects) {
                             </div>
                         </div>
 
-                        <!-- Subject Marks Table -->
                         <div class="table-responsive">
                             <table class="table table-bordered report-table">
                                 <thead>
@@ -360,7 +424,6 @@ if ($subjects) {
                             </table>
                         </div>
 
-                        <!-- Summary -->
                         <div class="summary-card">
                             <h4>Summary</h4>
                             <div class="row">
@@ -391,7 +454,6 @@ if ($subjects) {
                             </div>
                         </div>
 
-                        <!-- Footer -->
                         <div class="text-center mt-4 no-print">
                             <small class="text-muted">
                                 Generated on: <?php echo date('Y-m-d H:i:s'); ?>
@@ -411,7 +473,6 @@ if ($subjects) {
         </div>
     </div>
 
-    
     <?php
     $footer_base_path = '../';
     include __DIR__ . '/../includes/footer.php';
@@ -420,4 +481,3 @@ if ($subjects) {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
-

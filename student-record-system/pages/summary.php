@@ -615,9 +615,11 @@ if ($subjectPerformance === false) {
                     <li class="nav-item">
                         <a class="nav-link" href="subjects.php">Subjects</a>
                     </li>
+                    <?php if (hasRole('admin')): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="teachers.php">Teachers</a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>

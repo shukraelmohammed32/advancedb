@@ -44,9 +44,11 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                     <li class="nav-item">
                         <a class="nav-link" href="pages/subjects.php">Subjects</a>
                     </li>
+                    <?php if (hasRole('admin')): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="pages/teachers.php">Teachers</a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link" href="pages/marks.php">Marks</a>
                     </li>
@@ -127,10 +129,16 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                <?php if (canAccessStudentRecords()): ?>
+                                <?php if (hasRole('admin')): ?>
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/students.php" class="btn btn-primary btn-lg w-100">
                                         <i class="fas fa-user-plus"></i> Add Student
+                                    </a>
+                                </div>
+                                <?php elseif (hasRole('teacher')): ?>
+                                <div class="col-md-6 mb-2">
+                                    <a href="pages/students.php" class="btn btn-primary btn-lg w-100">
+                                        <i class="fas fa-users"></i> My Students
                                     </a>
                                 </div>
                                 <?php endif; ?>
@@ -140,11 +148,13 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                                         <i class="fas fa-edit"></i> Enter Marks
                                     </a>
                                 </div>
+                                <?php if (hasRole('admin')): ?>
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/teachers.php" class="btn btn-info btn-lg w-100">
                                         <i class="fas fa-chalkboard-teacher"></i> Manage Teachers
                                     </a>
                                 </div>
+                                <?php endif; ?>
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/summary.php" class="btn btn-secondary btn-lg w-100">
                                         <i class="fas fa-chart-line"></i> View Summary

@@ -2,11 +2,11 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireAnyRole(['admin', 'teacher']);
+requireRole('admin');
 
 $db = new Database();
 $conn = $db->getConnection();
-$can_manage_teacher_accounts = hasRole('admin');
+$can_manage_teacher_accounts = true;
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);

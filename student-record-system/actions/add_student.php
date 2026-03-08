@@ -2,7 +2,7 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireAnyRole(['admin', 'teacher']);
+requireRole('admin');
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);
@@ -69,3 +69,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     exit();
 }
 ?>
+
