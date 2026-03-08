@@ -84,8 +84,8 @@ function teacherCanAccessStudent($conn, $teacher_id, $student_id) {
 $teacher_grade = $is_teacher ? getTeacherAssignedGrade($conn, $session_teacher_id) : '';
 $page_title = $is_admin ? 'School Reports' : (isHomeroomTeacher() ? 'Homeroom Reports' : 'My Academic Report');
 $student_site_select = $show_site_details
-    ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
-    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
+    ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name"
+    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name";
 $student_site_join = $show_site_details ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
 
 // Handle form submission for generating report
@@ -106,8 +106,12 @@ if (isHomeroomTeacher()) {
     $info_message = 'You can view only your own academic report, marks, rank, and pass or fail status.';
 }
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
-    requireValidCsrfToken();
+$should_generate_report = (($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) || ($is_student && (int)($_SESSION['student_id'] ?? 0) > 0));
+
+if ($should_generate_report) {
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
+        requireValidCsrfToken();
+    }
 
     if (canOnlyViewOwnRecords()) {
         $student_id = (int)($_SESSION['student_id'] ?? 0);
@@ -508,6 +512,7 @@ if ($subjects) {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
 
 
 
