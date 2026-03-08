@@ -3,12 +3,17 @@ require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
 
-requireAnyRole(['admin', 'teacher']);
+requireLogin();
+if (!canViewStudentDirectory()) {
+    $_SESSION['error'] = 'Only admin and teachers can access the student roster.';
+    header('Location: ../index.php');
+    exit();
+}
 
 $db = new Database();
 $conn = $db->getConnection();
 $coordinator = new DistributedCoordinator($db);
-$is_admin = hasRole('admin');
+$is_admin = canManageStudentDirectory();
 $is_teacher = hasRole('teacher');
 $distributed_ready = $coordinator->isDistributedReady();
 $can_access_distributed = canAccessDistributedCoordinator();
@@ -413,11 +418,13 @@ if ($students) {
 $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
 $info_message = '';
-$page_title = $is_admin ? 'Student Management' : 'My Students';
+$page_title = $is_admin ? 'Student Management' : (isHomeroomTeacher() ? 'Homeroom Student Roster' : 'Student Roster');
 
 if ($is_teacher) {
     if ($teacher_scope && $teacher_grade !== '') {
-        $info_message = 'You can view only students in ' . $teacher_grade . '. Student accounts are created by admin.';
+        $info_message = isHomeroomTeacher()
+            ? 'You can review only students in ' . $teacher_grade . ' while compiling final results. Student accounts remain admin-managed.'
+            : 'You can view only students in ' . $teacher_grade . '. Student records and accounts remain admin-managed.';
     } else {
         $error_message = $error_message !== ''
             ? $error_message

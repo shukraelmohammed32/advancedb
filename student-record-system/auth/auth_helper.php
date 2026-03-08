@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -18,8 +18,16 @@ function hasRole($role) {
     return isset($_SESSION['role']) && $_SESSION['role'] === $role;
 }
 
+function isAdmin() {
+    return hasRole('admin');
+}
+
 function isTeacher() {
     return hasRole('teacher');
+}
+
+function isStudent() {
+    return hasRole('student');
 }
 
 function isHomeroomTeacher() {
@@ -49,15 +57,15 @@ function getRoleLabel() {
         return 'Homeroom Teacher';
     }
 
-    if (hasRole('admin')) {
+    if (isAdmin()) {
         return 'Administrator';
     }
 
-    if (hasRole('student')) {
+    if (isStudent()) {
         return 'Student';
     }
 
-    if (hasRole('teacher')) {
+    if (isTeacher()) {
         return 'Teacher';
     }
 
@@ -80,39 +88,91 @@ function getCurrentUser() {
 }
 
 function canAccessTeacherDashboard() {
-    return hasRole('admin') || hasRole('teacher');
+    return isAdmin() || isTeacher();
+}
+
+function canViewStudentDirectory() {
+    return isAdmin() || isTeacher();
+}
+
+function canManageStudentDirectory() {
+    return isAdmin();
 }
 
 function canAccessStudentRecords() {
-    return hasRole('admin') || hasRole('teacher');
+    return canViewStudentDirectory();
+}
+
+function canViewSubjects() {
+    return isAdmin() || isTeacher();
 }
 
 function canAccessSubjects() {
-    return hasRole('admin') || hasRole('teacher');
+    return canViewSubjects();
 }
 
 function canManageSubjects() {
-    return hasRole('admin');
+    return isAdmin();
+}
+
+function canManageTeachers() {
+    return isAdmin();
+}
+
+function canManageAcademicYear() {
+    return isAdmin();
+}
+
+function canManageGrades() {
+    return isAdmin();
+}
+
+function canViewOwnAcademicRecords() {
+    return isStudent();
 }
 
 function canOnlyViewOwnRecords() {
-    return hasRole('student');
+    return canViewOwnAcademicRecords();
+}
+
+function canEnterMarks() {
+    return isTeacher();
+}
+
+function canManageSubjectResults() {
+    return isTeacher();
+}
+
+function canSubmitMarks() {
+    return isTeacher();
 }
 
 function canManageMarks() {
-    return hasRole('teacher');
+    return canEnterMarks();
+}
+
+function canGenerateSchoolReports() {
+    return isAdmin();
+}
+
+function canCompileFinalResults() {
+    return isAdmin() || isHomeroomTeacher();
+}
+
+function canGenerateStudentReports() {
+    return canGenerateSchoolReports() || isHomeroomTeacher();
 }
 
 function canViewStudentReports() {
-    return hasRole('admin') || isHomeroomTeacher() || hasRole('student');
+    return canGenerateStudentReports() || canViewOwnAcademicRecords();
 }
 
 function canAccessSummary() {
-    return hasRole('admin') || isHomeroomTeacher();
+    return canCompileFinalResults();
 }
 
 function canAccessDistributedCoordinator() {
-    return hasRole('admin');
+    return isAdmin();
 }
 
 function getCsrfToken() {

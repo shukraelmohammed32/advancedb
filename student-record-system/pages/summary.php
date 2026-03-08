@@ -2,9 +2,9 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireAnyRole(['admin', 'teacher']);
+requireLogin();
 if (!canAccessSummary()) {
-    $_SESSION['error'] = 'Only admin and homeroom teachers can access the academic summary.';
+    $_SESSION['error'] = 'Only admin and homeroom teachers can review compiled academic results.';
     header('Location: ../index.php');
     exit();
 }
@@ -63,6 +63,13 @@ $conn = $db->getConnection();
 $totalStudents = (int)$conn->query("SELECT COUNT(*) as count FROM students")->fetch_assoc()['count'];
 $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_assoc()['count'];
 $totalMarks = (int)$conn->query("SELECT COUNT(*) as count FROM marks")->fetch_assoc()['count'];
+
+$summary_title = isHomeroomTeacher()
+    ? 'Compile final results for your homeroom without jumping between multiple pages.'
+    : 'Review compiled results, completion, and subject health across the whole school.';
+$summary_intro = isHomeroomTeacher()
+    ? 'This page helps homeroom teachers collect subject marks, monitor completion, and move directly into final student reports.'
+    : 'This page gives administrators a single place to review completion, averages, pass rate, and subject trends before opening reports.';
 
 $studentSummary = $conn->query("
     SELECT
@@ -650,12 +657,12 @@ if ($subjectPerformance === false) {
             <section class="summary-hero">
                 <div>
                     <span class="summary-kicker">Academic Summary</span>
-                    <h1 class="summary-title">A cleaner view of student progress and subject health.</h1>
-                    <p class="summary-intro">This page brings together completion, averages, pass rate, and subject trends so homeroom teachers and administrators can review academic progress without opening multiple reports.</p>
-                    <?php if (canManageMarks() || canViewStudentReports()): ?>
+                    <h1 class="summary-title"><?php echo htmlspecialchars($summary_title, ENT_QUOTES, 'UTF-8'); ?></h1>
+                    <p class="summary-intro"><?php echo htmlspecialchars($summary_intro, ENT_QUOTES, 'UTF-8'); ?></p>
+                    <?php if (canEnterMarks() || canViewStudentReports()): ?>
                     <div class="summary-actions">
-                        <?php if (canManageMarks()): ?>
-                        <a href="marks.php" class="summary-action summary-action-primary">Manage Marks</a>
+                        <?php if (canEnterMarks()): ?>
+                        <a href="marks.php" class="summary-action summary-action-primary">Open Mark Entry</a>
                         <?php endif; ?>
                         <?php if (canViewStudentReports()): ?>
                         <a href="report.php" class="summary-action summary-action-secondary">Open Reports</a>

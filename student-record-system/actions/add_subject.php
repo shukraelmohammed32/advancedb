@@ -2,7 +2,7 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireRole('admin');
+if (!canManageSubjects()) { header('Location: ../index.php'); exit(); }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();

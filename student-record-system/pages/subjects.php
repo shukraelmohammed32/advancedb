@@ -2,11 +2,16 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireAnyRole(['admin', 'teacher']);
+requireLogin();
+if (!canAccessSubjects()) {
+    $_SESSION['error'] = 'Only admin and teachers can access subjects.';
+    header('Location: ../index.php');
+    exit();
+}
 
 $db = new Database();
 $conn = $db->getConnection();
-$is_admin = hasRole('admin');
+$is_admin = canManageSubjects();
 $is_teacher = hasRole('teacher');
 $session_teacher_id = $is_teacher ? (int)($_SESSION['teacher_id'] ?? 0) : 0;
 
@@ -83,12 +88,12 @@ if ($is_admin) {
                               ORDER BY s.subject_name");
 }
 
-$page_title = $is_admin ? 'Subject Management' : 'My Subjects';
+$page_title = $is_admin ? 'Subject Management' : (isHomeroomTeacher() ? 'Homeroom Subject Assignments' : 'My Subject Assignments');
 $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
 $info_message = $is_admin
-    ? 'Administrators manage the school subject catalog.'
-    : 'You can review only the subjects assigned to your teacher account. Subject setup is managed by admin.';
+    ? 'Administrators define subjects, grades, and academic structure for the school.'
+    : 'You can review only the subjects assigned to your teacher account. Only admin can add, update, or delete subject definitions.';
 $csrf_token = urlencode(getCsrfToken());
 ?>
 

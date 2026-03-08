@@ -3,7 +3,7 @@ require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
 
-requireAnyRole(['admin', 'teacher', 'student']);
+requireLogin();
 if (!canViewStudentReports()) {
     $_SESSION['error'] = 'Only admin, homeroom teachers, and students can access reports.';
     header('Location: ../index.php');
@@ -15,6 +15,7 @@ $conn = $db->getConnection();
 $coordinator = new DistributedCoordinator($db);
 $is_admin = hasRole('admin');
 $is_teacher = hasRole('teacher');
+$is_student = hasRole('student');
 $distributed_ready = $coordinator->isDistributedReady();
 $can_access_distributed = canAccessDistributedCoordinator();
 $show_site_details = $can_access_distributed && $distributed_ready;
@@ -81,7 +82,7 @@ function teacherCanAccessStudent($conn, $teacher_id, $student_id) {
 }
 
 $teacher_grade = $is_teacher ? getTeacherAssignedGrade($conn, $session_teacher_id) : '';
-$page_title = isHomeroomTeacher() ? 'Homeroom Reports' : 'Academic Reports';
+$page_title = $is_admin ? 'School Reports' : (isHomeroomTeacher() ? 'Homeroom Reports' : 'My Academic Report');
 $student_site_select = $show_site_details
     ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
@@ -99,6 +100,10 @@ if (isHomeroomTeacher()) {
     } else {
         $error_message = 'Your homeroom teacher account is not linked to an assigned grade. Contact admin.';
     }
+} elseif ($is_admin) {
+    $info_message = 'Admins can generate academic reports for any student in the system.';
+} elseif ($is_student) {
+    $info_message = 'You can view only your own academic report, marks, rank, and pass or fail status.';
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
@@ -332,7 +337,7 @@ if ($subjects) {
             <div class="col-md-4 no-print">
                 <div class="card">
                     <div class="card-header">
-                        Generate Report
+                        <?php echo $is_student ? 'View My Report' : 'Generate Report'; ?>
                     </div>
                     <div class="card-body">
                         <form method="POST">
@@ -354,7 +359,7 @@ if ($subjects) {
                             </div>
 
                             <button type="submit" class="btn btn-primary" name="generate_report">
-                                Generate Report
+                                <?php echo $is_student ? 'View My Report' : 'Generate Report'; ?>
                             </button>
                             <?php if ($report_data): ?>
                                 <button type="button" class="btn btn-secondary" onclick="window.print()">
@@ -487,7 +492,7 @@ if ($subjects) {
                         <div class="card-body text-center">
                             <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
                             <h4>No Report Generated</h4>
-                            <p class="text-muted">Select a student from the form to generate their academic report.</p>
+                            <p class="text-muted"><?php echo $is_student ? 'Use the form to load your current academic report.' : 'Select a student from the form to generate their academic report.'; ?></p>
                         </div>
                     </div>
                 <?php endif; ?>

@@ -2,7 +2,12 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireRole('admin');
+requireLogin();
+if (!canManageTeachers()) {
+    $_SESSION['error'] = 'Only admin can manage teachers and homeroom assignments.';
+    header('Location: ../index.php');
+    exit();
+}
 
 $db = new Database();
 $conn = $db->getConnection();

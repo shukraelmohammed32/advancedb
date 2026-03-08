@@ -2,7 +2,7 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireRole('admin');
+if (!canManageTeachers()) { header('Location: ../index.php'); exit(); }
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);

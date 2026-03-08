@@ -3,7 +3,12 @@ require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
 
-requireRole('teacher');
+requireLogin();
+if (!canEnterMarks()) {
+    $_SESSION['error'] = 'Only teachers can enter, update, and submit subject marks.';
+    header('Location: ../index.php');
+    exit();
+}
 
 $db = new Database();
 $conn = $db->getConnection();
@@ -316,11 +321,13 @@ if ($is_teacher && $teacher_scope) {
 $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
 $info_message = '';
-$page_title = $is_teacher ? 'My Student Marks' : 'Mark Entry';
+$page_title = isHomeroomTeacher() ? 'Homeroom Mark Entry' : 'Subject Mark Entry';
 
 if ($is_teacher) {
     if ($teacher_scope && $teacher_grade !== '') {
-        $info_message = 'You can record marks only for ' . $teacher_grade . ' students in your assigned subjects.';
+        $info_message = isHomeroomTeacher()
+            ? 'You can enter marks for your assigned subjects in ' . $teacher_grade . ' and later compile final results for that homeroom grade.'
+            : 'You can enter, update, and submit marks only for ' . $teacher_grade . ' students in your assigned subjects.';
     } else {
         $error_message = $error_message !== ''
             ? $error_message

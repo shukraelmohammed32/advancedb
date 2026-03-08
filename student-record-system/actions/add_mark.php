@@ -3,7 +3,7 @@ require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
 
-requireRole('teacher');
+if (!canEnterMarks()) { header('Location: ../index.php'); exit(); }
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);
