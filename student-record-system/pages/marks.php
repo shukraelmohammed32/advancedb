@@ -222,11 +222,11 @@ if (isset($_GET['edit'])) {
     $edit_mark = $result ? $result->fetch_assoc() : null;
 }
 
-$student_site_select = $distributed_ready
+$student_site_select = $show_site_details
     ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name, COALESCE(ds.site_code, 'N/A') AS site_code,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name, 'CENTRAL' AS site_code,";
 $student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
-$mark_site_select = $distributed_ready
+$mark_site_select = $show_site_details
     ? "m.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
 $mark_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = m.site_id' : '';
@@ -505,7 +505,9 @@ $csrf_token = urlencode(getCsrfToken());
                                         <thead>
                                             <tr>
                                                 <th>Student</th>
+                                                <?php if (): ?>
                                                 <th>Site</th>
+                                                <?php endif; ?>
                                                 <th>Subject</th>
                                                 <th>Teacher</th>
                                                 <th>Score</th>
@@ -639,6 +641,7 @@ $csrf_token = urlencode(getCsrfToken());
     </script>
 </body>
 </html>
+
 
 
 

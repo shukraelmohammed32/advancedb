@@ -68,6 +68,10 @@ function canViewStudentReports() {
     return hasRole('teacher') || hasRole('student');
 }
 
+function canAccessDistributedCoordinator() {
+    return hasRole('admin');
+}
+
 function getCsrfToken() {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -98,4 +102,5 @@ function requireValidCsrfToken() {
     }
 }
 ?>
+
 

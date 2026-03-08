@@ -356,7 +356,7 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-$student_site_select = $distributed_ready
+$student_site_select = $show_site_details
     ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name, COALESCE(ds.site_code, 'N/A') AS site_code,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name, 'CENTRAL' AS site_code,";
 $student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
@@ -423,7 +423,7 @@ if ($is_teacher) {
             ? $error_message
             : 'Your teacher account is not linked to an assigned grade. Contact admin.';
     }
-} elseif ($is_admin && $distributed_ready) {
+} elseif ($is_admin && $show_site_details) {
     $info_message = 'Distributed mode is active. New students are routed through the central coordinator to a selected local branch site.';
 }
 
@@ -521,7 +521,7 @@ $csrf_token = urlencode(getCsrfToken());
                                 <input type="hidden" name="student_id" value="<?php echo (int)$edit_student['student_id']; ?>">
                             <?php endif; ?>
 
-                            <?php if ($distributed_ready): ?>
+                            <?php if ($show_site_details): ?>
                             <div class="mb-3">
                                 <label for="site_id" class="form-label">Branch Site</label>
                                 <select class="form-control" id="site_id" name="site_id" required>
@@ -713,6 +713,7 @@ $csrf_token = urlencode(getCsrfToken());
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
 
 

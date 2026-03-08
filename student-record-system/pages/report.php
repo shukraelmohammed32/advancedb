@@ -75,7 +75,7 @@ function teacherCanAccessStudent($conn, $teacher_id, $student_id) {
 
 $teacher_grade = $is_teacher ? getTeacherAssignedGrade($conn, $session_teacher_id) : '';
 $page_title = $is_teacher ? 'My Student Reports' : 'Academic Reports';
-$student_site_select = $distributed_ready
+$student_site_select = $show_site_details
     ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
 $student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
@@ -492,6 +492,7 @@ if ($subjects) {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
 
 
 

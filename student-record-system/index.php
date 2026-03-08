@@ -128,7 +128,7 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                 </div>
             </div>
 
-            <?php if ($distributed_ready && !empty($site_stats)): ?>
+            <?php if ($can_access_distributed && $distributed_ready && !empty($site_stats)): ?>
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card">
@@ -230,5 +230,6 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
 
 

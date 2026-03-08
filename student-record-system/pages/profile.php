@@ -521,3 +521,4 @@ if (!$profile_table_exists && $error_message === '') {
 </html>
 
 
+
