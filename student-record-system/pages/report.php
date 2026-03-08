@@ -11,6 +11,8 @@ $coordinator = new DistributedCoordinator($db);
 $is_admin = hasRole('admin');
 $is_teacher = hasRole('teacher');
 $distributed_ready = $coordinator->isDistributedReady();
+$can_access_distributed = canAccessDistributedCoordinator();
+$show_site_details = $can_access_distributed && $distributed_ready;
 $default_site_id = $coordinator->getDefaultSiteId();
 $session_teacher_id = $is_teacher ? (int)($_SESSION['teacher_id'] ?? 0) : 0;
 
@@ -78,7 +80,7 @@ $page_title = $is_teacher ? 'My Student Reports' : 'Academic Reports';
 $student_site_select = $show_site_details
     ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
-$student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
+$student_site_join = $show_site_details ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
 
 // Handle form submission for generating report
 $report_data = null;
@@ -88,9 +90,7 @@ $info_message = '';
 
 if ($is_teacher) {
     if ($teacher_grade !== '') {
-        $info_message = $distributed_ready
-            ? 'You can generate reports only for students in ' . $teacher_grade . ' across all branch sites.'
-            : 'You can generate reports only for students in ' . $teacher_grade . '.';
+        $info_message = 'You can generate reports only for students in ' . $teacher_grade . '.';
     } else {
         $error_message = 'Your teacher account is not linked to an assigned grade. Contact admin.';
     }
@@ -335,7 +335,7 @@ if ($subjects) {
                                     <?php foreach ($student_rows as $student): ?>
                                         <option value="<?php echo (int)$student['student_id']; ?>"
                                                 <?php echo isset($_POST['student_id']) && (int)$_POST['student_id'] === (int)$student['student_id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($student['name'] . ' - ' . normalizeGradeLabel($student['grade']) . ' - ' . ($student['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo htmlspecialchars($student['name'] . ' - ' . normalizeGradeLabel($student['grade']) . ($show_site_details ? ' - ' . ($student['site_name'] ?? 'Central Coordinator') : ''), ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -371,8 +371,10 @@ if ($subjects) {
                                 <div class="col-md-6">
                                     <strong>Name:</strong> <?php echo htmlspecialchars($report_data['student']['name'], ENT_QUOTES, 'UTF-8'); ?><br>
                                     <strong>Student ID:</strong> <?php echo (int)$report_data['student']['student_id']; ?><br>
-                                    <strong>Grade:</strong> <?php echo htmlspecialchars(normalizeGradeLabel($report_data['student']['grade']), ENT_QUOTES, 'UTF-8'); ?><br>
+                                    <strong>Grade:</strong> <?php echo htmlspecialchars(normalizeGradeLabel($report_data['student']['grade']), ENT_QUOTES, 'UTF-8'); ?>
+                                    <?php if ($show_site_details): ?><br>
                                     <strong>Site:</strong> <?php echo htmlspecialchars((string)($report_data['student']['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="col-md-6">
                                     <strong>Gender:</strong> <?php echo htmlspecialchars($report_data['student']['gender'], ENT_QUOTES, 'UTF-8'); ?><br>

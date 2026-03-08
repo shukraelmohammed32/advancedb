@@ -11,7 +11,9 @@ $coordinator = new DistributedCoordinator($db);
 $is_admin = hasRole('admin');
 $is_teacher = hasRole('teacher');
 $distributed_ready = $coordinator->isDistributedReady();
-$site_options = $coordinator->getSites();
+$can_access_distributed = canAccessDistributedCoordinator();
+$show_site_details = $can_access_distributed && $distributed_ready;
+$site_options = $show_site_details ? $coordinator->getSites() : [];
 $default_site_id = $coordinator->getDefaultSiteId();
 
 function normalizeGradeLabel($grade) {
@@ -415,9 +417,7 @@ $page_title = $is_admin ? 'Student Management' : 'My Students';
 
 if ($is_teacher) {
     if ($teacher_scope && $teacher_grade !== '') {
-        $info_message = $distributed_ready
-            ? 'You can view only students in ' . $teacher_grade . ' across all branch sites. Student accounts are created by admin.'
-            : 'You can view only students in ' . $teacher_grade . '. Student accounts are created by admin.';
+        $info_message = 'You can view only students in ' . $teacher_grade . '. Student accounts are created by admin.';
     } else {
         $error_message = $error_message !== ''
             ? $error_message
@@ -652,7 +652,9 @@ $csrf_token = urlencode(getCsrfToken());
                                             <tr>
                                                 <th>ID</th>
                                                 <th>Name</th>
+                                                <?php if ($show_site_details): ?>
                                                 <th>Site</th>
+                                                <?php endif; ?>
                                                 <?php if ($is_admin): ?>
                                                 <th>Username</th>
                                                 <th>Email</th>
@@ -670,7 +672,9 @@ $csrf_token = urlencode(getCsrfToken());
                                                 <tr>
                                                     <td><?php echo (int)$student['student_id']; ?></td>
                                                     <td><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <?php if ($show_site_details): ?>
                                                     <td><?php echo htmlspecialchars((string)($student['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <?php endif; ?>
                                                     <?php if ($is_admin): ?>
                                                     <td><?php echo htmlspecialchars((string)($student['login_username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars((string)($student['login_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>

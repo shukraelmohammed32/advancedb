@@ -9,7 +9,8 @@ $db = new Database();
 $conn = $db->getConnection();
 $coordinator = new DistributedCoordinator($db);
 $distributed_ready = $coordinator->isDistributedReady();
-$site_stats = $coordinator->getSiteStats();
+$can_access_distributed = canAccessDistributedCoordinator();
+$site_stats = $can_access_distributed ? $coordinator->getSiteStats() : [];
 
 // Get statistics
 $totalStudents = (int)$conn->query("SELECT COUNT(*) as count FROM students")->fetch_assoc()['count'];

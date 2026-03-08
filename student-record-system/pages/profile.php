@@ -293,8 +293,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
                 $_SESSION['email'] = $email;
                 $sync_ok = $coordinator->syncStudentProfile($student_id);
                 $success_message = $sync_ok
-                    ? 'Profile saved and synced to your branch database.'
-                    : 'Profile saved in the central coordinator, but branch sync failed.';
+                    ? 'Profile saved successfully.'
+                    : 'Profile saved, but synchronization needs admin attention.';
 
                 if ($profile_photo_column_exists && $current_profile_photo !== $new_profile_photo && $current_profile_photo !== '') {
                     deleteProfilePhotoFile($current_profile_photo);

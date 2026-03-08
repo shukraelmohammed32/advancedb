@@ -89,8 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $mark_id = (int)$conn->insert_id;
         $sync_ok = $coordinator->syncMark($mark_id);
         $message = $sync_ok
-            ? 'Mark added and synced to ' . $coordinator->getSiteName($site_id)
-            : 'Mark added centrally, but branch sync failed';
+            ? 'Mark added successfully'
+            : 'Mark added, but synchronization needs admin attention';
         header('Location: ../pages/marks.php?success=' . urlencode($message));
     } else {
         header('Location: ../pages/marks.php?error=' . urlencode('Error adding mark'));

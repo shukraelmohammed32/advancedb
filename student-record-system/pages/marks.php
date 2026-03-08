@@ -11,6 +11,8 @@ $coordinator = new DistributedCoordinator($db);
 $is_admin = hasRole('admin');
 $is_teacher = hasRole('teacher');
 $distributed_ready = $coordinator->isDistributedReady();
+$can_access_distributed = canAccessDistributedCoordinator();
+$show_site_details = $can_access_distributed && $distributed_ready;
 $default_site_id = $coordinator->getDefaultSiteId();
 $session_teacher_id = $is_teacher ? (int)($_SESSION['teacher_id'] ?? 0) : 0;
 
@@ -137,8 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $mark_id = (int)$conn->insert_id;
             $sync_ok = $coordinator->syncMark($mark_id);
             $message = $sync_ok
-                ? 'Mark added and synced to ' . $coordinator->getSiteName($site_id)
-                : 'Mark added centrally, but branch sync failed';
+                ? ($show_site_details ? 'Mark added and synced to ' . $coordinator->getSiteName($site_id) : 'Mark added successfully')
+                : ($show_site_details ? 'Mark added centrally, but branch sync failed' : 'Mark added, but synchronization needs admin attention');
             header('Location: marks.php?success=' . urlencode($message));
         } else {
             header('Location: marks.php?error=' . urlencode('Error adding mark'));
@@ -185,8 +187,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $conn->query($sql);
         $sync_ok = $coordinator->syncMark($mark_id);
         $message = $sync_ok
-            ? 'Mark updated and synced to ' . $coordinator->getSiteName($site_id)
-            : 'Mark updated centrally, but branch sync failed';
+            ? ($show_site_details ? 'Mark updated and synced to ' . $coordinator->getSiteName($site_id) : 'Mark updated successfully')
+            : ($show_site_details ? 'Mark updated centrally, but branch sync failed' : 'Mark updated, but synchronization needs admin attention');
         header('Location: marks.php?success=' . urlencode($message));
         exit();
     }
@@ -203,7 +205,9 @@ if (isset($_GET['delete'])) {
 
     $conn->query("DELETE FROM marks WHERE mark_id=$mark_id");
     $sync_ok = $coordinator->deleteMarkDistributed($mark_id);
-    $message = $sync_ok ? 'Mark deleted from coordinator and branch database' : 'Mark deleted centrally, but branch cleanup failed';
+    $message = $sync_ok
+        ? ($show_site_details ? 'Mark deleted from coordinator and branch database' : 'Mark deleted successfully')
+        : ($show_site_details ? 'Mark deleted centrally, but branch cleanup failed' : 'Mark deleted, but synchronization needs admin attention');
     header('Location: marks.php?success=' . urlencode($message));
     exit();
 }
@@ -225,11 +229,11 @@ if (isset($_GET['edit'])) {
 $student_site_select = $show_site_details
     ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name, COALESCE(ds.site_code, 'N/A') AS site_code,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name, 'CENTRAL' AS site_code,";
-$student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
+$student_site_join = $show_site_details ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
 $mark_site_select = $show_site_details
     ? "m.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
-$mark_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = m.site_id' : '';
+$mark_site_join = $show_site_details ? 'LEFT JOIN distributed_sites ds ON ds.site_id = m.site_id' : '';
 
 // Build dropdown data
 $student_rows = [];
@@ -316,9 +320,7 @@ $page_title = $is_teacher ? 'My Student Marks' : 'Mark Entry';
 
 if ($is_teacher) {
     if ($teacher_scope && $teacher_grade !== '') {
-        $info_message = $distributed_ready
-            ? 'You can record marks only for ' . $teacher_grade . ' students in your assigned subjects across all branch sites.'
-            : 'You can record marks only for ' . $teacher_grade . ' students in your assigned subjects.';
+        $info_message = 'You can record marks only for ' . $teacher_grade . ' students in your assigned subjects.';
     } else {
         $error_message = $error_message !== ''
             ? $error_message
@@ -424,7 +426,7 @@ $csrf_token = urlencode(getCsrfToken());
                                         <option value="<?php echo (int)$student['student_id']; ?>"
                                                 data-grade="<?php echo htmlspecialchars($student_grade, ENT_QUOTES, 'UTF-8'); ?>"
                                                 <?php echo $edit_mark && (int)$edit_mark['student_id'] === (int)$student['student_id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($student['name'] . ' - ' . $student_grade . ' - ' . ($student['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo htmlspecialchars($student['name'] . ' - ' . $student_grade . ($show_site_details ? ' - ' . ($student['site_name'] ?? 'Central Coordinator') : ''), ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -505,7 +507,7 @@ $csrf_token = urlencode(getCsrfToken());
                                         <thead>
                                             <tr>
                                                 <th>Student</th>
-                                                <?php if (): ?>
+                                                <?php if ($show_site_details): ?>
                                                 <th>Site</th>
                                                 <?php endif; ?>
                                                 <th>Subject</th>
@@ -519,7 +521,9 @@ $csrf_token = urlencode(getCsrfToken());
                                             <?php foreach ($grade_marks as $mark): ?>
                                                 <tr>
                                                     <td><?php echo htmlspecialchars($mark['student_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <?php if ($show_site_details): ?>
                                                     <td><?php echo htmlspecialchars((string)($mark['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <?php endif; ?>
                                                     <td><?php echo htmlspecialchars($mark['subject_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars($mark['teacher_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td>
