@@ -32,6 +32,97 @@ function isHighSchoolGrade($grade) {
     return in_array(normalizeGradeLabel($grade), highSchoolGrades(), true);
 }
 
+function normalizeLoginUsername($value) {
+    return trim((string)$value);
+}
+
+function isValidLoginUsername($value) {
+    return preg_match('/^[A-Za-z][A-Za-z0-9._-]{2,49}$/', (string)$value) === 1;
+}
+
+function getStudentAccount($conn, $student_id) {
+    $student_id = (int)$student_id;
+    if ($student_id <= 0) {
+        return null;
+    }
+
+    $stmt = $conn->prepare("SELECT user_id, username, email, is_active FROM users WHERE student_id = ? AND role = 'student' ORDER BY user_id ASC LIMIT 1");
+    if (!$stmt) {
+        return null;
+    }
+
+    $stmt->bind_param('i', $student_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $account = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+
+    return $account ?: null;
+}
+
+function loginIdentityExists($conn, $username, $email, $exclude_user_id = 0) {
+    $stmt = $conn->prepare('SELECT user_id FROM users WHERE user_id != ? AND (username = ? OR email = ? OR username = ? OR email = ?) LIMIT 1');
+    if (!$stmt) {
+        return true;
+    }
+
+    $stmt->bind_param('issss', $exclude_user_id, $username, $username, $email, $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $exists = $result && $result->num_rows > 0;
+    $stmt->close();
+
+    return $exists;
+}
+
+function saveStudentAccount($conn, $student_id, $username, $email, $plain_password, $existing_user_id = 0) {
+    $student_id = (int)$student_id;
+    $existing_user_id = (int)$existing_user_id;
+
+    if ($student_id <= 0) {
+        return false;
+    }
+
+    if ($existing_user_id > 0) {
+        if ($plain_password !== '') {
+            $password_hash = password_hash($plain_password, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("UPDATE users SET username = ?, email = ?, password = ?, is_active = 1 WHERE user_id = ? AND role = 'student' LIMIT 1");
+            if (!$stmt) {
+                return false;
+            }
+
+            $stmt->bind_param('sssi', $username, $email, $password_hash, $existing_user_id);
+        } else {
+            $stmt = $conn->prepare("UPDATE users SET username = ?, email = ?, is_active = 1 WHERE user_id = ? AND role = 'student' LIMIT 1");
+            if (!$stmt) {
+                return false;
+            }
+
+            $stmt->bind_param('ssi', $username, $email, $existing_user_id);
+        }
+
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok;
+    }
+
+    if ($plain_password === '') {
+        return false;
+    }
+
+    $password_hash = password_hash($plain_password, PASSWORD_DEFAULT);
+    $stmt = $conn->prepare("INSERT INTO users (username, password, email, role, student_id, is_active) VALUES (?, ?, ?, 'student', ?, 1)");
+    if (!$stmt) {
+        return false;
+    }
+
+    $stmt->bind_param('sssi', $username, $password_hash, $email, $student_id);
+    $ok = $stmt->execute();
+    $stmt->close();
+
+    return $ok;
+}
+
 // Get grade options
 $grade_rows = [];
 $grade_result = $conn->query('SELECT grade_id, grade_name FROM grades ORDER BY grade_id');
@@ -54,11 +145,19 @@ if ($grade_result) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();
 
-    $name = $conn->real_escape_string($_POST['name']);
-    $gender = $conn->real_escape_string($_POST['gender']);
+    $name = trim((string)($_POST['name'] ?? ''));
+    $gender = trim((string)($_POST['gender'] ?? ''));
     $selected_grade = normalizeGradeLabel($_POST['grade'] ?? '');
-    $academic_year = $conn->real_escape_string($_POST['academic_year']);
-    $semester = $conn->real_escape_string($_POST['semester']);
+    $academic_year = trim((string)($_POST['academic_year'] ?? ''));
+    $semester = trim((string)($_POST['semester'] ?? ''));
+    $login_username = normalizeLoginUsername($_POST['login_username'] ?? '');
+    $login_email = trim((string)($_POST['login_email'] ?? ''));
+    $login_password = (string)($_POST['login_password'] ?? '');
+
+    if ($name === '') {
+        header('Location: students.php?error=' . urlencode('Student name is required'));
+        exit();
+    }
 
     if ($selected_grade === '') {
         header('Location: students.php?error=' . urlencode('Please select a grade'));
@@ -67,6 +166,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (!isHighSchoolGrade($selected_grade)) {
         header('Location: students.php?error=' . urlencode('Only high school grades 9 to 12 are allowed'));
+        exit();
+    }
+
+    if ($login_username === '' || !isValidLoginUsername($login_username)) {
+        header('Location: students.php?error=' . urlencode('Login username must start with a letter and use only letters, numbers, dot, dash, or underscore'));
+        exit();
+    }
+
+    if ($login_email === '' || !filter_var($login_email, FILTER_VALIDATE_EMAIL)) {
+        header('Location: students.php?error=' . urlencode('Please enter a valid student login email'));
+        exit();
+    }
+
+    if (strcasecmp($login_username, $login_email) === 0) {
+        header('Location: students.php?error=' . urlencode('Login username and email must be different'));
         exit();
     }
 
@@ -81,32 +195,85 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $grade_id = (int)$grade_record['grade_id'];
     $grade_name = $conn->real_escape_string($grade_record['grade_name']);
 
+    $student_id = isset($_POST['student_id']) ? (int)$_POST['student_id'] : 0;
+    $existing_account = $student_id > 0 ? getStudentAccount($conn, $student_id) : null;
+    $existing_user_id = (int)($existing_account['user_id'] ?? 0);
+    $password_required = isset($_POST['add_student']) || $existing_user_id === 0;
+
+    if ($password_required && strlen($login_password) < 6) {
+        header('Location: students.php?error=' . urlencode('Student login password must be at least 6 characters'));
+        exit();
+    }
+
+    if (loginIdentityExists($conn, $login_username, $login_email, $existing_user_id)) {
+        header('Location: students.php?error=' . urlencode('That student login username or email is already used by another account'));
+        exit();
+    }
+
+    $name_safe = $conn->real_escape_string($name);
+    $gender_safe = $conn->real_escape_string($gender);
+    $academic_year_safe = $conn->real_escape_string($academic_year);
+    $semester_safe = $conn->real_escape_string($semester);
+    $conn->begin_transaction();
+
     if (isset($_POST['add_student'])) {
         $sql = "INSERT INTO students (name, gender, grade, grade_id, academic_year, semester)
-                VALUES ('$name', '$gender', '$grade_name', $grade_id, '$academic_year', '$semester')";
-        $conn->query($sql);
-        header('Location: students.php?success=' . urlencode('Student added successfully'));
-        exit();
+                VALUES ('$name_safe', '$gender_safe', '$grade_name', $grade_id, '$academic_year_safe', '$semester_safe')";
+
+        if (!$conn->query($sql)) {
+            $conn->rollback();
+            header('Location: students.php?error=' . urlencode('Error adding student'));
+            exit();
+        }
+
+        $student_id = (int)$conn->insert_id;
     }
 
     if (isset($_POST['edit_student'])) {
-        $student_id = (int)$_POST['student_id'];
+        if ($student_id <= 0) {
+            $conn->rollback();
+            header('Location: students.php?error=' . urlencode('Student record not found'));
+            exit();
+        }
 
-        $sql = "UPDATE students SET name='$name', gender='$gender', grade='$grade_name', grade_id=$grade_id,
-                academic_year='$academic_year', semester='$semester'
+        $sql = "UPDATE students SET name='$name_safe', gender='$gender_safe', grade='$grade_name', grade_id=$grade_id,
+                academic_year='$academic_year_safe', semester='$semester_safe'
                 WHERE student_id=$student_id";
-        $conn->query($sql);
-        header('Location: students.php?success=' . urlencode('Student updated successfully'));
+
+        if (!$conn->query($sql)) {
+            $conn->rollback();
+            header('Location: students.php?error=' . urlencode('Error updating student'));
+            exit();
+        }
+    }
+
+    if (!saveStudentAccount($conn, $student_id, $login_username, $login_email, $login_password, $existing_user_id)) {
+        $conn->rollback();
+        header('Location: students.php?error=' . urlencode('Student saved but login account could not be secured'));
         exit();
     }
+
+    $conn->commit();
+    $message = isset($_POST['add_student'])
+        ? 'Student and login account created successfully'
+        : 'Student and login account updated successfully';
+    header('Location: students.php?success=' . urlencode($message));
+    exit();
 }
 
 // Handle delete action (CSRF protected)
 if (isset($_GET['delete'])) {
     requireValidCsrfToken();
     $student_id = (int)$_GET['delete'];
-    $conn->query("DELETE FROM students WHERE student_id=$student_id");
-    header('Location: students.php?success=' . urlencode('Student deleted successfully'));
+
+    if ($student_id > 0) {
+        $conn->begin_transaction();
+        $conn->query("DELETE FROM users WHERE student_id = $student_id AND role = 'student'");
+        $conn->query("DELETE FROM students WHERE student_id=$student_id");
+        $conn->commit();
+    }
+
+    header('Location: students.php?success=' . urlencode('Student and login account deleted successfully'));
     exit();
 }
 
@@ -114,12 +281,25 @@ if (isset($_GET['delete'])) {
 $edit_student = null;
 if (isset($_GET['edit'])) {
     $student_id = (int)$_GET['edit'];
-    $result = $conn->query("SELECT * FROM students WHERE student_id=$student_id");
+    $result = $conn->query("SELECT
+                                s.*,
+                                (SELECT u.user_id FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_user_id,
+                                (SELECT u.username FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_username,
+                                (SELECT u.email FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_email
+                            FROM students s
+                            WHERE s.student_id = $student_id
+                            LIMIT 1");
     $edit_student = $result ? $result->fetch_assoc() : null;
 }
 
 // Get all students grouped by grade/class
-$students = $conn->query('SELECT * FROM students ORDER BY grade_id ASC, grade ASC, name ASC');
+$students = $conn->query("SELECT
+                            s.*,
+                            (SELECT u.username FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_username,
+                            (SELECT u.email FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_email,
+                            EXISTS(SELECT 1 FROM users u WHERE u.student_id = s.student_id AND u.role = 'student') AS has_login
+                         FROM students s
+                         ORDER BY s.grade_id ASC, s.grade ASC, s.name ASC");
 $students_by_grade = [];
 if ($students) {
     while ($student = $students->fetch_assoc()) {
@@ -151,7 +331,6 @@ $csrf_token = urlencode(getCsrfToken());
     <link href="../assets/style.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="../index.php">Student Record System</a>
@@ -186,7 +365,6 @@ $csrf_token = urlencode(getCsrfToken());
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="container mt-4">
         <div class="row">
             <div class="col-12">
@@ -209,8 +387,7 @@ $csrf_token = urlencode(getCsrfToken());
         <?php endif; ?>
 
         <div class="row">
-            <!-- Add/Edit Student Form -->
-            <div class="col-md-4">
+            <div class="col-lg-4 mb-4">
                 <div class="card">
                     <div class="card-header">
                         <?php echo $edit_student ? 'Edit Student' : 'Add New Student'; ?>
@@ -219,7 +396,7 @@ $csrf_token = urlencode(getCsrfToken());
                         <form method="POST">
                             <?php csrfInput(); ?>
                             <?php if ($edit_student): ?>
-                                <input type="hidden" name="student_id" value="<?php echo $edit_student['student_id']; ?>">
+                                <input type="hidden" name="student_id" value="<?php echo (int)$edit_student['student_id']; ?>">
                             <?php endif; ?>
 
                             <div class="mb-3">
@@ -269,6 +446,40 @@ $csrf_token = urlencode(getCsrfToken());
                                 </select>
                             </div>
 
+                            <hr>
+                            <h6 class="mb-3">Student Login Security</h6>
+
+                            <div class="mb-3">
+                                <label for="login_username" class="form-label">Login Username</label>
+                                <input type="text" class="form-control" id="login_username" name="login_username"
+                                       value="<?php echo $edit_student ? htmlspecialchars((string)($edit_student['login_username'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
+                                       placeholder="student.username" required>
+                                <div class="form-text">Unique login name used on the sign-in page.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="login_email" class="form-label">Login Email</label>
+                                <input type="email" class="form-control" id="login_email" name="login_email"
+                                       value="<?php echo $edit_student ? htmlspecialchars((string)($edit_student['login_email'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
+                                       placeholder="student@school.edu" required>
+                                <div class="form-text">Must be unique across all user accounts.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="login_password" class="form-label">
+                                    <?php echo $edit_student && !empty($edit_student['login_user_id']) ? 'Reset Password' : 'Login Password'; ?>
+                                </label>
+                                <input type="password" class="form-control" id="login_password" name="login_password"
+                                       <?php echo $edit_student && !empty($edit_student['login_user_id']) ? '' : 'required'; ?>>
+                                <div class="form-text">
+                                    <?php if ($edit_student && !empty($edit_student['login_user_id'])): ?>
+                                        Leave blank to keep the current student password.
+                                    <?php else: ?>
+                                        Required for new student login accounts. Minimum 6 characters.
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
                             <button type="submit" class="btn btn-primary" name="<?php echo $edit_student ? 'edit_student' : 'add_student'; ?>">
                                 <?php echo $edit_student ? 'Update Student' : 'Add Student'; ?>
                             </button>
@@ -280,8 +491,7 @@ $csrf_token = urlencode(getCsrfToken());
                 </div>
             </div>
 
-            <!-- Students List Grouped by Grade -->
-            <div class="col-md-8">
+            <div class="col-lg-8">
                 <?php if (empty($students_by_grade)): ?>
                     <div class="card">
                         <div class="card-body">
@@ -302,26 +512,36 @@ $csrf_token = urlencode(getCsrfToken());
                                             <tr>
                                                 <th>ID</th>
                                                 <th>Name</th>
-                                                <th>Gender</th>
+                                                <th>Username</th>
+                                                <th>Email</th>
                                                 <th>Academic Year</th>
                                                 <th>Semester</th>
+                                                <th>Account</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php foreach ($grade_students as $student): ?>
                                                 <tr>
-                                                    <td><?php echo $student['student_id']; ?></td>
+                                                    <td><?php echo (int)$student['student_id']; ?></td>
                                                     <td><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                                    <td><?php echo htmlspecialchars($student['gender'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string)($student['login_username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string)($student['login_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars($student['academic_year'], ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars($student['semester'], ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td>
-                                                        <a href="students.php?edit=<?php echo $student['student_id']; ?>"
+                                                        <?php if (!empty($student['has_login'])): ?>
+                                                            <span class="badge bg-success">Secured</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-danger">Missing Login</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <a href="students.php?edit=<?php echo (int)$student['student_id']; ?>"
                                                            class="btn btn-sm btn-warning">Edit</a>
-                                                        <a href="students.php?delete=<?php echo $student['student_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
+                                                        <a href="students.php?delete=<?php echo (int)$student['student_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
                                                            class="btn btn-sm btn-danger"
-                                                           onclick="return confirm('Are you sure you want to delete this student?')">Delete</a>
+                                                           onclick="return confirm('Are you sure you want to delete this student and login account?')">Delete</a>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -336,7 +556,6 @@ $csrf_token = urlencode(getCsrfToken());
         </div>
     </div>
 
-    
     <?php
     $footer_base_path = '../';
     include __DIR__ . '/../includes/footer.php';
@@ -344,5 +563,3 @@ $csrf_token = urlencode(getCsrfToken());
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-

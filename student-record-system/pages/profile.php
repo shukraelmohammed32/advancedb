@@ -96,15 +96,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
         } elseif (!validDateInput($date_of_birth)) {
             $error_message = 'Date of birth must be a valid past date.';
         } else {
-            $email_check_stmt = $conn->prepare('SELECT user_id FROM users WHERE email = ? AND user_id != ? LIMIT 1');
+            $email_check_stmt = $conn->prepare('SELECT user_id FROM users WHERE user_id != ? AND (email = ? OR username = ?) LIMIT 1');
             if (!$email_check_stmt) {
                 $error_message = 'Unable to validate email right now. Please try again.';
             } else {
-                $email_check_stmt->bind_param('si', $email, $user_id);
+                $email_check_stmt->bind_param('iss', $user_id, $email, $email);
                 $email_check_stmt->execute();
                 $email_exists = $email_check_stmt->get_result();
                 if ($email_exists && $email_exists->num_rows > 0) {
-                    $error_message = 'That email is already used by another account.';
+                    $error_message = 'That email is already used by another account login.';
                 }
                 $email_check_stmt->close();
             }

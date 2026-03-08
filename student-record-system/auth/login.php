@@ -11,19 +11,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (!$conn) {
         $error = "Database connection failed. Please check if the database is imported.";
     } else {
-        $username = $conn->real_escape_string($_POST['username']);
+        $login_input = trim((string)($_POST['username'] ?? ''));
         $password = $_POST['password'];
         
         $stmt = $conn->prepare("SELECT u.*, s.name as student_name, t.teacher_name 
                                FROM users u 
                                LEFT JOIN students s ON u.student_id = s.student_id 
                                LEFT JOIN teachers t ON u.teacher_id = t.teacher_id 
-                               WHERE u.username = ? AND u.is_active = 1");
+                               WHERE (u.username = ? OR u.email = ?) AND u.is_active = 1");
         
         if ($stmt === false) {
             $error = "Database query failed. Please check if users table exists.";
         } else {
-            $stmt->bind_param("s", $username);
+            $stmt->bind_param("ss", $login_input, $login_input);
             $stmt->execute();
             $result = $stmt->get_result();
             
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $error = "Invalid password";
                 }
             } else {
-                $error = "Invalid username or account not active";
+                $error = "Invalid username/email or account not active";
             }
         }
     }
@@ -248,8 +248,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 <form method="POST">
                     <div class="form-floating">
-                        <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
-                        <label for="username">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Username or Email" required>
+                        <label for="username">Username or Email</label>
                     </div>
                     
                     <div class="form-floating">
@@ -274,4 +274,3 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
-
