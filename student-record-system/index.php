@@ -4,54 +4,6 @@ require_once 'auth/auth_helper.php';
 
 requireLogin();
 
-function normalizeGradeLabel($grade) {
-    $grade = trim((string)$grade);
-    if ($grade === '') {
-        return '';
-    }
-
-    if (preg_match('/^\d+$/', $grade)) {
-        return 'Grade ' . $grade;
-    }
-
-    if (preg_match('/^grade\s*(\d+)$/i', $grade, $matches)) {
-        return 'Grade ' . $matches[1];
-    }
-
-    return $grade;
-}
-
-function formatDashboardLabel($value) {
-    $value = str_replace('_', ' ', trim((string)$value));
-    if ($value === '') {
-        return '';
-    }
-
-    return ucwords(strtolower($value));
-}
-
-function getStatusPillClass($status) {
-    $status = strtoupper(trim((string)$status));
-
-    switch ($status) {
-        case 'PASS':
-        case 'EXCELLENT':
-            return 'status-pill status-pass';
-        case 'GOOD':
-            return 'status-pill status-good';
-        case 'FAIR':
-            return 'status-pill status-fair';
-        case 'INCOMPLETE':
-            return 'status-pill status-incomplete';
-        case 'NO MARKS':
-        case 'NO SUBJECTS':
-        case 'NO DATA':
-            return 'status-pill status-muted';
-        default:
-            return 'status-pill status-fail';
-    }
-}
-
 $db = new Database();
 $conn = $db->getConnection();
 
@@ -59,107 +11,6 @@ $conn = $db->getConnection();
 $totalStudents = (int)$conn->query("SELECT COUNT(*) as count FROM students")->fetch_assoc()['count'];
 $totalTeachers = (int)$conn->query("SELECT COUNT(*) as count FROM teachers")->fetch_assoc()['count'];
 $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_assoc()['count'];
-
-$studentSummary = false;
-$subjectPerformance = false;
-
-if (canAccessTeacherDashboard()) {
-    $studentSummary = $conn->query("
-        SELECT
-            student_id,
-            name,
-            grade,
-            total_marks AS recorded_subjects,
-            total_subjects,
-            passed_subjects,
-            average_score,
-            overall_status
-        FROM student_summary
-        ORDER BY average_score DESC, name ASC
-        LIMIT 6
-    ");
-
-    if ($studentSummary === false) {
-        $studentSummary = $conn->query("
-            SELECT
-                s.student_id,
-                s.name,
-                s.grade,
-                COUNT(m.mark_id) AS recorded_subjects,
-                {$totalSubjects} AS total_subjects,
-                SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_subjects,
-                COALESCE(ROUND(AVG(m.score), 1), 0) AS average_score,
-                CASE
-                    WHEN {$totalSubjects} = 0 THEN 'NO SUBJECTS'
-                    WHEN COUNT(m.mark_id) = 0 THEN 'NO MARKS'
-                    WHEN COUNT(m.mark_id) < {$totalSubjects} THEN 'INCOMPLETE'
-                    WHEN SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) = {$totalSubjects} THEN 'PASS'
-                    ELSE 'FAIL'
-                END AS overall_status
-            FROM students s
-            LEFT JOIN marks m ON s.student_id = m.student_id
-            GROUP BY s.student_id, s.name, s.grade
-            ORDER BY average_score DESC, s.name ASC
-            LIMIT 6
-        ");
-    }
-
-    $subjectPerformance = $conn->query("
-        SELECT
-            subject_id,
-            subject_name,
-            total_students AS total_marks,
-            average_score,
-            highest_score,
-            lowest_score,
-            passed_count,
-            COALESCE(failed_count, GREATEST(total_students - passed_count, 0)) AS failed_count,
-            COALESCE(pass_rate, 0) AS pass_rate,
-            COALESCE(
-                performance_band,
-                CASE
-                    WHEN total_students = 0 THEN 'NO DATA'
-                    WHEN average_score >= 80 THEN 'EXCELLENT'
-                    WHEN average_score >= 60 THEN 'GOOD'
-                    WHEN average_score >= 50 THEN 'FAIR'
-                    ELSE 'NEEDS IMPROVEMENT'
-                END
-            ) AS performance_band
-        FROM subject_performance
-        ORDER BY average_score DESC, subject_name ASC
-        LIMIT 6
-    ");
-
-    if ($subjectPerformance === false) {
-        $subjectPerformance = $conn->query("
-            SELECT
-                sub.subject_id,
-                sub.subject_name,
-                COUNT(m.mark_id) AS total_marks,
-                COALESCE(ROUND(AVG(m.score), 1), 0) AS average_score,
-                COALESCE(MAX(m.score), 0) AS highest_score,
-                COALESCE(MIN(m.score), 0) AS lowest_score,
-                SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_count,
-                SUM(CASE WHEN m.score < 50 THEN 1 ELSE 0 END) AS failed_count,
-                COALESCE(
-                    ROUND((SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) / NULLIF(COUNT(m.mark_id), 0)) * 100, 1),
-                    0
-                ) AS pass_rate,
-                CASE
-                    WHEN COUNT(m.mark_id) = 0 THEN 'NO DATA'
-                    WHEN AVG(m.score) >= 80 THEN 'EXCELLENT'
-                    WHEN AVG(m.score) >= 60 THEN 'GOOD'
-                    WHEN AVG(m.score) >= 50 THEN 'FAIR'
-                    ELSE 'NEEDS IMPROVEMENT'
-                END AS performance_band
-            FROM subjects sub
-            LEFT JOIN marks m ON sub.subject_id = m.subject_id
-            GROUP BY sub.subject_id, sub.subject_name
-            ORDER BY average_score DESC, sub.subject_name ASC
-            LIMIT 6
-        ");
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -198,6 +49,9 @@ if (canAccessTeacherDashboard()) {
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="pages/marks.php">Marks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pages/summary.php">Summary</a>
                     </li>
                     <?php endif; ?>
                     <li class="nav-item">
@@ -264,119 +118,6 @@ if (canAccessTeacherDashboard()) {
                 </div>
             </div>
 
-            <?php if (canAccessTeacherDashboard()): ?>
-            <div class="row mb-4">
-                <div class="col-xl-6 mb-4">
-                    <div class="card dashboard-panel">
-                        <div class="card-header dashboard-panel-header">
-                            <div>
-                                <span class="dashboard-section-label">Student Summary</span>
-                                <h2 class="dashboard-section-title">How students are performing</h2>
-                            </div>
-                            <span class="dashboard-section-meta"><?php echo $totalStudents; ?> students</span>
-                        </div>
-                        <div class="card-body dashboard-panel-body">
-                            <?php if ($studentSummary && $studentSummary->num_rows > 0): ?>
-                                <div class="dashboard-list">
-                                    <?php while ($student = $studentSummary->fetch_assoc()): ?>
-                                        <?php
-                                        $recordedSubjects = (int)($student['recorded_subjects'] ?? 0);
-                                        $targetSubjects = (int)($student['total_subjects'] ?? $totalSubjects);
-                                        $passedSubjects = (int)($student['passed_subjects'] ?? 0);
-                                        $pendingSubjects = max($targetSubjects - $recordedSubjects, 0);
-                                        $averageScore = number_format((float)($student['average_score'] ?? 0), 1);
-                                        $statusLabel = formatDashboardLabel($student['overall_status'] ?? 'NO DATA');
-                                        ?>
-                                        <div class="dashboard-list-item">
-                                            <div class="dashboard-list-main">
-                                                <div class="dashboard-list-head">
-                                                    <h3 class="dashboard-list-title"><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
-                                                    <span class="dashboard-grade"><?php echo htmlspecialchars(normalizeGradeLabel($student['grade']), ENT_QUOTES, 'UTF-8'); ?></span>
-                                                </div>
-                                                <p class="dashboard-list-meta">
-                                                    <?php if ($targetSubjects > 0): ?>
-                                                        <?php echo $passedSubjects; ?>/<?php echo $targetSubjects; ?> passed
-                                                        <?php if ($pendingSubjects > 0): ?>
-                                                            <span>&bull; <?php echo $pendingSubjects; ?> pending</span>
-                                                        <?php endif; ?>
-                                                    <?php else: ?>
-                                                        No subjects configured yet.
-                                                    <?php endif; ?>
-                                                </p>
-                                            </div>
-                                            <div class="dashboard-list-side">
-                                                <div class="dashboard-score"><?php echo $averageScore; ?>%</div>
-                                                <span class="<?php echo getStatusPillClass($student['overall_status'] ?? 'NO DATA'); ?>"><?php echo htmlspecialchars($statusLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                                            </div>
-                                        </div>
-                                    <?php endwhile; ?>
-                                </div>
-                            <?php else: ?>
-                                <div class="dashboard-empty-state">
-                                    <p>No student summary data available yet.</p>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-6 mb-4">
-                    <div class="card dashboard-panel">
-                        <div class="card-header dashboard-panel-header">
-                            <div>
-                                <span class="dashboard-section-label">Subject Performance</span>
-                                <h2 class="dashboard-section-title">How each subject is performing</h2>
-                            </div>
-                            <span class="dashboard-section-meta"><?php echo $totalSubjects; ?> subjects</span>
-                        </div>
-                        <div class="card-body dashboard-panel-body">
-                            <?php if ($subjectPerformance && $subjectPerformance->num_rows > 0): ?>
-                                <div class="dashboard-list">
-                                    <?php while ($subject = $subjectPerformance->fetch_assoc()): ?>
-                                        <?php
-                                        $totalMarks = (int)($subject['total_marks'] ?? 0);
-                                        $passedCount = (int)($subject['passed_count'] ?? 0);
-                                        $averageScore = (float)($subject['average_score'] ?? 0);
-                                        $passRate = (float)($subject['pass_rate'] ?? 0);
-                                        $bandLabel = formatDashboardLabel($subject['performance_band'] ?? 'NO DATA');
-                                        $barWidth = $totalMarks > 0 ? max(12, min(100, (int)round($averageScore))) : 12;
-                                        ?>
-                                        <div class="dashboard-list-item">
-                                            <div class="dashboard-list-main">
-                                                <div class="dashboard-list-head">
-                                                    <h3 class="dashboard-list-title"><?php echo htmlspecialchars($subject['subject_name'], ENT_QUOTES, 'UTF-8'); ?></h3>
-                                                    <span class="<?php echo getStatusPillClass($subject['performance_band'] ?? 'NO DATA'); ?>"><?php echo htmlspecialchars($bandLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                                                </div>
-                                                <p class="dashboard-list-meta">
-                                                    <?php if ($totalMarks > 0): ?>
-                                                        <?php echo $passedCount; ?>/<?php echo $totalMarks; ?> pass
-                                                        <span>&bull; High <?php echo (int)round((float)($subject['highest_score'] ?? 0)); ?></span>
-                                                        <span>&bull; Low <?php echo (int)round((float)($subject['lowest_score'] ?? 0)); ?></span>
-                                                    <?php else: ?>
-                                                        No marks recorded for this subject yet.
-                                                    <?php endif; ?>
-                                                </p>
-                                                <div class="performance-track <?php echo $totalMarks > 0 ? '' : 'performance-track-empty'; ?>">
-                                                    <span style="width: <?php echo $barWidth; ?>%"></span>
-                                                </div>
-                                            </div>
-                                            <div class="dashboard-list-side">
-                                                <div class="dashboard-score"><?php echo number_format($averageScore, 1); ?>%</div>
-                                                <div class="dashboard-subscore"><?php echo $totalMarks > 0 ? number_format($passRate, 1) . '% pass rate' : 'Awaiting marks'; ?></div>
-                                            </div>
-                                        </div>
-                                    <?php endwhile; ?>
-                                </div>
-                            <?php else: ?>
-                                <div class="dashboard-empty-state">
-                                    <p>No subject performance data available yet.</p>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-
             <!-- Quick Actions -->
             <div class="row">
                 <div class="col-12">
@@ -402,6 +143,11 @@ if (canAccessTeacherDashboard()) {
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/teachers.php" class="btn btn-info btn-lg w-100">
                                         <i class="fas fa-chalkboard-teacher"></i> Manage Teachers
+                                    </a>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <a href="pages/summary.php" class="btn btn-secondary btn-lg w-100">
+                                        <i class="fas fa-chart-line"></i> View Summary
                                     </a>
                                 </div>
                                 <?php endif; ?>
