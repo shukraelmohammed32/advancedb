@@ -232,12 +232,12 @@ if (isset($_GET['edit'])) {
 }
 
 $student_site_select = $show_site_details
-    ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name, COALESCE(ds.site_code, 'N/A') AS site_code,"
-    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name, 'CENTRAL' AS site_code,";
+    ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name, COALESCE(ds.site_code, 'N/A') AS site_code"
+    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name, 'CENTRAL' AS site_code";
 $student_site_join = $show_site_details ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
 $mark_site_select = $show_site_details
-    ? "m.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
-    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
+    ? "m.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name"
+    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name";
 $mark_site_join = $show_site_details ? 'LEFT JOIN distributed_sites ds ON ds.site_id = m.site_id' : '';
 
 // Build dropdown data
@@ -288,7 +288,7 @@ if ($teacher_query) {
 }
 
 $marks_sql = "SELECT m.*, s.name as student_name, s.grade,
-                     $mark_site_select
+                     $mark_site_select,
                      sub.subject_name, t.teacher_name
               FROM marks m
               JOIN students s ON m.student_id = s.student_id
@@ -656,6 +656,7 @@ $csrf_token = urlencode(getCsrfToken());
     </script>
 </body>
 </html>
+
 
 
 
