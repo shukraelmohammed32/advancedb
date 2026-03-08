@@ -146,7 +146,6 @@ if ($should_generate_report) {
             $marks = [];
             $total_score = 0;
             $subject_count = 0;
-            $all_passed = true;
 
             if ($marks_result) {
                 while ($mark = $marks_result->fetch_assoc()) {
@@ -155,17 +154,26 @@ if ($should_generate_report) {
                     if ($mark['score'] !== null) {
                         $total_score += (int)$mark['score'];
                         $subject_count++;
-
-                        if ((int)$mark['score'] < 50) {
-                            $all_passed = false;
-                        }
-                    } else {
-                        $all_passed = false;
                     }
                 }
             }
 
-            $average = $subject_count > 0 ? round($total_score / $subject_count, 2) : 0;
+            $subject_count_result = $conn->query('SELECT COUNT(*) as count FROM subjects');
+            $total_subjects = $subject_count_result ? (int)$subject_count_result->fetch_assoc()['count'] : 0;
+            $has_all_marks = $total_subjects > 0 && $subject_count >= $total_subjects;
+            $average = $has_all_marks ? round($total_score / $total_subjects, 2) : null;
+
+            if ($total_subjects <= 0) {
+                $overall_status = 'NO SUBJECTS';
+            } elseif ($subject_count === 0) {
+                $overall_status = 'NO MARKS';
+            } elseif (!$has_all_marks) {
+                $overall_status = 'INCOMPLETE';
+            } elseif ($average >= 50) {
+                $overall_status = 'PASS';
+            } else {
+                $overall_status = 'FAIL';
+            }
 
             $student_grade = $conn->real_escape_string($selected_student['grade']);
             $rank_query = "SELECT student_rank
@@ -185,10 +193,6 @@ if ($should_generate_report) {
             $rank_row = $rank_result ? $rank_result->fetch_assoc() : null;
             $rank = $rank_row ? $rank_row['student_rank'] : 'N/A';
 
-            $subject_count_result = $conn->query('SELECT COUNT(*) as count FROM subjects');
-            $total_subjects = $subject_count_result ? (int)$subject_count_result->fetch_assoc()['count'] : 0;
-            $has_all_marks = $subject_count >= $total_subjects;
-
             $report_data = [
                 'student' => $selected_student,
                 'marks' => $marks,
@@ -196,7 +200,10 @@ if ($should_generate_report) {
                 'average' => $average,
                 'rank' => $rank,
                 'rank_label' => 'Rank in ' . normalizeGradeLabel($selected_student['grade']),
-                'status' => ($has_all_marks && $all_passed && $subject_count > 0) ? 'PASS' : 'FAIL'
+                'status' => $overall_status,
+                'recorded_subjects' => $subject_count,
+                'total_subjects' => $total_subjects,
+                'has_all_marks' => $has_all_marks
             ];
         } else {
             $error_message = 'Student not found.';
@@ -464,7 +471,13 @@ if ($subjects) {
                                 </div>
                                 <div class="col-md-3">
                                     <strong>Average:</strong><br>
-                                    <h3><?php echo htmlspecialchars((string)$report_data['average'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                                    <?php if ($report_data['average'] !== null): ?>
+                                        <h3><?php echo htmlspecialchars(number_format((float)$report_data['average'], 2), ENT_QUOTES, 'UTF-8'); ?>%</h3>
+                                    <?php elseif ($report_data['status'] === 'INCOMPLETE'): ?>
+                                        <h3 class="text-muted">Pending</h3>
+                                    <?php else: ?>
+                                        <h3 class="text-muted">N/A</h3>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="col-md-3">
                                     <strong><?php echo htmlspecialchars($report_data['rank_label'], ENT_QUOTES, 'UTF-8'); ?>:</strong><br>
@@ -476,8 +489,12 @@ if ($subjects) {
                                         <?php
                                         if ($report_data['status'] === 'PASS') {
                                             echo '<span class="pass">PASS</span>';
-                                        } else {
+                                        } elseif ($report_data['status'] === 'FAIL') {
                                             echo '<span class="fail">FAIL</span>';
+                                        } elseif ($report_data['status'] === 'INCOMPLETE') {
+                                            echo '<span class="text-warning">INCOMPLETE</span>';
+                                        } else {
+                                            echo '<span class="text-muted">' . htmlspecialchars((string)$report_data['status'], ENT_QUOTES, 'UTF-8') . '</span>';
                                         }
                                         ?>
                                     </h3>

@@ -57,6 +57,37 @@ function getStatusPillClass($status) {
     }
 }
 
+function buildStudentSummaryRecord($student, $defaultTotalSubjects) {
+    $recordedSubjects = (int)($student['recorded_subjects'] ?? 0);
+    $targetSubjects = (int)($student['total_subjects'] ?? $defaultTotalSubjects);
+    $passedSubjects = (int)($student['passed_subjects'] ?? 0);
+    $averageScore = array_key_exists('average_score', $student) && $student['average_score'] !== null
+        ? (float)$student['average_score']
+        : null;
+
+    if ($targetSubjects <= 0) {
+        $averageScore = null;
+        $overallStatus = 'NO SUBJECTS';
+    } elseif ($recordedSubjects <= 0) {
+        $averageScore = null;
+        $overallStatus = 'NO MARKS';
+    } elseif ($recordedSubjects < $targetSubjects) {
+        $averageScore = null;
+        $overallStatus = 'INCOMPLETE';
+    } else {
+        $averageScore = $averageScore !== null ? round($averageScore, 1) : 0.0;
+        $overallStatus = $averageScore >= 50 ? 'PASS' : 'FAIL';
+    }
+
+    $student['recorded_subjects'] = $recordedSubjects;
+    $student['total_subjects'] = $targetSubjects;
+    $student['passed_subjects'] = $passedSubjects;
+    $student['average_score'] = $averageScore;
+    $student['overall_status'] = $overallStatus;
+
+    return $student;
+}
+
 $db = new Database();
 $conn = $db->getConnection();
 
@@ -71,43 +102,45 @@ $summary_intro = isHomeroomTeacher()
     ? 'This page helps homeroom teachers collect subject marks, monitor completion, and move directly into final student reports.'
     : 'This page gives administrators a single place to review completion, averages, pass rate, and subject trends before opening reports.';
 
-$studentSummary = $conn->query("
+$studentSummaryResult = $conn->query("
     SELECT
-        student_id,
-        name,
-        grade,
-        total_marks AS recorded_subjects,
-        total_subjects,
-        passed_subjects,
-        average_score,
-        overall_status
-    FROM student_summary
-    ORDER BY average_score DESC, name ASC
+        s.student_id,
+        s.name,
+        s.grade,
+        COUNT(m.mark_id) AS recorded_subjects,
+        {$totalSubjects} AS total_subjects,
+        SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_subjects,
+        COALESCE(ROUND(AVG(m.score), 1), 0) AS average_score
+    FROM students s
+    LEFT JOIN marks m ON s.student_id = m.student_id
+    GROUP BY s.student_id, s.name, s.grade
 ");
 
-if ($studentSummary === false) {
-    $studentSummary = $conn->query("
-        SELECT
-            s.student_id,
-            s.name,
-            s.grade,
-            COUNT(m.mark_id) AS recorded_subjects,
-            {$totalSubjects} AS total_subjects,
-            SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_subjects,
-            COALESCE(ROUND(AVG(m.score), 1), 0) AS average_score,
-            CASE
-                WHEN {$totalSubjects} = 0 THEN 'NO SUBJECTS'
-                WHEN COUNT(m.mark_id) = 0 THEN 'NO MARKS'
-                WHEN COUNT(m.mark_id) < {$totalSubjects} THEN 'INCOMPLETE'
-                WHEN SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) = {$totalSubjects} THEN 'PASS'
-                ELSE 'FAIL'
-            END AS overall_status
-        FROM students s
-        LEFT JOIN marks m ON s.student_id = m.student_id
-        GROUP BY s.student_id, s.name, s.grade
-        ORDER BY average_score DESC, s.name ASC
-    ");
+$studentSummaryRows = [];
+if ($studentSummaryResult) {
+    while ($student = $studentSummaryResult->fetch_assoc()) {
+        $studentSummaryRows[] = buildStudentSummaryRecord($student, $totalSubjects);
+    }
+
+    usort($studentSummaryRows, function ($left, $right) {
+        $leftPending = $left['average_score'] === null ? 1 : 0;
+        $rightPending = $right['average_score'] === null ? 1 : 0;
+
+        if ($leftPending !== $rightPending) {
+            return $leftPending <=> $rightPending;
+        }
+
+        if ($leftPending === 0) {
+            $scoreComparison = (float)$right['average_score'] <=> (float)$left['average_score'];
+            if ($scoreComparison !== 0) {
+                return $scoreComparison;
+            }
+        }
+
+        return strcasecmp((string)$left['name'], (string)$right['name']);
+    });
 }
+
 
 $subjectPerformance = $conn->query("
     SELECT
@@ -700,20 +733,30 @@ if ($subjectPerformance === false) {
                         <div>
                             <span class="summary-panel-label">Student Summary</span>
                             <h2 class="summary-panel-title">Who is on track and who still needs marks</h2>
-                            <p class="summary-panel-copy">Sorted by average score, with completion progress and status for each student.</p>
+                            <p class="summary-panel-copy">Completed students are sorted by final average, while incomplete records stay pending until every subject has a mark.</p>
                         </div>
                         <span class="summary-panel-meta"><?php echo $totalStudents; ?> students</span>
                     </div>
                     <div class="summary-panel-body">
-                        <?php if ($studentSummary && $studentSummary->num_rows > 0): ?>
-                            <?php while ($student = $studentSummary->fetch_assoc()): ?>
+                        <?php if (!empty($studentSummaryRows)): ?>
+                            <?php foreach ($studentSummaryRows as $student): ?>
                                 <?php
                                 $recordedSubjects = (int)($student['recorded_subjects'] ?? 0);
                                 $targetSubjects = (int)($student['total_subjects'] ?? $totalSubjects);
                                 $passedSubjects = (int)($student['passed_subjects'] ?? 0);
                                 $pendingSubjects = max($targetSubjects - $recordedSubjects, 0);
                                 $completionWidth = $targetSubjects > 0 ? max(10, min(100, (int)round(($recordedSubjects / $targetSubjects) * 100))) : 10;
-                                $averageScore = number_format((float)($student['average_score'] ?? 0), 1);
+                                $averageScoreValue = $student['average_score'] ?? null;
+                                if ($averageScoreValue !== null) {
+                                    $averageScore = number_format((float)$averageScoreValue, 1) . '%';
+                                    $averageCaption = 'Average score';
+                                } elseif (($student['overall_status'] ?? '') === 'INCOMPLETE') {
+                                    $averageScore = 'Pending';
+                                    $averageCaption = 'Awaiting full marks';
+                                } else {
+                                    $averageScore = 'N/A';
+                                    $averageCaption = 'Average unavailable';
+                                }
                                 $statusLabel = formatSummaryLabel($student['overall_status'] ?? 'NO DATA');
                                 ?>
                                 <article class="summary-row">
@@ -741,12 +784,12 @@ if ($subjectPerformance === false) {
                                         </div>
                                     </div>
                                     <div class="summary-row-side">
-                                        <div class="summary-value"><?php echo $averageScore; ?>%</div>
-                                        <div class="summary-caption">Average score</div>
+                                        <div class="summary-value"><?php echo htmlspecialchars($averageScore, ENT_QUOTES, 'UTF-8'); ?></div>
+                                        <div class="summary-caption"><?php echo htmlspecialchars($averageCaption, ENT_QUOTES, 'UTF-8'); ?></div>
                                         <span class="<?php echo getStatusPillClass($student['overall_status'] ?? 'NO DATA'); ?>"><?php echo htmlspecialchars($statusLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                     </div>
                                 </article>
-                            <?php endwhile; ?>
+                            <?php endforeach; ?>
                         <?php else: ?>
                             <div class="summary-empty">
                                 <p>No student summary data available yet.</p>
@@ -825,5 +868,6 @@ if ($subjectPerformance === false) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
 
