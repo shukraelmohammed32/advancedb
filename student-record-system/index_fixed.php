@@ -167,6 +167,31 @@ $subjectStats = $conn->query("
             background: #dc3545;
             color: white;
         }
+        .empty-stats {
+            background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+            opacity: 0.7;
+        }
+        .empty-stats .card-body {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .empty-stats h3 {
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        .empty-stats .stats-description {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .stats-label {
+            color: #6c757d !important;
+        }
+        .stats-title {
+            color: #6c757d !important;
+        }
+        .stats-description {
+            color: #6c757d !important;
+        }
     </style>
 </head>
 <body>
@@ -262,39 +287,63 @@ $subjectStats = $conn->query("
             <!-- Statistics Cards -->
             <div class="row mb-4">
                 <div class="col-md-3 mb-3">
-                    <div class="card stats-card students-card">
+                    <div class="card stats-card <?php echo $totalStudents == 0 ? 'empty-stats' : 'students-card'; ?>">
                         <div class="card-body">
                             <span class="stats-label">Students</span>
                             <h3><?php echo $totalStudents; ?></h3>
                             <p class="stats-title">Total Students</p>
-                            <p class="stats-description">Registered learners</p>
+                            <p class="stats-description">
+                                <?php if ($totalStudents == 0): ?>
+                                    <i class="fas fa-exclamation-triangle"></i> No students registered
+                                <?php else: ?>
+                                    <i class="fas fa-users"></i> Registered learners
+                                <?php endif; ?>
+                            </p>
                         </div>
                     </div>
                 <div class="col-md-3 mb-3">
-                    <div class="card stats-card teachers-card">
+                    <div class="card stats-card <?php echo $totalTeachers == 0 ? 'empty-stats' : 'teachers-card'; ?>">
                         <div class="card-body">
                             <span class="stats-label">Teachers</span>
                             <h3><?php echo $totalTeachers; ?></h3>
                             <p class="stats-title">Total Teachers</p>
-                            <p class="stats-description">Faculty members</p>
+                            <p class="stats-description">
+                                <?php if ($totalTeachers == 0): ?>
+                                    <i class="fas fa-exclamation-triangle"></i> No teachers added
+                                <?php else: ?>
+                                    <i class="fas fa-chalkboard-teacher"></i> Faculty members
+                                <?php endif; ?>
+                            </p>
                         </div>
                     </div>
                 <div class="col-md-3 mb-3">
-                    <div class="card stats-card subjects-card">
+                    <div class="card stats-card <?php echo $totalSubjects == 0 ? 'empty-stats' : 'subjects-card'; ?>">
                         <div class="card-body">
                             <span class="stats-label">Subjects</span>
                             <h3><?php echo $totalSubjects; ?></h3>
                             <p class="stats-title">Total Subjects</p>
-                            <p class="stats-description">Available courses</p>
+                            <p class="stats-description">
+                                <?php if ($totalSubjects == 0): ?>
+                                    <i class="fas fa-exclamation-triangle"></i> No subjects created
+                                <?php else: ?>
+                                    <i class="fas fa-book"></i> Available courses
+                                <?php endif; ?>
+                            </p>
                         </div>
                     </div>
                 <div class="col-md-3 mb-3">
-                    <div class="card stats-card">
+                    <div class="card stats-card <?php echo $totalMarks == 0 ? 'empty-stats' : 'marks-card'; ?>">
                         <div class="card-body">
                             <span class="stats-label">Marks</span>
                             <h3><?php echo $totalMarks; ?></h3>
                             <p class="stats-title">Total Marks</p>
-                            <p class="stats-description">Recorded assessments</p>
+                            <p class="stats-description">
+                                <?php if ($totalMarks == 0): ?>
+                                    <i class="fas fa-exclamation-triangle"></i> No marks recorded
+                                <?php else: ?>
+                                    <i class="fas fa-edit"></i> Recorded assessments
+                                <?php endif; ?>
+                            </p>
                         </div>
                     </div>
                 </div>
