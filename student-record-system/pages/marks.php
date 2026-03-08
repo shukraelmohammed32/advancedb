@@ -366,12 +366,16 @@ $csrf_token = urlencode(getCsrfToken());
                     <li class="nav-item">
                         <a class="nav-link active" href="marks.php">Marks</a>
                     </li>
+                    <?php if (canAccessSummary()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="summary.php">Summary</a>
                     </li>
+                    <?php endif; ?>
+                    <?php if (canViewStudentReports()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="report.php">Reports</a>
                     </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -645,6 +649,7 @@ $csrf_token = urlencode(getCsrfToken());
     </script>
 </body>
 </html>
+
 
 
 

@@ -59,9 +59,11 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                         <a class="nav-link" href="pages/marks.php">Marks</a>
                     </li>
                     <?php endif; ?>
+                    <?php if (canAccessSummary()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="pages/summary.php">Summary</a>
                     </li>
+                    <?php endif; ?>
                     <?php endif; ?>
                     <?php if (canViewStudentReports()): ?>
                     <li class="nav-item">
@@ -75,7 +77,7 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                     <?php endif; ?>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <?php echo $_SESSION['display_name']; ?> (<?php echo ucfirst($_SESSION['role']); ?>)
+                            <?php echo $_SESSION['display_name']; ?> (<?php echo htmlspecialchars(getRoleLabel(), ENT_QUOTES, 'UTF-8'); ?>)
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="auth/logout.php">Logout</a></li>
@@ -195,11 +197,13 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                                     </a>
                                 </div>
                                 <?php endif; ?>
+                                <?php if (canAccessSummary()): ?>
                                 <div class="col-md-6 mb-2">
                                     <a href="pages/summary.php" class="btn btn-secondary btn-lg w-100">
                                         <i class="fas fa-chart-line"></i> View Summary
                                     </a>
                                 </div>
+                                <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if (canViewStudentReports()): ?>
                                 <div class="col-md-6 mb-2">
@@ -231,6 +235,8 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
+
 
 
 

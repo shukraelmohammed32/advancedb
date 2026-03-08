@@ -26,7 +26,9 @@ if ($footer_base_path !== '') {
                     <?php if (function_exists('canManageMarks') && canManageMarks()): ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/marks.php', ENT_QUOTES, 'UTF-8'); ?>">Marks</a></li>
                     <?php endif; ?>
+                    <?php if (function_exists('canAccessSummary') && canAccessSummary()): ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/summary.php', ENT_QUOTES, 'UTF-8'); ?>">Summary</a></li>
+                    <?php endif; ?>
                     <?php endif; ?>
                     <?php if (function_exists('canViewStudentReports') && canViewStudentReports()): ?>
                     <li><a href="<?php echo htmlspecialchars($footer_base_path . 'pages/report.php', ENT_QUOTES, 'UTF-8'); ?>">Reports</a></li>
@@ -47,6 +49,7 @@ if ($footer_base_path !== '') {
         </div>
     </div>
 </footer>
+
 
 
 

@@ -2,7 +2,7 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
-requireAnyRole(['admin', 'teacher']);
+requireRole('admin');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();
@@ -24,3 +24,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     exit();
 }
 ?>
+

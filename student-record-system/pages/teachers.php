@@ -455,15 +455,21 @@ $csrf_token = urlencode(getCsrfToken());
                     <li class="nav-item">
                         <a class="nav-link active" href="teachers.php">Teachers</a>
                     </li>
+                    <?php if (canManageMarks()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
+                    <?php endif; ?>
+                    <?php if (canAccessSummary()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="summary.php">Summary</a>
                     </li>
+                    <?php endif; ?>
+                    <?php if (canViewStudentReports()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="report.php">Reports</a>
                     </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -676,3 +682,4 @@ $csrf_token = urlencode(getCsrfToken());
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

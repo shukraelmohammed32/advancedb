@@ -18,6 +18,14 @@ function hasRole($role) {
     return isset($_SESSION['role']) && $_SESSION['role'] === $role;
 }
 
+function isTeacher() {
+    return hasRole('teacher');
+}
+
+function isHomeroomTeacher() {
+    return isTeacher() && !empty($_SESSION['is_homeroom']);
+}
+
 function requireRole($role) {
     requireLogin();
     if (!hasRole($role)) {
@@ -36,14 +44,37 @@ function requireAnyRole($roles) {
     }
 }
 
+function getRoleLabel() {
+    if (isHomeroomTeacher()) {
+        return 'Homeroom Teacher';
+    }
+
+    if (hasRole('admin')) {
+        return 'Administrator';
+    }
+
+    if (hasRole('student')) {
+        return 'Student';
+    }
+
+    if (hasRole('teacher')) {
+        return 'Teacher';
+    }
+
+    return 'User';
+}
+
 function getCurrentUser() {
     return [
         'user_id' => $_SESSION['user_id'] ?? null,
         'username' => $_SESSION['username'] ?? null,
         'role' => $_SESSION['role'] ?? null,
+        'role_label' => getRoleLabel(),
         'email' => $_SESSION['email'] ?? null,
         'student_id' => $_SESSION['student_id'] ?? null,
         'teacher_id' => $_SESSION['teacher_id'] ?? null,
+        'is_homeroom' => $_SESSION['is_homeroom'] ?? 0,
+        'assigned_grade' => $_SESSION['assigned_grade'] ?? null,
         'display_name' => $_SESSION['display_name'] ?? null
     ];
 }
@@ -56,6 +87,14 @@ function canAccessStudentRecords() {
     return hasRole('admin') || hasRole('teacher');
 }
 
+function canAccessSubjects() {
+    return hasRole('admin') || hasRole('teacher');
+}
+
+function canManageSubjects() {
+    return hasRole('admin');
+}
+
 function canOnlyViewOwnRecords() {
     return hasRole('student');
 }
@@ -65,7 +104,11 @@ function canManageMarks() {
 }
 
 function canViewStudentReports() {
-    return hasRole('teacher') || hasRole('student');
+    return hasRole('admin') || isHomeroomTeacher() || hasRole('student');
+}
+
+function canAccessSummary() {
+    return hasRole('admin') || isHomeroomTeacher();
 }
 
 function canAccessDistributedCoordinator() {
@@ -102,5 +145,3 @@ function requireValidCsrfToken() {
     }
 }
 ?>
-
-

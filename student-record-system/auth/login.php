@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $login_input = trim((string)($_POST['username'] ?? ''));
         $password = $_POST['password'];
         
-        $stmt = $conn->prepare("SELECT u.*, s.name as student_name, t.teacher_name 
+        $stmt = $conn->prepare("SELECT u.*, s.name as student_name, t.teacher_name, t.is_homeroom, t.assigned_grade 
                                FROM users u 
                                LEFT JOIN students s ON u.student_id = s.student_id 
                                LEFT JOIN teachers t ON u.teacher_id = t.teacher_id 
@@ -37,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $_SESSION['email'] = $user['email'];
                     $_SESSION['student_id'] = $user['student_id'];
                     $_SESSION['teacher_id'] = $user['teacher_id'];
+                    $_SESSION['is_homeroom'] = (int)($user['is_homeroom'] ?? 0);
+                    $_SESSION['assigned_grade'] = $user['assigned_grade'] ?? null;
                     $_SESSION['display_name'] = $user['student_name'] ?: $user['teacher_name'] ?: $user['username'];
                     
                     header("Location: ../index.php");

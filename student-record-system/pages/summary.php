@@ -3,6 +3,11 @@ require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 
 requireAnyRole(['admin', 'teacher']);
+if (!canAccessSummary()) {
+    $_SESSION['error'] = 'Only admin and homeroom teachers can access the academic summary.';
+    header('Location: ../index.php');
+    exit();
+}
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);
@@ -625,9 +630,11 @@ if ($subjectPerformance === false) {
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
                     <?php endif; ?>
+                    <?php if (canAccessSummary()): ?>
                     <li class="nav-item">
                         <a class="nav-link active" href="summary.php">Summary</a>
                     </li>
+                    <?php endif; ?>
                     <?php if (canViewStudentReports()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="report.php">Reports</a>
@@ -644,7 +651,7 @@ if ($subjectPerformance === false) {
                 <div>
                     <span class="summary-kicker">Academic Summary</span>
                     <h1 class="summary-title">A cleaner view of student progress and subject health.</h1>
-                    <p class="summary-intro">This page brings together completion, averages, pass rate, and subject trends so teachers and admins can review the school picture quickly without opening multiple reports.</p>
+                    <p class="summary-intro">This page brings together completion, averages, pass rate, and subject trends so homeroom teachers and administrators can review academic progress without opening multiple reports.</p>
                     <?php if (canManageMarks() || canViewStudentReports()): ?>
                     <div class="summary-actions">
                         <?php if (canManageMarks()): ?>
@@ -811,4 +818,5 @@ if ($subjectPerformance === false) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 

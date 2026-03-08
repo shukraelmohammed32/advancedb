@@ -3,7 +3,12 @@ require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
 
-requireAnyRole(['teacher', 'student']);
+requireAnyRole(['admin', 'teacher', 'student']);
+if (!canViewStudentReports()) {
+    $_SESSION['error'] = 'Only admin, homeroom teachers, and students can access reports.';
+    header('Location: ../index.php');
+    exit();
+}
 
 $db = new Database();
 $conn = $db->getConnection();
@@ -76,7 +81,7 @@ function teacherCanAccessStudent($conn, $teacher_id, $student_id) {
 }
 
 $teacher_grade = $is_teacher ? getTeacherAssignedGrade($conn, $session_teacher_id) : '';
-$page_title = $is_teacher ? 'My Student Reports' : 'Academic Reports';
+$page_title = isHomeroomTeacher() ? 'Homeroom Reports' : 'Academic Reports';
 $student_site_select = $show_site_details
     ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
@@ -88,11 +93,11 @@ $selected_student = null;
 $error_message = '';
 $info_message = '';
 
-if ($is_teacher) {
+if (isHomeroomTeacher()) {
     if ($teacher_grade !== '') {
-        $info_message = 'You can generate reports only for students in ' . $teacher_grade . '.';
+        $info_message = 'As homeroom teacher, you can generate final academic reports only for students in ' . $teacher_grade . '.';
     } else {
-        $error_message = 'Your teacher account is not linked to an assigned grade. Contact admin.';
+        $error_message = 'Your homeroom teacher account is not linked to an assigned grade. Contact admin.';
     }
 }
 
@@ -279,12 +284,16 @@ if ($subjects) {
                         <a class="nav-link" href="teachers.php">Teachers</a>
                     </li>
                     <?php endif; ?>
+                    <?php if (canManageMarks()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="marks.php">Marks</a>
                     </li>
+                    <?php endif; ?>
+                    <?php if (canAccessSummary()): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="summary.php">Summary</a>
                     </li>
+                    <?php endif; ?>
                     <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link active" href="report.php">Reports</a>
@@ -494,6 +503,8 @@ if ($subjects) {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
+
 
 
 
