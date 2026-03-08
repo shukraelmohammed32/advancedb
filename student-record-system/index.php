@@ -1,11 +1,15 @@
 <?php
 require_once 'config/database.php';
 require_once 'auth/auth_helper.php';
+require_once 'includes/distributed_coordinator.php';
 
 requireLogin();
 
 $db = new Database();
 $conn = $db->getConnection();
+$coordinator = new DistributedCoordinator($db);
+$distributed_ready = $coordinator->isDistributedReady();
+$site_stats = $coordinator->getSiteStats();
 
 // Get statistics
 $totalStudents = (int)$conn->query("SELECT COUNT(*) as count FROM students")->fetch_assoc()['count'];
@@ -124,6 +128,35 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
                 </div>
             </div>
 
+            <?php if ($distributed_ready && !empty($site_stats)): ?>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">Local Distributed Sites</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <?php foreach ($site_stats as $site_stat): ?>
+                                <div class="col-md-4 mb-3">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <strong><?php echo htmlspecialchars($site_stat['site_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                                            <?php if (!empty($site_stat['is_default'])): ?>
+                                            <span class="badge bg-primary">Default</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="text-muted small mb-2"><?php echo htmlspecialchars($site_stat['db_name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                        <div class="mb-1">Students: <strong><?php echo (int)$site_stat['total_students']; ?></strong></div>
+                                        <div>Marks: <strong><?php echo (int)$site_stat['total_marks']; ?></strong></div>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Quick Actions -->
             <div class="row">
                 <div class="col-12">
@@ -197,4 +230,5 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
 

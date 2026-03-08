@@ -1,13 +1,17 @@
 <?php
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
+require_once '../includes/distributed_coordinator.php';
 
 requireAnyRole(['teacher', 'student']);
 
 $db = new Database();
 $conn = $db->getConnection();
+$coordinator = new DistributedCoordinator($db);
 $is_admin = hasRole('admin');
 $is_teacher = hasRole('teacher');
+$distributed_ready = $coordinator->isDistributedReady();
+$default_site_id = $coordinator->getDefaultSiteId();
 $session_teacher_id = $is_teacher ? (int)($_SESSION['teacher_id'] ?? 0) : 0;
 
 function normalizeGradeLabel($grade) {
@@ -71,6 +75,10 @@ function teacherCanAccessStudent($conn, $teacher_id, $student_id) {
 
 $teacher_grade = $is_teacher ? getTeacherAssignedGrade($conn, $session_teacher_id) : '';
 $page_title = $is_teacher ? 'My Student Reports' : 'Academic Reports';
+$student_site_select = $distributed_ready
+    ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
+    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
+$student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
 
 // Handle form submission for generating report
 $report_data = null;
@@ -80,7 +88,9 @@ $info_message = '';
 
 if ($is_teacher) {
     if ($teacher_grade !== '') {
-        $info_message = 'You can generate reports only for students in ' . $teacher_grade . '.';
+        $info_message = $distributed_ready
+            ? 'You can generate reports only for students in ' . $teacher_grade . ' across all branch sites.'
+            : 'You can generate reports only for students in ' . $teacher_grade . '.';
     } else {
         $error_message = 'Your teacher account is not linked to an assigned grade. Contact admin.';
     }
@@ -103,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
     }
 
     if (empty($error_message) && $student_id > 0) {
-        $student_result = $conn->query("SELECT * FROM students WHERE student_id = $student_id");
+        $student_result = $conn->query("SELECT s.*, $student_site_select FROM students s $student_site_join WHERE s.student_id = $student_id");
         $selected_student = $student_result ? $student_result->fetch_assoc() : null;
 
         if ($selected_student) {
@@ -181,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generate_report'])) {
 }
 
 $student_rows = [];
-$students_query = $conn->query('SELECT student_id, name, grade FROM students ORDER BY name');
+$students_query = $conn->query("SELECT s.student_id, s.name, s.grade, $student_site_select FROM students s $student_site_join ORDER BY s.name");
 if ($students_query) {
     while ($student = $students_query->fetch_assoc()) {
         if (canOnlyViewOwnRecords() && (int)$student['student_id'] !== (int)($_SESSION['student_id'] ?? 0)) {
@@ -325,7 +335,7 @@ if ($subjects) {
                                     <?php foreach ($student_rows as $student): ?>
                                         <option value="<?php echo (int)$student['student_id']; ?>"
                                                 <?php echo isset($_POST['student_id']) && (int)$_POST['student_id'] === (int)$student['student_id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($student['name'] . ' - ' . normalizeGradeLabel($student['grade']), ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo htmlspecialchars($student['name'] . ' - ' . normalizeGradeLabel($student['grade']) . ' - ' . ($student['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -361,7 +371,8 @@ if ($subjects) {
                                 <div class="col-md-6">
                                     <strong>Name:</strong> <?php echo htmlspecialchars($report_data['student']['name'], ENT_QUOTES, 'UTF-8'); ?><br>
                                     <strong>Student ID:</strong> <?php echo (int)$report_data['student']['student_id']; ?><br>
-                                    <strong>Grade:</strong> <?php echo htmlspecialchars(normalizeGradeLabel($report_data['student']['grade']), ENT_QUOTES, 'UTF-8'); ?>
+                                    <strong>Grade:</strong> <?php echo htmlspecialchars(normalizeGradeLabel($report_data['student']['grade']), ENT_QUOTES, 'UTF-8'); ?><br>
+                                    <strong>Site:</strong> <?php echo htmlspecialchars((string)($report_data['student']['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?>
                                 </div>
                                 <div class="col-md-6">
                                     <strong>Gender:</strong> <?php echo htmlspecialchars($report_data['student']['gender'], ENT_QUOTES, 'UTF-8'); ?><br>
@@ -481,4 +492,7 @@ if ($subjects) {
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
+
+
+
 

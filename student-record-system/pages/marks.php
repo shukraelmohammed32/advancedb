@@ -1,13 +1,17 @@
 <?php
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
+require_once '../includes/distributed_coordinator.php';
 
 requireRole('teacher');
 
 $db = new Database();
 $conn = $db->getConnection();
+$coordinator = new DistributedCoordinator($db);
 $is_admin = hasRole('admin');
 $is_teacher = hasRole('teacher');
+$distributed_ready = $coordinator->isDistributedReady();
+$default_site_id = $coordinator->getDefaultSiteId();
 $session_teacher_id = $is_teacher ? (int)($_SESSION['teacher_id'] ?? 0) : 0;
 
 function normalizeGradeLabel($grade) {
@@ -103,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $subject_id = (int)($_POST['subject_id'] ?? 0);
         $teacher_id = $is_teacher ? $session_teacher_id : (int)($_POST['teacher_id'] ?? 0);
         $score = (int)($_POST['score'] ?? -1);
+        $site_id = $coordinator->studentSiteId($student_id);
 
         if ($score < 0 || $score > 100) {
             header('Location: marks.php?error=' . urlencode('Score must be between 0 and 100'));
@@ -120,10 +125,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit();
         }
 
-        $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, score)
-                VALUES ($student_id, $subject_id, $teacher_id, $score)";
-        $conn->query($sql);
-        header('Location: marks.php?success=' . urlencode('Mark added successfully'));
+        if ($distributed_ready) {
+            $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, site_id, score)
+                    VALUES ($student_id, $subject_id, $teacher_id, $site_id, $score)";
+        } else {
+            $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, score)
+                    VALUES ($student_id, $subject_id, $teacher_id, $score)";
+        }
+
+        if ($conn->query($sql)) {
+            $mark_id = (int)$conn->insert_id;
+            $sync_ok = $coordinator->syncMark($mark_id);
+            $message = $sync_ok
+                ? 'Mark added and synced to ' . $coordinator->getSiteName($site_id)
+                : 'Mark added centrally, but branch sync failed';
+            header('Location: marks.php?success=' . urlencode($message));
+        } else {
+            header('Location: marks.php?error=' . urlencode('Error adding mark'));
+        }
         exit();
     }
 
@@ -133,6 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $subject_id = (int)($_POST['subject_id'] ?? 0);
         $teacher_id = $is_teacher ? $session_teacher_id : (int)($_POST['teacher_id'] ?? 0);
         $score = (int)($_POST['score'] ?? -1);
+        $site_id = $coordinator->studentSiteId($student_id);
 
         if ($score < 0 || $score > 100) {
             header('Location: marks.php?error=' . urlencode('Score must be between 0 and 100'));
@@ -155,10 +175,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit();
         }
 
-        $sql = "UPDATE marks SET student_id=$student_id, subject_id=$subject_id,
-                teacher_id=$teacher_id, score=$score WHERE mark_id=$mark_id";
+        if ($distributed_ready) {
+            $sql = "UPDATE marks SET student_id=$student_id, subject_id=$subject_id,
+                    teacher_id=$teacher_id, site_id=$site_id, score=$score WHERE mark_id=$mark_id";
+        } else {
+            $sql = "UPDATE marks SET student_id=$student_id, subject_id=$subject_id,
+                    teacher_id=$teacher_id, score=$score WHERE mark_id=$mark_id";
+        }
         $conn->query($sql);
-        header('Location: marks.php?success=' . urlencode('Mark updated successfully'));
+        $sync_ok = $coordinator->syncMark($mark_id);
+        $message = $sync_ok
+            ? 'Mark updated and synced to ' . $coordinator->getSiteName($site_id)
+            : 'Mark updated centrally, but branch sync failed';
+        header('Location: marks.php?success=' . urlencode($message));
         exit();
     }
 }
@@ -173,7 +202,9 @@ if (isset($_GET['delete'])) {
     }
 
     $conn->query("DELETE FROM marks WHERE mark_id=$mark_id");
-    header('Location: marks.php?success=' . urlencode('Mark deleted successfully'));
+    $sync_ok = $coordinator->deleteMarkDistributed($mark_id);
+    $message = $sync_ok ? 'Mark deleted from coordinator and branch database' : 'Mark deleted centrally, but branch cleanup failed';
+    header('Location: marks.php?success=' . urlencode($message));
     exit();
 }
 
@@ -191,9 +222,18 @@ if (isset($_GET['edit'])) {
     $edit_mark = $result ? $result->fetch_assoc() : null;
 }
 
+$student_site_select = $distributed_ready
+    ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name, COALESCE(ds.site_code, 'N/A') AS site_code,"
+    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name, 'CENTRAL' AS site_code,";
+$student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
+$mark_site_select = $distributed_ready
+    ? "m.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name,"
+    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name,";
+$mark_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = m.site_id' : '';
+
 // Build dropdown data
 $student_rows = [];
-$student_query = $conn->query('SELECT student_id, name, grade FROM students ORDER BY name');
+$student_query = $conn->query("SELECT s.student_id, s.name, s.grade, $student_site_select FROM students s $student_site_join ORDER BY s.name");
 if ($student_query) {
     while ($student = $student_query->fetch_assoc()) {
         if ($is_teacher && ($teacher_grade === '' || !gradesMatch($student['grade'], $teacher_grade))) {
@@ -239,11 +279,13 @@ if ($teacher_query) {
 }
 
 $marks_sql = "SELECT m.*, s.name as student_name, s.grade,
+                     $mark_site_select
                      sub.subject_name, t.teacher_name
               FROM marks m
               JOIN students s ON m.student_id = s.student_id
               JOIN subjects sub ON m.subject_id = sub.subject_id
-              JOIN teachers t ON m.teacher_id = t.teacher_id";
+              JOIN teachers t ON m.teacher_id = t.teacher_id
+              $mark_site_join";
 if ($is_teacher) {
     $marks_sql .= " WHERE m.teacher_id = $session_teacher_id";
 }
@@ -274,7 +316,9 @@ $page_title = $is_teacher ? 'My Student Marks' : 'Mark Entry';
 
 if ($is_teacher) {
     if ($teacher_scope && $teacher_grade !== '') {
-        $info_message = 'You can record marks only for ' . $teacher_grade . ' students in your assigned subjects.';
+        $info_message = $distributed_ready
+            ? 'You can record marks only for ' . $teacher_grade . ' students in your assigned subjects across all branch sites.'
+            : 'You can record marks only for ' . $teacher_grade . ' students in your assigned subjects.';
     } else {
         $error_message = $error_message !== ''
             ? $error_message
@@ -380,7 +424,7 @@ $csrf_token = urlencode(getCsrfToken());
                                         <option value="<?php echo (int)$student['student_id']; ?>"
                                                 data-grade="<?php echo htmlspecialchars($student_grade, ENT_QUOTES, 'UTF-8'); ?>"
                                                 <?php echo $edit_mark && (int)$edit_mark['student_id'] === (int)$student['student_id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($student['name'] . ' - ' . $student_grade, ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo htmlspecialchars($student['name'] . ' - ' . $student_grade . ' - ' . ($student['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -461,6 +505,7 @@ $csrf_token = urlencode(getCsrfToken());
                                         <thead>
                                             <tr>
                                                 <th>Student</th>
+                                                <th>Site</th>
                                                 <th>Subject</th>
                                                 <th>Teacher</th>
                                                 <th>Score</th>
@@ -472,6 +517,7 @@ $csrf_token = urlencode(getCsrfToken());
                                             <?php foreach ($grade_marks as $mark): ?>
                                                 <tr>
                                                     <td><?php echo htmlspecialchars($mark['student_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string)($mark['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars($mark['subject_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars($mark['teacher_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td>
@@ -593,4 +639,12 @@ $csrf_token = urlencode(getCsrfToken());
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
 

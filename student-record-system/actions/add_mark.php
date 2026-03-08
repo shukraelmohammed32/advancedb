@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
+require_once '../includes/distributed_coordinator.php';
 
 requireRole('teacher');
 
@@ -51,13 +52,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $db = new Database();
     $conn = $db->getConnection();
+    $coordinator = new DistributedCoordinator($db);
+    $distributed_ready = $coordinator->isDistributedReady();
 
-    $student_id = (int)$_POST['student_id'];
-    $subject_id = (int)$_POST['subject_id'];
-    $teacher_id = (int)$_POST['teacher_id'];
-    $score = (int)$_POST['score'];
+    $student_id = (int)($_POST['student_id'] ?? 0);
+    $subject_id = (int)($_POST['subject_id'] ?? 0);
+    $teacher_id = (int)($_POST['teacher_id'] ?? 0);
+    $score = (int)($_POST['score'] ?? -1);
+    $site_id = $coordinator->studentSiteId($student_id);
 
-    // Validate score
     if ($score < 0 || $score > 100) {
         header('Location: ../pages/marks.php?error=' . urlencode('Score must be between 0 and 100'));
         exit();
@@ -68,23 +71,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 
-    // Check if mark already exists for this student and subject
     $existing = $conn->query("SELECT mark_id FROM marks WHERE student_id=$student_id AND subject_id=$subject_id");
-
     if ($existing && $existing->num_rows > 0) {
         header('Location: ../pages/marks.php?error=' . urlencode('Mark already exists for this student and subject'));
         exit();
     }
 
-    $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, score)
-            VALUES ($student_id, $subject_id, $teacher_id, $score)";
+    if ($distributed_ready) {
+        $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, site_id, score)
+                VALUES ($student_id, $subject_id, $teacher_id, $site_id, $score)";
+    } else {
+        $sql = "INSERT INTO marks (student_id, subject_id, teacher_id, score)
+                VALUES ($student_id, $subject_id, $teacher_id, $score)";
+    }
 
     if ($conn->query($sql)) {
-        header('Location: ../pages/marks.php?success=' . urlencode('Mark added successfully'));
+        $mark_id = (int)$conn->insert_id;
+        $sync_ok = $coordinator->syncMark($mark_id);
+        $message = $sync_ok
+            ? 'Mark added and synced to ' . $coordinator->getSiteName($site_id)
+            : 'Mark added centrally, but branch sync failed';
+        header('Location: ../pages/marks.php?success=' . urlencode($message));
     } else {
         header('Location: ../pages/marks.php?error=' . urlencode('Error adding mark'));
     }
     exit();
 }
 ?>
-

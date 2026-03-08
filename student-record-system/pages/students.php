@@ -1,13 +1,18 @@
 <?php
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
+require_once '../includes/distributed_coordinator.php';
 
 requireAnyRole(['admin', 'teacher']);
 
 $db = new Database();
 $conn = $db->getConnection();
+$coordinator = new DistributedCoordinator($db);
 $is_admin = hasRole('admin');
 $is_teacher = hasRole('teacher');
+$distributed_ready = $coordinator->isDistributedReady();
+$site_options = $coordinator->getSites();
+$default_site_id = $coordinator->getDefaultSiteId();
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);
@@ -190,6 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $selected_grade = normalizeGradeLabel($_POST['grade'] ?? '');
     $academic_year = trim((string)($_POST['academic_year'] ?? ''));
     $semester = trim((string)($_POST['semester'] ?? ''));
+    $selected_site_id = $distributed_ready ? $coordinator->normalizeSiteId((int)($_POST['site_id'] ?? $default_site_id)) : $default_site_id;
     $login_username = normalizeLoginUsername($_POST['login_username'] ?? '');
     $login_email = trim((string)($_POST['login_email'] ?? ''));
     $login_password = (string)($_POST['login_password'] ?? '');
@@ -257,8 +263,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $conn->begin_transaction();
 
     if (isset($_POST['add_student'])) {
-        $sql = "INSERT INTO students (name, gender, grade, grade_id, academic_year, semester)
-                VALUES ('$name_safe', '$gender_safe', '$grade_name', $grade_id, '$academic_year_safe', '$semester_safe')";
+        if ($distributed_ready) {
+            $sql = "INSERT INTO students (name, gender, grade, grade_id, academic_year, semester, site_id)
+                    VALUES ('$name_safe', '$gender_safe', '$grade_name', $grade_id, '$academic_year_safe', '$semester_safe', $selected_site_id)";
+        } else {
+            $sql = "INSERT INTO students (name, gender, grade, grade_id, academic_year, semester)
+                    VALUES ('$name_safe', '$gender_safe', '$grade_name', $grade_id, '$academic_year_safe', '$semester_safe')";
+        }
 
         if (!$conn->query($sql)) {
             $conn->rollback();
@@ -276,9 +287,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit();
         }
 
-        $sql = "UPDATE students SET name='$name_safe', gender='$gender_safe', grade='$grade_name', grade_id=$grade_id,
-                academic_year='$academic_year_safe', semester='$semester_safe'
-                WHERE student_id=$student_id";
+        if ($distributed_ready) {
+            $sql = "UPDATE students SET name='$name_safe', gender='$gender_safe', grade='$grade_name', grade_id=$grade_id,
+                    academic_year='$academic_year_safe', semester='$semester_safe', site_id=$selected_site_id
+                    WHERE student_id=$student_id";
+        } else {
+            $sql = "UPDATE students SET name='$name_safe', gender='$gender_safe', grade='$grade_name', grade_id=$grade_id,
+                    academic_year='$academic_year_safe', semester='$semester_safe'
+                    WHERE student_id=$student_id";
+        }
 
         if (!$conn->query($sql)) {
             $conn->rollback();
@@ -294,9 +311,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     $conn->commit();
-    $message = isset($_POST['add_student'])
-        ? 'Student and login account created successfully'
-        : 'Student and login account updated successfully';
+    $sync_ok = $coordinator->syncStudent($student_id);
+    $site_label = $coordinator->getSiteName($selected_site_id);
+    if (isset($_POST['add_student'])) {
+        $message = $sync_ok
+            ? 'Student created and routed to ' . $site_label
+            : 'Student created in central coordinator, but branch sync failed';
+    } else {
+        $message = $sync_ok
+            ? 'Student updated and synced to ' . $site_label
+            : 'Student updated in central coordinator, but branch sync failed';
+    }
     header('Location: students.php?success=' . urlencode($message));
     exit();
 }
@@ -315,13 +340,26 @@ if (isset($_GET['delete'])) {
     if ($student_id > 0) {
         $conn->begin_transaction();
         $conn->query("DELETE FROM users WHERE student_id = $student_id AND role = 'student'");
+        $conn->query("DELETE FROM student_profiles WHERE student_id = $student_id");
+        $conn->query("DELETE FROM marks WHERE student_id = $student_id");
         $conn->query("DELETE FROM students WHERE student_id=$student_id");
         $conn->commit();
+        $sync_ok = $coordinator->deleteStudentDistributed($student_id);
+        $message = $sync_ok
+            ? 'Student deleted from coordinator and all branch databases'
+            : 'Student deleted centrally, but some branch cleanup failed';
+        header('Location: students.php?success=' . urlencode($message));
+        exit();
     }
 
-    header('Location: students.php?success=' . urlencode('Student and login account deleted successfully'));
+    header('Location: students.php?success=' . urlencode('Student deleted successfully'));
     exit();
 }
+
+$student_site_select = $distributed_ready
+    ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name, COALESCE(ds.site_code, 'N/A') AS site_code,"
+    : "$default_site_id AS site_id, 'Central Coordinator' AS site_name, 'CENTRAL' AS site_code,";
+$student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
 
 // Get student data for editing
 $edit_student = null;
@@ -329,10 +367,12 @@ if ($is_admin && isset($_GET['edit'])) {
     $student_id = (int)$_GET['edit'];
     $result = $conn->query("SELECT
                                 s.*,
+                                $student_site_select
                                 (SELECT u.user_id FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_user_id,
                                 (SELECT u.username FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_username,
                                 (SELECT u.email FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_email
                             FROM students s
+                            $student_site_join
                             WHERE s.student_id = $student_id
                             LIMIT 1");
     $edit_student = $result ? $result->fetch_assoc() : null;
@@ -341,10 +381,12 @@ if ($is_admin && isset($_GET['edit'])) {
 // Get all students grouped by grade/class
 $students = $conn->query("SELECT
                             s.*,
+                            $student_site_select
                             (SELECT u.username FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_username,
                             (SELECT u.email FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_email,
                             EXISTS(SELECT 1 FROM users u WHERE u.student_id = s.student_id AND u.role = 'student') AS has_login
                          FROM students s
+                         $student_site_join
                          ORDER BY s.grade_id ASC, s.grade ASC, s.name ASC");
 $students_by_grade = [];
 if ($students) {
@@ -373,12 +415,16 @@ $page_title = $is_admin ? 'Student Management' : 'My Students';
 
 if ($is_teacher) {
     if ($teacher_scope && $teacher_grade !== '') {
-        $info_message = 'You can view only students in ' . $teacher_grade . '. Student accounts are created by admin.';
+        $info_message = $distributed_ready
+            ? 'You can view only students in ' . $teacher_grade . ' across all branch sites. Student accounts are created by admin.'
+            : 'You can view only students in ' . $teacher_grade . '. Student accounts are created by admin.';
     } else {
         $error_message = $error_message !== ''
             ? $error_message
             : 'Your teacher account is not linked to an assigned grade. Contact admin.';
     }
+} elseif ($is_admin && $distributed_ready) {
+    $info_message = 'Distributed mode is active. New students are routed through the central coordinator to a selected local branch site.';
 }
 
 $csrf_token = urlencode(getCsrfToken());
@@ -473,6 +519,23 @@ $csrf_token = urlencode(getCsrfToken());
                             <?php csrfInput(); ?>
                             <?php if ($edit_student): ?>
                                 <input type="hidden" name="student_id" value="<?php echo (int)$edit_student['student_id']; ?>">
+                            <?php endif; ?>
+
+                            <?php if ($distributed_ready): ?>
+                            <div class="mb-3">
+                                <label for="site_id" class="form-label">Branch Site</label>
+                                <select class="form-control" id="site_id" name="site_id" required>
+                                    <?php
+                                    $current_site_id = $edit_student ? (int)($edit_student['site_id'] ?? $default_site_id) : $default_site_id;
+                                    foreach ($site_options as $site_option):
+                                    ?>
+                                        <option value="<?php echo (int)$site_option['site_id']; ?>" <?php echo $current_site_id === (int)$site_option['site_id'] ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($site_option['site_name'] . ' (' . $site_option['site_code'] . ')', ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="form-text">The central coordinator will store this student in the selected local branch database.</div>
+                            </div>
                             <?php endif; ?>
 
                             <div class="mb-3">
@@ -589,6 +652,7 @@ $csrf_token = urlencode(getCsrfToken());
                                             <tr>
                                                 <th>ID</th>
                                                 <th>Name</th>
+                                                <th>Site</th>
                                                 <?php if ($is_admin): ?>
                                                 <th>Username</th>
                                                 <th>Email</th>
@@ -606,6 +670,7 @@ $csrf_token = urlencode(getCsrfToken());
                                                 <tr>
                                                     <td><?php echo (int)$student['student_id']; ?></td>
                                                     <td><?php echo htmlspecialchars($student['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><?php echo htmlspecialchars((string)($student['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <?php if ($is_admin): ?>
                                                     <td><?php echo htmlspecialchars((string)($student['login_username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars((string)($student['login_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
@@ -625,7 +690,7 @@ $csrf_token = urlencode(getCsrfToken());
                                                            class="btn btn-sm btn-warning">Edit</a>
                                                         <a href="students.php?delete=<?php echo (int)$student['student_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
                                                            class="btn btn-sm btn-danger"
-                                                           onclick="return confirm('Are you sure you want to delete this student and login account?')">Delete</a>
+                                                           onclick="return confirm('Are you sure you want to delete this student from the coordinator and branch database?')">Delete</a>
                                                     </td>
                                                     <?php endif; ?>
                                                 </tr>
@@ -648,4 +713,15 @@ $csrf_token = urlencode(getCsrfToken());
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
 

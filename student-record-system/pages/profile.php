@@ -1,11 +1,14 @@
 <?php
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
+require_once '../includes/distributed_coordinator.php';
 
 requireRole('student');
 
 $db = new Database();
 $conn = $db->getConnection();
+$coordinator = new DistributedCoordinator($db);
+$distributed_ready = $coordinator->isDistributedReady();
 
 $student_id = (int)($_SESSION['student_id'] ?? 0);
 $user_id = (int)($_SESSION['user_id'] ?? 0);
@@ -288,7 +291,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
             if ($error_message === '') {
                 $conn->commit();
                 $_SESSION['email'] = $email;
-                $success_message = 'Profile saved successfully.';
+                $sync_ok = $coordinator->syncStudentProfile($student_id);
+                $success_message = $sync_ok
+                    ? 'Profile saved and synced to your branch database.'
+                    : 'Profile saved in the central coordinator, but branch sync failed.';
 
                 if ($profile_photo_column_exists && $current_profile_photo !== $new_profile_photo && $current_profile_photo !== '') {
                     deleteProfilePhotoFile($current_profile_photo);
@@ -513,4 +519,5 @@ if (!$profile_table_exists && $error_message === '') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
