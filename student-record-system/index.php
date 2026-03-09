@@ -41,7 +41,6 @@ $coordinator = new DistributedCoordinator($db);
 $distributed_ready = $coordinator->isDistributedReady();
 $can_access_distributed = canAccessDistributedCoordinator();
 $site_stats = $can_access_distributed ? $coordinator->getSiteStats() : [];
-$branch_activity = $can_access_distributed ? $coordinator->getRecentBranchActivity(12) : [];
 
 $totalStudents = (int)$conn->query("SELECT COUNT(*) as count FROM students")->fetch_assoc()['count'];
 $totalTeachers = (int)$conn->query("SELECT COUNT(*) as count FROM teachers")->fetch_assoc()['count'];
@@ -182,76 +181,35 @@ function formatDashboardDateTime($value, $fallback = 'No activity yet') {
                             <div class="row">
                                 <?php foreach ($site_stats as $site_stat): ?>
                                 <div class="col-md-4 mb-3">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="d-flex justify-content-between align-items-start mb-3">
-                                            <div>
-                                                <strong><?php echo htmlspecialchars($site_stat['site_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
-                                                <div class="text-muted small"><?php echo htmlspecialchars($site_stat['db_name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <a href="pages/branch_details.php?site_id=<?php echo (int)$site_stat['site_id']; ?>" class="text-decoration-none text-reset d-block h-100">
+                                        <div class="border rounded p-3 h-100">
+                                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                                <div>
+                                                    <strong><?php echo htmlspecialchars($site_stat['site_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                                                    <div class="text-muted small"><?php echo htmlspecialchars($site_stat['db_name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge <?php echo ($site_stat['connection_status'] ?? '') === 'online' ? 'bg-success' : 'bg-secondary'; ?>">
+                                                        <?php echo ($site_stat['connection_status'] ?? '') === 'online' ? 'Online' : 'Unavailable'; ?>
+                                                    </span>
+                                                    <?php if (!empty($site_stat['is_default'])): ?>
+                                                    <div class="mt-2"><span class="badge bg-primary">Default</span></div>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
-                                            <div class="text-end">
-                                                <span class="badge <?php echo ($site_stat['connection_status'] ?? '') === 'online' ? 'bg-success' : 'bg-secondary'; ?>">
-                                                    <?php echo ($site_stat['connection_status'] ?? '') === 'online' ? 'Online' : 'Unavailable'; ?>
-                                                </span>
-                                                <?php if (!empty($site_stat['is_default'])): ?>
-                                                <div class="mt-2"><span class="badge bg-primary">Default</span></div>
-                                                <?php endif; ?>
+                                            <div class="row g-2 small">
+                                                <div class="col-6">Teachers: <strong><?php echo htmlspecialchars(formatDashboardMetric($site_stat['total_teachers'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong></div>
+                                                <div class="col-6">Subjects: <strong><?php echo htmlspecialchars(formatDashboardMetric($site_stat['total_subjects'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong></div>
+                                                <div class="col-6">Students: <strong><?php echo htmlspecialchars(formatDashboardMetric($site_stat['total_students'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong></div>
+                                                <div class="col-6">Marks: <strong><?php echo htmlspecialchars(formatDashboardMetric($site_stat['total_marks'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong></div>
                                             </div>
+                                            <div class="small text-muted mt-3">Latest activity: <?php echo htmlspecialchars(formatDashboardDateTime($site_stat['last_activity_at'] ?? null), ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <div class="small text-primary mt-3">Open campus details</div>
                                         </div>
-                                        <div class="row g-2 small">
-                                            <div class="col-6">Teachers: <strong><?php echo htmlspecialchars(formatDashboardMetric($site_stat['total_teachers'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong></div>
-                                            <div class="col-6">Subjects: <strong><?php echo htmlspecialchars(formatDashboardMetric($site_stat['total_subjects'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong></div>
-                                            <div class="col-6">Students: <strong><?php echo htmlspecialchars(formatDashboardMetric($site_stat['total_students'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong></div>
-                                            <div class="col-6">Marks: <strong><?php echo htmlspecialchars(formatDashboardMetric($site_stat['total_marks'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong></div>
-                                        </div>
-                                        <div class="small text-muted mt-3">Latest activity: <?php echo htmlspecialchars(formatDashboardDateTime($site_stat['last_activity_at'] ?? null), ENT_QUOTES, 'UTF-8'); ?></div>
-                                    </div>
+                                    </a>
                                 </div>
                                 <?php endforeach; ?>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">Recent Branch Activity</div>
-                        <div class="card-body">
-                            <?php if (empty($branch_activity)): ?>
-                            <p class="mb-0 text-muted">No recent branch activity recorded yet.</p>
-                            <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-striped align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Branch</th>
-                                            <th>Type</th>
-                                            <th>Details</th>
-                                            <th>When</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($branch_activity as $activity): ?>
-                                        <tr>
-                                            <td>
-                                                <strong><?php echo htmlspecialchars($activity['site_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
-                                                <div class="small text-muted"><?php echo htmlspecialchars($activity['site_code'], ENT_QUOTES, 'UTF-8'); ?></div>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-dark"><?php echo htmlspecialchars(ucfirst((string)($activity['entity_type'] ?? 'item')), ENT_QUOTES, 'UTF-8'); ?></span>
-                                            </td>
-                                            <td>
-                                                <strong><?php echo htmlspecialchars((string)($activity['title'] ?? 'Activity'), ENT_QUOTES, 'UTF-8'); ?></strong>
-                                                <div class="small text-muted"><?php echo htmlspecialchars((string)($activity['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
-                                            </td>
-                                            <td class="text-nowrap"><?php echo htmlspecialchars(formatDashboardDateTime($activity['activity_at'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

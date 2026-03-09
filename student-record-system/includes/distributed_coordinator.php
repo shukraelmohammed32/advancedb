@@ -192,6 +192,24 @@ class DistributedCoordinator {
         return $timestamps[0];
     }
 
+    private function connectionQueryRows($connection, $sql) {
+        if (!($connection instanceof mysqli)) {
+            return [];
+        }
+
+        $rows = [];
+        $result = $connection->query($sql);
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $rows[] = $row;
+            }
+
+            $result->free();
+        }
+
+        return $rows;
+    }
+
     private function siteRecentActivity($site, $connection, $limit_per_table) {
         if (!($connection instanceof mysqli)) {
             return [];
@@ -361,6 +379,157 @@ class DistributedCoordinator {
         });
 
         return array_slice($activities, 0, $limit);
+    }
+
+    public function getSiteDetails($site_id) {
+        $site = $this->getSiteById((int)$site_id);
+        if (!$site || !$this->isDistributedReady()) {
+            return null;
+        }
+
+        $site_id = (int)$site['site_id'];
+        $connection = $this->siteConnection($site_id);
+        $details = [
+            'site' => [
+                'site_id' => $site_id,
+                'site_code' => (string)($site['site_code'] ?? ''),
+                'site_name' => (string)($site['site_name'] ?? 'Unknown Site'),
+                'db_name' => (string)($site['db_name'] ?? ''),
+                'is_default' => (int)($site['is_default'] ?? 0),
+                'is_active' => (int)($site['is_active'] ?? 1),
+                'connection_status' => $connection instanceof mysqli ? 'online' : 'offline',
+            ],
+            'stats' => [
+                'teachers' => null,
+                'subjects' => null,
+                'students' => null,
+                'marks' => null,
+                'last_activity_at' => null,
+            ],
+            'teachers' => [],
+            'subjects' => [],
+            'students' => [],
+            'marks' => [],
+        ];
+
+        if (!($connection instanceof mysqli)) {
+            return $details;
+        }
+
+        $has_teachers = $this->connectionTableExists($connection, 'teachers');
+        $has_subjects = $this->connectionTableExists($connection, 'subjects');
+        $has_students = $this->connectionTableExists($connection, 'students');
+        $has_marks = $this->connectionTableExists($connection, 'marks');
+        $has_teacher_subjects = $this->connectionTableExists($connection, 'teacher_subjects');
+
+        $details['stats'] = [
+            'teachers' => $this->connectionTableCount($connection, 'teachers'),
+            'subjects' => $this->connectionTableCount($connection, 'subjects'),
+            'students' => $this->connectionTableCount($connection, 'students'),
+            'marks' => $this->connectionTableCount($connection, 'marks'),
+            'last_activity_at' => $this->newestTimestamp([
+                $this->connectionMaxTimestamp($connection, 'teachers', 'created_at'),
+                $this->connectionMaxTimestamp($connection, 'subjects', 'created_at'),
+                $this->connectionMaxTimestamp($connection, 'students', 'created_at'),
+                $this->connectionMaxTimestamp($connection, 'marks', 'updated_at'),
+                $this->connectionMaxTimestamp($connection, 'marks', 'created_at'),
+            ]),
+        ];
+
+        $subject_rows = $has_subjects
+            ? $this->connectionQueryRows($connection, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC')
+            : [];
+        $subject_lookup = [];
+        foreach ($subject_rows as $subject_row) {
+            $subject_lookup[(int)$subject_row['subject_id']] = (string)($subject_row['subject_name'] ?? 'Unknown Subject');
+        }
+
+        $subject_counts_by_teacher = [];
+        $subject_counts_by_subject = [];
+        $subject_names_by_teacher = [];
+        if ($has_teacher_subjects) {
+            $teacher_subject_rows = $this->connectionQueryRows($connection, 'SELECT teacher_id, subject_id FROM teacher_subjects ORDER BY teacher_id ASC, subject_id ASC');
+            foreach ($teacher_subject_rows as $teacher_subject_row) {
+                $teacher_id = (int)($teacher_subject_row['teacher_id'] ?? 0);
+                $subject_id = (int)($teacher_subject_row['subject_id'] ?? 0);
+                if ($teacher_id <= 0 || $subject_id <= 0) {
+                    continue;
+                }
+
+                $subject_counts_by_teacher[$teacher_id] = (int)($subject_counts_by_teacher[$teacher_id] ?? 0) + 1;
+                $subject_counts_by_subject[$subject_id] = (int)($subject_counts_by_subject[$subject_id] ?? 0) + 1;
+                if (isset($subject_lookup[$subject_id])) {
+                    $subject_names_by_teacher[$teacher_id][] = $subject_lookup[$subject_id];
+                }
+            }
+        }
+
+        foreach ($subject_rows as &$subject_row) {
+            $subject_id = (int)($subject_row['subject_id'] ?? 0);
+            $subject_row['assigned_teachers'] = (int)($subject_counts_by_subject[$subject_id] ?? 0);
+        }
+        unset($subject_row);
+        $details['subjects'] = $subject_rows;
+
+        $teacher_rows = $has_teachers
+            ? $this->connectionQueryRows($connection, 'SELECT teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at FROM teachers ORDER BY teacher_name ASC')
+            : [];
+        $teacher_lookup = [];
+        foreach ($teacher_rows as &$teacher_row) {
+            $teacher_id = (int)($teacher_row['teacher_id'] ?? 0);
+            $teacher_lookup[$teacher_id] = (string)($teacher_row['teacher_name'] ?? 'Unknown Teacher');
+            $subjects_taught = $subject_names_by_teacher[$teacher_id] ?? [];
+            $teacher_row['subjects_taught'] = !empty($subjects_taught)
+                ? implode(', ', array_unique($subjects_taught))
+                : (string)($teacher_row['department'] ?? '');
+            $teacher_row['subject_count'] = (int)($subject_counts_by_teacher[$teacher_id] ?? 0);
+        }
+        unset($teacher_row);
+        $details['teachers'] = $teacher_rows;
+
+        $student_mark_counts = [];
+        if ($has_marks) {
+            $student_mark_count_rows = $this->connectionQueryRows($connection, 'SELECT student_id, COUNT(*) AS total_marks FROM marks GROUP BY student_id');
+            foreach ($student_mark_count_rows as $student_mark_count_row) {
+                $student_mark_counts[(int)($student_mark_count_row['student_id'] ?? 0)] = (int)($student_mark_count_row['total_marks'] ?? 0);
+            }
+        }
+
+        $student_rows = $has_students
+            ? $this->connectionQueryRows($connection, 'SELECT student_id, name, gender, grade, academic_year, semester, created_at FROM students ORDER BY grade ASC, name ASC')
+            : [];
+        $student_lookup = [];
+        $student_grade_lookup = [];
+        foreach ($student_rows as &$student_row) {
+            $student_id = (int)($student_row['student_id'] ?? 0);
+            $student_lookup[$student_id] = (string)($student_row['name'] ?? 'Unknown Student');
+            $student_grade_lookup[$student_id] = (string)($student_row['grade'] ?? '');
+            $student_row['total_marks'] = (int)($student_mark_counts[$student_id] ?? 0);
+        }
+        unset($student_row);
+        $details['students'] = $student_rows;
+
+        if ($has_marks) {
+            $mark_order_column = $this->connectionColumnExists($connection, 'marks', 'updated_at') ? 'updated_at' : 'created_at';
+            $mark_rows = $this->connectionQueryRows($connection, "SELECT * FROM marks ORDER BY `$mark_order_column` DESC, mark_id DESC");
+            foreach ($mark_rows as &$mark_row) {
+                $student_id = (int)($mark_row['student_id'] ?? 0);
+                $subject_id = (int)($mark_row['subject_id'] ?? 0);
+                $teacher_id = (int)($mark_row['teacher_id'] ?? 0);
+                $mark_row['student_name'] = $student_lookup[$student_id] ?? ('Student #' . $student_id);
+                $mark_row['student_grade'] = $student_grade_lookup[$student_id] ?? '';
+                $mark_row['subject_name'] = $subject_lookup[$subject_id] ?? ('Subject #' . $subject_id);
+                $mark_row['teacher_name'] = $teacher_lookup[$teacher_id] ?? ('Teacher #' . $teacher_id);
+                $mark_row['assessment_type'] = (string)($mark_row['assessment_type'] ?? 'Exam');
+                $mark_row['assessment_date'] = (string)($mark_row['assessment_date'] ?? '');
+                $mark_row['comments'] = (string)($mark_row['comments'] ?? '');
+                $mark_row['activity_at'] = (string)($mark_row[$mark_order_column] ?? ($mark_row['created_at'] ?? ''));
+            }
+            unset($mark_row);
+            $details['marks'] = $mark_rows;
+        }
+
+        return $details;
     }
 
     public function studentSiteId($student_id) {

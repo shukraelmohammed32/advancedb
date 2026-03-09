@@ -19,19 +19,9 @@ if (file_exists(__DIR__ . '/error_handler.php')) {
 // Set timezone
 date_default_timezone_set('UTC');
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    // Set secure session parameters
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_strict_mode', 1);
-    ini_set('session.cookie_samesite', 'Lax');
-    
-    if (AppConfig::isForceHttps()) {
-        ini_set('session.cookie_secure', 1);
-    }
-    
-    session_start();
-}
+// Start application session with an app-specific cookie name and path.
+require_once __DIR__ . '/session.php';
+startAppSession();
 
 // Set session lifetime
 if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > AppConfig::getSessionLifetime() * 60)) {

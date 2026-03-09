@@ -1,7 +1,6 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../config/session.php';
+startAppSession();
 
 function isLoggedIn() {
     return isset($_SESSION['user_id']);
@@ -61,6 +60,10 @@ function getRoleLabel() {
         return 'Homeroom Teacher';
     }
 
+    if (!empty($_SESSION['role_label_override']) && is_string($_SESSION['role_label_override'])) {
+        return $_SESSION['role_label_override'];
+    }
+
     if (isAdmin()) {
         return 'Administrator';
     }
@@ -82,12 +85,18 @@ function getCurrentUser() {
         'username' => $_SESSION['username'] ?? null,
         'role' => $_SESSION['role'] ?? null,
         'role_label' => getRoleLabel(),
+        'role_label_override' => $_SESSION['role_label_override'] ?? null,
         'email' => $_SESSION['email'] ?? null,
         'student_id' => $_SESSION['student_id'] ?? null,
         'teacher_id' => $_SESSION['teacher_id'] ?? null,
         'is_homeroom' => $_SESSION['is_homeroom'] ?? 0,
         'assigned_grade' => $_SESSION['assigned_grade'] ?? null,
-        'display_name' => $_SESSION['display_name'] ?? null
+        'display_name' => $_SESSION['display_name'] ?? null,
+        'portal_mode' => $_SESSION['portal_mode'] ?? null,
+        'admin_scope' => $_SESSION['admin_scope'] ?? null,
+        'site_name' => $_SESSION['site_name'] ?? null,
+        'site_code' => $_SESSION['site_code'] ?? null,
+        'is_branch_portal' => $_SESSION['is_branch_portal'] ?? 0,
     ];
 }
 
