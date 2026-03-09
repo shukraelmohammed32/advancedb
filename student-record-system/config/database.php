@@ -1,6 +1,63 @@
 <?php
 require_once __DIR__ . '/env.php';
 
+if (!function_exists('dbStatementFetchAllAssoc')) {
+    function dbStatementFetchAllAssoc($stmt) {
+        if (!($stmt instanceof mysqli_stmt)) {
+            return [];
+        }
+
+        if (method_exists($stmt, 'get_result')) {
+            $result = $stmt->get_result();
+            if ($result instanceof mysqli_result) {
+                $rows = $result->fetch_all(MYSQLI_ASSOC);
+                $result->free();
+                return $rows;
+            }
+        }
+
+        $stmt->store_result();
+        $metadata = $stmt->result_metadata();
+        if ($metadata === false) {
+            return [];
+        }
+
+        $row = [];
+        $boundColumns = [];
+        while ($field = $metadata->fetch_field()) {
+            $row[$field->name] = null;
+            $boundColumns[] = &$row[$field->name];
+        }
+        $metadata->free();
+
+        if (!call_user_func_array([$stmt, 'bind_result'], $boundColumns)) {
+            return [];
+        }
+
+        $rows = [];
+        while ($stmt->fetch()) {
+            $rows[] = array_map(static function ($value) {
+                return $value;
+            }, $row);
+        }
+
+        return $rows;
+    }
+}
+
+if (!function_exists('dbStatementFetchOneAssoc')) {
+    function dbStatementFetchOneAssoc($stmt) {
+        $rows = dbStatementFetchAllAssoc($stmt);
+        return $rows[0] ?? null;
+    }
+}
+
+if (!function_exists('dbStatementHasRows')) {
+    function dbStatementHasRows($stmt) {
+        return dbStatementFetchOneAssoc($stmt) !== null;
+    }
+}
+
 class Database {
     private $host;
     private $username;
@@ -9,10 +66,10 @@ class Database {
     private $connections = [];
 
     public function __construct($database = null) {
-        $this->host = getenv('DB_HOST') ?: 'localhost';
-        $this->username = getenv('DB_USERNAME') ?: 'root';
-        $this->password = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : '';
-        $this->database = $database ?: (getenv('DB_DATABASE') ?: 'student_record_system');
+        $this->host = getenv('DB_HOST') ?: 'sql303.infinityfree.com';
+        $this->username = getenv('DB_USERNAME') ?: 'if0_41348166';
+        $this->password = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : 'RqMCVBiQVfEf4x';
+        $this->database = $database ?: (getenv('DB_DATABASE') ?: 'if0_41348166_student_record_system');
     }
 
     private function createConnection($databaseName) {

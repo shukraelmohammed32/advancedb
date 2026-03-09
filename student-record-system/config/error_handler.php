@@ -11,7 +11,7 @@ class ErrorHandler {
         set_exception_handler([self::class, 'handleException']);
         
         // Hide errors in production
-        if (AppConfig::getAppEnv() === 'production') {
+        if (AppConfig::getAppEnv() === 'production' && !AppConfig::isAppDebug()) {
             ini_set('display_errors', 0);
             error_reporting(0);
         } else {
@@ -28,7 +28,7 @@ class ErrorHandler {
         $message = "Error: [$errno] $errstr in $errfile on line $errline";
         error_log($message);
         
-        if (AppConfig::getAppEnv() === 'production') {
+        if (AppConfig::getAppEnv() === 'production' && !AppConfig::isAppDebug()) {
             self::showUserFriendlyError();
         } else {
             echo "<div style='background: #fee; border: 1px solid #c00; padding: 10px; margin: 10px;'>";
@@ -43,7 +43,7 @@ class ErrorHandler {
         $message = "Uncaught exception: " . $exception->getMessage() . " in " . $exception->getFile() . " on line " . $exception->getLine();
         error_log($message);
         
-        if (AppConfig::getAppEnv() === 'production') {
+        if (AppConfig::getAppEnv() === 'production' && !AppConfig::isAppDebug()) {
             self::showUserFriendlyError();
         } else {
             echo "<div style='background: #fee; border: 1px solid #c00; padding: 10px; margin: 10px;'>";

@@ -10,19 +10,19 @@ class AppConfig {
     
     // Database settings
     public static function getDatabaseHost() {
-        return env('DB_HOST', 'localhost');
+        return env('DB_HOST', 'sql303.infinityfree.com');
     }
     
     public static function getDatabaseUsername() {
-        return env('DB_USERNAME', 'root');
+        return env('DB_USERNAME', 'if0_41348166');
     }
     
     public static function getDatabasePassword() {
-        return env('DB_PASSWORD', '');
+        return env('DB_PASSWORD', 'RqMCVBiQVfEf4x');
     }
     
     public static function getDatabaseName() {
-        return env('DB_DATABASE', 'student_record_system');
+        return env('DB_DATABASE', 'if0_41348166_student_record_system');
     }
     
     // Admin settings
@@ -52,7 +52,7 @@ class AppConfig {
     }
     
     public static function getAllowedOrigins() {
-        $origins = env('ALLOWED_ORIGINS', 'http://localhost,http://127.0.0.1');
+        $origins = env('ALLOWED_ORIGINS', 'https://student-record-managment-system.42web.io');
         return explode(',', $origins);
     }
     
@@ -97,7 +97,7 @@ class AppConfig {
     }
     
     public static function getAppUrl() {
-        return env('APP_URL', 'http://localhost/student-record-system');
+        return env('APP_URL', 'https://student-record-managment-system.42web.io/student-record-system');
     }
     
     public static function isAppDebug() {

@@ -55,8 +55,7 @@ function getTeacherScope($conn, $teacher_id) {
 
     $stmt->bind_param('i', $teacher_id);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $teacher = $result ? $result->fetch_assoc() : null;
+    $teacher = dbStatementFetchOneAssoc($stmt);
     $stmt->close();
 
     return $teacher ?: null;
@@ -83,8 +82,7 @@ function getStudentAccount($conn, $student_id) {
 
     $stmt->bind_param('i', $student_id);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $account = $result ? $result->fetch_assoc() : null;
+    $account = dbStatementFetchOneAssoc($stmt);
     $stmt->close();
 
     return $account ?: null;
@@ -98,8 +96,7 @@ function loginIdentityExists($conn, $username, $email, $exclude_user_id = 0) {
 
     $stmt->bind_param('issss', $exclude_user_id, $username, $username, $email, $email);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $exists = $result && $result->num_rows > 0;
+    $exists = dbStatementHasRows($stmt);
     $stmt->close();
 
     return $exists;

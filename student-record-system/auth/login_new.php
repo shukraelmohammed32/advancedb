@@ -33,10 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $stmt->bind_param('ss', $login_input, $login_input);
             $stmt->execute();
-            $result = $stmt->get_result();
+            $user = dbStatementFetchOneAssoc($stmt);
 
-            if ($result->num_rows === 1) {
-                $user = $result->fetch_assoc();
+            if ($user !== null) {
 
                 if (password_verify($password, $user['password'])) {
                     $displayName = $user['student_name'] ?: $user['teacher_name'] ?: $user['username'];

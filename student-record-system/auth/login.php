@@ -3,6 +3,11 @@ require_once '../config/session.php';
 startAppSession();
 require_once '../config/database.php';
 
+if ((getenv('APP_ENV') ?: 'local') !== 'production') {
+    ini_set('display_errors', '1');
+    error_reporting(E_ALL);
+}
+
 function isBranchPortalDatabase($databaseName) {
     return is_string($databaseName) && stripos($databaseName, 'branch') !== false;
 }
@@ -111,6 +116,59 @@ function portalMismatchMessage($portal, $isBranchPortal, $siteName) {
     }
 }
 
+function fetchLoginUserFromStatement($stmt) {
+    $stmt->store_result();
+    if ($stmt->num_rows !== 1) {
+        return null;
+    }
+
+    $userId = null;
+    $username = null;
+    $passwordHash = null;
+    $email = null;
+    $role = null;
+    $studentId = null;
+    $teacherId = null;
+    $studentName = null;
+    $teacherName = null;
+    $isHomeroom = 0;
+    $assignedGrade = null;
+
+    if (!$stmt->bind_result(
+        $userId,
+        $username,
+        $passwordHash,
+        $email,
+        $role,
+        $studentId,
+        $teacherId,
+        $studentName,
+        $teacherName,
+        $isHomeroom,
+        $assignedGrade
+    )) {
+        return null;
+    }
+
+    if (!$stmt->fetch()) {
+        return null;
+    }
+
+    return [
+        'user_id' => $userId,
+        'username' => $username,
+        'password' => $passwordHash,
+        'email' => $email,
+        'role' => $role,
+        'student_id' => $studentId,
+        'teacher_id' => $teacherId,
+        'student_name' => $studentName,
+        'teacher_name' => $teacherName,
+        'is_homeroom' => $isHomeroom,
+        'assigned_grade' => $assignedGrade,
+    ];
+}
+
 $error = '';
 $loginInput = '';
 
@@ -133,7 +191,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$conn) {
         $error = 'Database connection failed. Please try again in a moment.';
     } else {
-        $stmt = $conn->prepare("SELECT u.*, s.name AS student_name, t.teacher_name, t.is_homeroom, t.assigned_grade
+        $stmt = $conn->prepare("SELECT
+                u.user_id,
+                u.username,
+                u.password,
+                u.email,
+                u.role,
+                u.student_id,
+                u.teacher_id,
+                s.name AS student_name,
+                t.teacher_name,
+                t.is_homeroom,
+                t.assigned_grade
             FROM users u
             LEFT JOIN students s ON u.student_id = s.student_id
             LEFT JOIN teachers t ON u.teacher_id = t.teacher_id
@@ -143,13 +212,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Unable to process your sign-in request right now.';
         } else {
             $stmt->bind_param('ss', $loginInput, $loginInput);
-            $stmt->execute();
-            $result = $stmt->get_result();
+            $executed = $stmt->execute();
 
-            if ($result->num_rows === 1) {
-                $user = $result->fetch_assoc();
+            if ($executed) {
+                $user = fetchLoginUserFromStatement($stmt);
 
-                if (password_verify($password, $user['password'])) {
+                if ($user !== null && password_verify($password, $user['password'])) {
                     if (!selectedPortalMatchesUser($loginPortal, (string)$user['role'], $isBranchPortal)) {
                         $error = portalMismatchMessage($loginPortal, $isBranchPortal, $siteName);
                     } else {
@@ -191,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = 'Login failed. Please verify your credentials and selected role.';
                 }
             } else {
-                $error = 'Login failed. Please verify your credentials and selected role.';
+                $error = 'Unable to process your sign-in request right now.';
             }
 
             $stmt->close();

@@ -105,8 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
             } else {
                 $email_check_stmt->bind_param('iss', $user_id, $email, $email);
                 $email_check_stmt->execute();
-                $email_exists = $email_check_stmt->get_result();
-                if ($email_exists && $email_exists->num_rows > 0) {
+                if (dbStatementHasRows($email_check_stmt)) {
                     $error_message = 'That email is already used by another account login.';
                 }
                 $email_check_stmt->close();
@@ -119,9 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
             if ($current_photo_stmt) {
                 $current_photo_stmt->bind_param('i', $student_id);
                 $current_photo_stmt->execute();
-                $current_photo_result = $current_photo_stmt->get_result();
-                if ($current_photo_result && $current_photo_result->num_rows > 0) {
-                    $current_photo_row = $current_photo_result->fetch_assoc();
+                $current_photo_row = dbStatementFetchOneAssoc($current_photo_stmt);
+                if ($current_photo_row) {
                     $current_profile_photo = (string)($current_photo_row['profile_photo'] ?? '');
                 }
                 $current_photo_stmt->close();
@@ -342,8 +340,7 @@ if ($profile_table_exists && $student_id > 0 && $user_id > 0) {
     if ($profile_stmt) {
         $profile_stmt->bind_param('ii', $user_id, $student_id);
         $profile_stmt->execute();
-        $profile_result = $profile_stmt->get_result();
-        $profile = $profile_result ? $profile_result->fetch_assoc() : null;
+        $profile = dbStatementFetchOneAssoc($profile_stmt);
         $profile_stmt->close();
     }
 }
