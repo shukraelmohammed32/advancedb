@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/env.php';
+
 class Database {
     private $host;
     private $username;

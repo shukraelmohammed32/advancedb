@@ -7,13 +7,13 @@ echo "<h2>Quick East Campus Setup</h2>";
 $east_campus_path = "c:\\xampp\\htdocs\\east_campus";
 if (!is_dir($east_campus_path)) {
     if (mkdir($east_campus_path, 0777, true)) {
-        echo "<p>✅ Created east campus directory: $east_campus_path</p>";
+        echo "<p>??? Created east campus directory: $east_campus_path</p>";
     } else {
-        echo "<p>❌ Failed to create east campus directory</p>";
+        echo "<p>??? Failed to create east campus directory</p>";
         exit;
     }
 } else {
-    echo "<p>ℹ️ East campus directory already exists</p>";
+    echo "<p>?????? East campus directory already exists</p>";
 }
 
 // Step 2: Copy essential files
@@ -37,7 +37,7 @@ $files_to_copy = [
     'config/error_handler.php'
 ];
 
-echo "<p>📁 Copying files...</p>";
+echo "<p>???? Copying files...</p>";
 $copied_count = 0;
 
 function copyDirectory($src, $dst) {
@@ -63,16 +63,16 @@ foreach ($files_to_copy as $file) {
     
     if (is_dir($source)) {
         copyDirectory($source, $destination);
-        echo "<p>✅ Copied directory: $file</p>";
+        echo "<p>??? Copied directory: $file</p>";
     } elseif (file_exists($source)) {
         if (copy($source, $destination)) {
-            echo "<p>✅ Copied file: $file</p>";
+            echo "<p>??? Copied file: $file</p>";
             $copied_count++;
         } else {
-            echo "<p>❌ Failed to copy: $file</p>";
+            echo "<p>??? Failed to copy: $file</p>";
         }
     } else {
-        echo "<p>⚠️ File not found: $file</p>";
+        echo "<p>?????? File not found: $file</p>";
     }
 }
 
@@ -82,17 +82,17 @@ $env_dest = $destination_path . '/.env';
 
 if (file_exists($env_source)) {
     if (copy($env_source, $env_dest)) {
-        echo "<p>✅ Created .env file for east campus</p>";
+        echo "<p>??? Created .env file for east campus</p>";
     } else {
-        echo "<p>❌ Failed to create .env file</p>";
+        echo "<p>??? Failed to create .env file</p>";
     }
 } else {
-    echo "<p>⚠️ .env.east not found, creating basic .env</p>";
-    $basic_env = "DB_HOST=localhost\nDB_USERNAME=root\nDB_PASSWORD=\nDB_DATABASE=student_record_system_east\nDEFAULT_SITE_ID=2\nADMIN_USERNAME=east_admin\nADMIN_PASSWORD=eastadmin123\nAPP_URL=http://localhost/east_campus";
+    echo "<p>?????? .env.east not found, creating basic .env</p>";
+    $basic_env = "DB_HOST=localhost\nDB_USERNAME=root\nDB_PASSWORD=\nDB_DATABASE=student_record_system_branch_east\nDEFAULT_SITE_ID=3\nADMIN_USERNAME=east_admin\nADMIN_PASSWORD=eastadmin123\nAPP_URL=http://localhost/east_campus";
     file_put_contents($env_dest, $basic_env);
 }
 
-echo "<p>📊 Total files copied: $copied_count</p>";
+echo "<p>???? Total files copied: $copied_count</p>";
 
 // Step 4: Create index.php if it doesn't exist
 $index_file = $destination_path . '/index.php';
@@ -129,7 +129,7 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
 </head>
 <body>
     <div class="container mt-4">
-        <h1>🏫 East Campus - Student Record System</h1>
+        <h1>???? East Campus - Student Record System</h1>
         <div class="alert alert-info">
             <strong>Welcome to East Campus!</strong> This is your local branch.
         </div>
@@ -138,7 +138,7 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5>👥 Students</h5>
+                        <h5>???? Students</h5>
                         <h3><?php echo $totalStudents; ?></h3>
                     </div>
                 </div>
@@ -146,7 +146,7 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5>👨‍🏫 Teachers</h5>
+                        <h5>??????????? Teachers</h5>
                         <h3><?php echo $totalTeachers; ?></h3>
                     </div>
                 </div>
@@ -154,7 +154,7 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5>📚 Subjects</h5>
+                        <h5>???? Subjects</h5>
                         <h3><?php echo $totalSubjects; ?></h3>
                     </div>
                 </div>
@@ -170,10 +170,10 @@ $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fe
 </body>
 </html>';
     file_put_contents($index_file, $index_content);
-    echo "<p>✅ Created basic index.php</p>";
+    echo "<p>??? Created basic index.php</p>";
 }
 
-echo "<h3>🎉 Setup Complete!</h3>";
+echo "<h3>???? Setup Complete!</h3>";
 echo "<div style='background: #e8f5e8; padding: 15px; border-radius: 5px;'>";
 echo "<h4>Next Steps:</h4>";
 echo "<p>1. Run the database setup: <a href='setup_east_campus.php'>Click here to setup database</a></p>";
@@ -188,3 +188,4 @@ h2 { color: #1976d2; }
 h3 { color: #388e3c; }
 h4 { color: #f57c00; }
 </style>
+
