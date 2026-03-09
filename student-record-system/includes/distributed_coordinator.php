@@ -210,6 +210,121 @@ class DistributedCoordinator {
         return $rows;
     }
 
+    private function siteReferenceIdsFromMarks($connection) {
+        $reference_ids = [
+            'teacher_ids' => [],
+            'subject_ids' => [],
+        ];
+
+        if (!($connection instanceof mysqli) || !$this->connectionTableExists($connection, 'marks')) {
+            return $reference_ids;
+        }
+
+        $rows = $this->connectionQueryRows($connection, 'SELECT DISTINCT teacher_id, subject_id FROM marks');
+        foreach ($rows as $row) {
+            $teacher_id = (int)($row['teacher_id'] ?? 0);
+            $subject_id = (int)($row['subject_id'] ?? 0);
+
+            if ($teacher_id > 0) {
+                $reference_ids['teacher_ids'][$teacher_id] = $teacher_id;
+            }
+
+            if ($subject_id > 0) {
+                $reference_ids['subject_ids'][$subject_id] = $subject_id;
+            }
+        }
+
+        $reference_ids['teacher_ids'] = array_values($reference_ids['teacher_ids']);
+        $reference_ids['subject_ids'] = array_values($reference_ids['subject_ids']);
+        sort($reference_ids['teacher_ids']);
+        sort($reference_ids['subject_ids']);
+
+        return $reference_ids;
+    }
+
+    private function siteTeacherSubjectRowsFromMarks($connection) {
+        if (!($connection instanceof mysqli) || !$this->connectionTableExists($connection, 'marks')) {
+            return [];
+        }
+
+        $rows = $this->connectionQueryRows($connection, 'SELECT DISTINCT teacher_id, subject_id FROM marks ORDER BY teacher_id ASC, subject_id ASC');
+        return array_values(array_filter($rows, static function ($row) {
+            return (int)($row['teacher_id'] ?? 0) > 0 && (int)($row['subject_id'] ?? 0) > 0;
+        }));
+    }
+
+    private function centralTeacherRowsByIds(array $teacher_ids) {
+        $teacher_ids = array_values(array_filter(array_map('intval', array_unique($teacher_ids)), static function ($teacher_id) {
+            return $teacher_id > 0;
+        }));
+        if (empty($teacher_ids)) {
+            return [];
+        }
+
+        $rows_by_id = [];
+        if ($this->connectionTableExists($this->central, 'teachers')) {
+            $id_list = implode(', ', $teacher_ids);
+            $rows = $this->connectionQueryRows($this->central, "SELECT teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at FROM teachers WHERE teacher_id IN ($id_list) ORDER BY teacher_name ASC");
+            foreach ($rows as $row) {
+                $rows_by_id[(int)($row['teacher_id'] ?? 0)] = $row;
+            }
+        }
+
+        $resolved_rows = [];
+        foreach ($teacher_ids as $teacher_id) {
+            if (isset($rows_by_id[$teacher_id])) {
+                $resolved_rows[] = $rows_by_id[$teacher_id];
+                continue;
+            }
+
+            $resolved_rows[] = [
+                'teacher_id' => $teacher_id,
+                'teacher_name' => 'Teacher #' . $teacher_id,
+                'department' => '',
+                'assigned_grade' => '',
+                'is_homeroom' => 0,
+                'created_at' => null,
+            ];
+        }
+
+        return $resolved_rows;
+    }
+
+    private function centralSubjectRowsByIds(array $subject_ids) {
+        $subject_ids = array_values(array_filter(array_map('intval', array_unique($subject_ids)), static function ($subject_id) {
+            return $subject_id > 0;
+        }));
+        if (empty($subject_ids)) {
+            return [];
+        }
+
+        $rows_by_id = [];
+        if ($this->connectionTableExists($this->central, 'subjects')) {
+            $id_list = implode(', ', $subject_ids);
+            $rows = $this->connectionQueryRows($this->central, "SELECT subject_id, subject_name, total_mark, created_at FROM subjects WHERE subject_id IN ($id_list) ORDER BY subject_name ASC");
+            foreach ($rows as $row) {
+                $rows_by_id[(int)($row['subject_id'] ?? 0)] = $row;
+            }
+        }
+
+        $resolved_rows = [];
+        foreach ($subject_ids as $subject_id) {
+            if (isset($rows_by_id[$subject_id])) {
+                $resolved_rows[] = $rows_by_id[$subject_id];
+                continue;
+            }
+
+            $resolved_rows[] = [
+                'subject_id' => $subject_id,
+                'subject_name' => 'Subject #' . $subject_id,
+                'total_mark' => 0,
+                'created_at' => null,
+            ];
+        }
+
+        return $resolved_rows;
+    }
+
     private function siteRecentActivity($site, $connection, $limit_per_table) {
         if (!($connection instanceof mysqli)) {
             return [];
@@ -326,8 +441,17 @@ class DistributedCoordinator {
         foreach ($this->getSites(false) as $site) {
             $connection = $this->siteConnection((int)$site['site_id']);
             $is_connected = $connection instanceof mysqli;
-            $teacher_total = $is_connected ? $this->connectionTableCount($connection, 'teachers') : null;
-            $subject_total = $is_connected ? $this->connectionTableCount($connection, 'subjects') : null;
+            $reference_ids = $is_connected ? $this->siteReferenceIdsFromMarks($connection) : ['teacher_ids' => [], 'subject_ids' => []];
+            $teacher_total = $is_connected
+                ? ($this->connectionTableExists($connection, 'teachers')
+                    ? $this->connectionTableCount($connection, 'teachers')
+                    : count($reference_ids['teacher_ids']))
+                : null;
+            $subject_total = $is_connected
+                ? ($this->connectionTableExists($connection, 'subjects')
+                    ? $this->connectionTableCount($connection, 'subjects')
+                    : count($reference_ids['subject_ids']))
+                : null;
             $student_total = $is_connected ? $this->connectionTableCount($connection, 'students') : null;
             $mark_total = $is_connected ? $this->connectionTableCount($connection, 'marks') : null;
             $last_activity_at = $is_connected ? $this->newestTimestamp([
@@ -421,10 +545,11 @@ class DistributedCoordinator {
         $has_students = $this->connectionTableExists($connection, 'students');
         $has_marks = $this->connectionTableExists($connection, 'marks');
         $has_teacher_subjects = $this->connectionTableExists($connection, 'teacher_subjects');
+        $reference_ids = $this->siteReferenceIdsFromMarks($connection);
 
         $details['stats'] = [
-            'teachers' => $this->connectionTableCount($connection, 'teachers'),
-            'subjects' => $this->connectionTableCount($connection, 'subjects'),
+            'teachers' => $has_teachers ? $this->connectionTableCount($connection, 'teachers') : count($reference_ids['teacher_ids']),
+            'subjects' => $has_subjects ? $this->connectionTableCount($connection, 'subjects') : count($reference_ids['subject_ids']),
             'students' => $this->connectionTableCount($connection, 'students'),
             'marks' => $this->connectionTableCount($connection, 'marks'),
             'last_activity_at' => $this->newestTimestamp([
@@ -438,7 +563,7 @@ class DistributedCoordinator {
 
         $subject_rows = $has_subjects
             ? $this->connectionQueryRows($connection, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC')
-            : [];
+            : $this->centralSubjectRowsByIds($reference_ids['subject_ids']);
         $subject_lookup = [];
         foreach ($subject_rows as $subject_row) {
             $subject_lookup[(int)$subject_row['subject_id']] = (string)($subject_row['subject_name'] ?? 'Unknown Subject');
@@ -447,20 +572,20 @@ class DistributedCoordinator {
         $subject_counts_by_teacher = [];
         $subject_counts_by_subject = [];
         $subject_names_by_teacher = [];
-        if ($has_teacher_subjects) {
-            $teacher_subject_rows = $this->connectionQueryRows($connection, 'SELECT teacher_id, subject_id FROM teacher_subjects ORDER BY teacher_id ASC, subject_id ASC');
-            foreach ($teacher_subject_rows as $teacher_subject_row) {
-                $teacher_id = (int)($teacher_subject_row['teacher_id'] ?? 0);
-                $subject_id = (int)($teacher_subject_row['subject_id'] ?? 0);
-                if ($teacher_id <= 0 || $subject_id <= 0) {
-                    continue;
-                }
+        $teacher_subject_rows = $has_teacher_subjects
+            ? $this->connectionQueryRows($connection, 'SELECT teacher_id, subject_id FROM teacher_subjects ORDER BY teacher_id ASC, subject_id ASC')
+            : $this->siteTeacherSubjectRowsFromMarks($connection);
+        foreach ($teacher_subject_rows as $teacher_subject_row) {
+            $teacher_id = (int)($teacher_subject_row['teacher_id'] ?? 0);
+            $subject_id = (int)($teacher_subject_row['subject_id'] ?? 0);
+            if ($teacher_id <= 0 || $subject_id <= 0) {
+                continue;
+            }
 
-                $subject_counts_by_teacher[$teacher_id] = (int)($subject_counts_by_teacher[$teacher_id] ?? 0) + 1;
-                $subject_counts_by_subject[$subject_id] = (int)($subject_counts_by_subject[$subject_id] ?? 0) + 1;
-                if (isset($subject_lookup[$subject_id])) {
-                    $subject_names_by_teacher[$teacher_id][] = $subject_lookup[$subject_id];
-                }
+            $subject_counts_by_teacher[$teacher_id] = (int)($subject_counts_by_teacher[$teacher_id] ?? 0) + 1;
+            $subject_counts_by_subject[$subject_id] = (int)($subject_counts_by_subject[$subject_id] ?? 0) + 1;
+            if (isset($subject_lookup[$subject_id])) {
+                $subject_names_by_teacher[$teacher_id][] = $subject_lookup[$subject_id];
             }
         }
 
@@ -473,7 +598,7 @@ class DistributedCoordinator {
 
         $teacher_rows = $has_teachers
             ? $this->connectionQueryRows($connection, 'SELECT teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at FROM teachers ORDER BY teacher_name ASC')
-            : [];
+            : $this->centralTeacherRowsByIds($reference_ids['teacher_ids']);
         $teacher_lookup = [];
         foreach ($teacher_rows as &$teacher_row) {
             $teacher_id = (int)($teacher_row['teacher_id'] ?? 0);

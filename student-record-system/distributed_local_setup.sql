@@ -142,13 +142,43 @@ CREATE TABLE IF NOT EXISTS student_record_system_branch_north.student_profiles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS student_record_system_branch_north.subjects (
+    subject_id INT PRIMARY KEY,
+    subject_name VARCHAR(100) NOT NULL,
+    total_mark INT NOT NULL DEFAULT 100,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS student_record_system_branch_north.teachers (
+    teacher_id INT PRIMARY KEY,
+    teacher_name VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    assigned_grade VARCHAR(20) NOT NULL,
+    is_homeroom TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS student_record_system_branch_north.teacher_subjects (
+    teacher_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (teacher_id, subject_id),
+    KEY idx_teacher_subjects_subject_id (subject_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS student_record_system_branch_south.students LIKE student_record_system_branch_north.students;
 CREATE TABLE IF NOT EXISTS student_record_system_branch_south.marks LIKE student_record_system_branch_north.marks;
 CREATE TABLE IF NOT EXISTS student_record_system_branch_south.student_profiles LIKE student_record_system_branch_north.student_profiles;
+CREATE TABLE IF NOT EXISTS student_record_system_branch_south.subjects LIKE student_record_system_branch_north.subjects;
+CREATE TABLE IF NOT EXISTS student_record_system_branch_south.teachers LIKE student_record_system_branch_north.teachers;
+CREATE TABLE IF NOT EXISTS student_record_system_branch_south.teacher_subjects LIKE student_record_system_branch_north.teacher_subjects;
 
 CREATE TABLE IF NOT EXISTS student_record_system_branch_east.students LIKE student_record_system_branch_north.students;
 CREATE TABLE IF NOT EXISTS student_record_system_branch_east.marks LIKE student_record_system_branch_north.marks;
 CREATE TABLE IF NOT EXISTS student_record_system_branch_east.student_profiles LIKE student_record_system_branch_north.student_profiles;
+CREATE TABLE IF NOT EXISTS student_record_system_branch_east.subjects LIKE student_record_system_branch_north.subjects;
+CREATE TABLE IF NOT EXISTS student_record_system_branch_east.teachers LIKE student_record_system_branch_north.teachers;
+CREATE TABLE IF NOT EXISTS student_record_system_branch_east.teacher_subjects LIKE student_record_system_branch_north.teacher_subjects;
 
 INSERT INTO student_record_system_branch_north.students (student_id, name, gender, grade, grade_id, academic_year, semester, site_id, created_at)
 SELECT student_id, name, gender, grade, grade_id, academic_year, semester, site_id, created_at
@@ -287,5 +317,92 @@ ON DUPLICATE KEY UPDATE
     bio = VALUES(bio),
     profile_photo = VALUES(profile_photo),
     updated_at = VALUES(updated_at);
+
+INSERT INTO student_record_system_branch_north.subjects (subject_id, subject_name, total_mark, created_at)
+SELECT DISTINCT sub.subject_id, sub.subject_name, sub.total_mark, sub.created_at
+FROM student_record_system.subjects sub
+JOIN student_record_system.marks m ON m.subject_id = sub.subject_id
+WHERE m.site_id = 1
+ON DUPLICATE KEY UPDATE
+    subject_name = VALUES(subject_name),
+    total_mark = VALUES(total_mark),
+    created_at = VALUES(created_at);
+
+INSERT INTO student_record_system_branch_south.subjects (subject_id, subject_name, total_mark, created_at)
+SELECT DISTINCT sub.subject_id, sub.subject_name, sub.total_mark, sub.created_at
+FROM student_record_system.subjects sub
+JOIN student_record_system.marks m ON m.subject_id = sub.subject_id
+WHERE m.site_id = 2
+ON DUPLICATE KEY UPDATE
+    subject_name = VALUES(subject_name),
+    total_mark = VALUES(total_mark),
+    created_at = VALUES(created_at);
+
+INSERT INTO student_record_system_branch_east.subjects (subject_id, subject_name, total_mark, created_at)
+SELECT DISTINCT sub.subject_id, sub.subject_name, sub.total_mark, sub.created_at
+FROM student_record_system.subjects sub
+JOIN student_record_system.marks m ON m.subject_id = sub.subject_id
+WHERE m.site_id = 3
+ON DUPLICATE KEY UPDATE
+    subject_name = VALUES(subject_name),
+    total_mark = VALUES(total_mark),
+    created_at = VALUES(created_at);
+
+INSERT INTO student_record_system_branch_north.teachers (teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at)
+SELECT DISTINCT t.teacher_id, t.teacher_name, t.department, t.assigned_grade, t.is_homeroom, t.created_at
+FROM student_record_system.teachers t
+JOIN student_record_system.marks m ON m.teacher_id = t.teacher_id
+WHERE m.site_id = 1
+ON DUPLICATE KEY UPDATE
+    teacher_name = VALUES(teacher_name),
+    department = VALUES(department),
+    assigned_grade = VALUES(assigned_grade),
+    is_homeroom = VALUES(is_homeroom),
+    created_at = VALUES(created_at);
+
+INSERT INTO student_record_system_branch_south.teachers (teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at)
+SELECT DISTINCT t.teacher_id, t.teacher_name, t.department, t.assigned_grade, t.is_homeroom, t.created_at
+FROM student_record_system.teachers t
+JOIN student_record_system.marks m ON m.teacher_id = t.teacher_id
+WHERE m.site_id = 2
+ON DUPLICATE KEY UPDATE
+    teacher_name = VALUES(teacher_name),
+    department = VALUES(department),
+    assigned_grade = VALUES(assigned_grade),
+    is_homeroom = VALUES(is_homeroom),
+    created_at = VALUES(created_at);
+
+INSERT INTO student_record_system_branch_east.teachers (teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at)
+SELECT DISTINCT t.teacher_id, t.teacher_name, t.department, t.assigned_grade, t.is_homeroom, t.created_at
+FROM student_record_system.teachers t
+JOIN student_record_system.marks m ON m.teacher_id = t.teacher_id
+WHERE m.site_id = 3
+ON DUPLICATE KEY UPDATE
+    teacher_name = VALUES(teacher_name),
+    department = VALUES(department),
+    assigned_grade = VALUES(assigned_grade),
+    is_homeroom = VALUES(is_homeroom),
+    created_at = VALUES(created_at);
+
+INSERT INTO student_record_system_branch_north.teacher_subjects (teacher_id, subject_id, assigned_at)
+SELECT DISTINCT teacher_id, subject_id, CURRENT_TIMESTAMP
+FROM student_record_system.marks
+WHERE site_id = 1
+ON DUPLICATE KEY UPDATE
+    assigned_at = VALUES(assigned_at);
+
+INSERT INTO student_record_system_branch_south.teacher_subjects (teacher_id, subject_id, assigned_at)
+SELECT DISTINCT teacher_id, subject_id, CURRENT_TIMESTAMP
+FROM student_record_system.marks
+WHERE site_id = 2
+ON DUPLICATE KEY UPDATE
+    assigned_at = VALUES(assigned_at);
+
+INSERT INTO student_record_system_branch_east.teacher_subjects (teacher_id, subject_id, assigned_at)
+SELECT DISTINCT teacher_id, subject_id, CURRENT_TIMESTAMP
+FROM student_record_system.marks
+WHERE site_id = 3
+ON DUPLICATE KEY UPDATE
+    assigned_at = VALUES(assigned_at);
 
 SELECT 'Local distributed setup completed. Central coordinator + 3 branch databases are ready.' AS message;

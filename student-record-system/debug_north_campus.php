@@ -14,12 +14,12 @@ try {
     
     echo "<h3>1. Main Database Connection</h3>";
     if ($conn) {
-        echo "<p>✅ Main database connection successful</p>";
+        echo "<p>âœ… Main database connection successful</p>";
         
         // Check if distributed_sites table exists
         $result = $conn->query("SHOW TABLES LIKE 'distributed_sites'");
         if ($result && $result->num_rows > 0) {
-            echo "<p>✅ distributed_sites table exists</p>";
+            echo "<p>âœ… distributed_sites table exists</p>";
             
             // Get all sites
             $sites_result = $conn->query("SELECT * FROM distributed_sites ORDER BY site_id");
@@ -41,16 +41,16 @@ try {
                 echo "</table>";
             }
         } else {
-            echo "<p>❌ distributed_sites table does not exist</p>";
+            echo "<p>âŒ distributed_sites table does not exist</p>";
         }
     } else {
-        echo "<p>❌ Main database connection failed</p>";
+        echo "<p>âŒ Main database connection failed</p>";
     }
     
     echo "<h3>2. Check North Campus Database</h3>";
     
     // Try to connect to north campus database
-    $north_db_name = 'student_record_system_north';
+    $north_db_name = 'student_record_system_branch_north';
     $north_conn = new mysqli(
         AppConfig::getDatabaseHost(), 
         AppConfig::getDatabaseUsername(), 
@@ -59,7 +59,7 @@ try {
     );
     
     if ($north_conn->connect_error) {
-        echo "<p>❌ North Campus database connection failed: " . htmlspecialchars($north_conn->connect_error) . "</p>";
+        echo "<p>âŒ North Campus database connection failed: " . htmlspecialchars($north_conn->connect_error) . "</p>";
         echo "<p>Attempting to create North Campus database...</p>";
         
         // Create the database
@@ -70,7 +70,7 @@ try {
         );
         
         if ($server_conn->query("CREATE DATABASE IF NOT EXISTS `$north_db_name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")) {
-            echo "<p>✅ North Campus database created</p>";
+            echo "<p>âœ… North Campus database created</p>";
             
             // Import structure from main database
             echo "<p>Importing database structure...</p>";
@@ -95,15 +95,15 @@ try {
                     }
                 }
                 
-                echo "<p>✅ Imported $imported SQL statements</p>";
+                echo "<p>âœ… Imported $imported SQL statements</p>";
             } else {
-                echo "<p>❌ database_fixed.sql not found</p>";
+                echo "<p>âŒ database_fixed.sql not found</p>";
             }
         } else {
-            echo "<p>❌ Failed to create North Campus database</p>";
+            echo "<p>âŒ Failed to create North Campus database</p>";
         }
     } else {
-        echo "<p>✅ North Campus database connection successful</p>";
+        echo "<p>âœ… North Campus database connection successful</p>";
         
         // Check tables and counts
         echo "<h4>North Campus Data:</h4>";
@@ -146,7 +146,7 @@ try {
                     $stmt->bind_param('sss', $subject[0], $subject[1], $subject[2]);
                     $stmt->execute();
                 }
-                echo "<p>✅ Added 4 sample subjects</p>";
+                echo "<p>âœ… Added 4 sample subjects</p>";
             }
             
             if ($teacher_count == 0) {
@@ -163,7 +163,7 @@ try {
                     $stmt->bind_param('sss', $teacher[0], $teacher[1], $teacher[2]);
                     $stmt->execute();
                 }
-                echo "<p>✅ Added 3 sample teachers</p>";
+                echo "<p>âœ… Added 3 sample teachers</p>";
             }
         }
         
@@ -186,12 +186,12 @@ try {
         
         $stmt->bind_param('isssii', $site_id, $site_name, $site_code, $db_name, $is_default, $is_active);
         if ($stmt->execute()) {
-            echo "<p>✅ North Campus registered in distributed system</p>";
+            echo "<p>âœ… North Campus registered in distributed system</p>";
         } else {
-            echo "<p>❌ Failed to register North Campus: " . htmlspecialchars($stmt->error) . "</p>";
+            echo "<p>âŒ Failed to register North Campus: " . htmlspecialchars($stmt->error) . "</p>";
         }
     } else {
-        echo "<p>✅ North Campus already registered</p>";
+        echo "<p>âœ… North Campus already registered</p>";
     }
     
     echo "<h3>5. Test Distributed Coordinator</h3>";
@@ -201,7 +201,7 @@ try {
         $coordinator = new DistributedCoordinator($db);
         
         if ($coordinator->isDistributedReady()) {
-            echo "<p>✅ Distributed system is ready</p>";
+            echo "<p>âœ… Distributed system is ready</p>";
             
             $stats = $coordinator->getSiteStats();
             echo "<h4>Site Statistics:</h4>";
@@ -221,16 +221,16 @@ try {
             
             echo "</table>";
         } else {
-            echo "<p>❌ Distributed system is not ready</p>";
+            echo "<p>âŒ Distributed system is not ready</p>";
         }
     } else {
-        echo "<p>❌ distributed_coordinator.php not found</p>";
+        echo "<p>âŒ distributed_coordinator.php not found</p>";
     }
     
     $conn->close();
     
 } catch (Exception $e) {
-    echo "<p style='color: red;'>❌ Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p style='color: red;'>âŒ Error: " . htmlspecialchars($e->getMessage()) . "</p>";
 }
 ?>
 
@@ -242,3 +242,4 @@ h4 { color: #f57c00; }
 table { margin: 10px 0; }
 th { background: #f0f0f0; }
 </style>
+
