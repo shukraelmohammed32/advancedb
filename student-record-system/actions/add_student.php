@@ -22,10 +22,6 @@ function normalizeGradeLabel($grade) {
     return $grade;
 }
 
-function isHighSchoolGrade($grade) {
-    return in_array(normalizeGradeLabel($grade), ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'], true);
-}
-
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();
 
@@ -44,11 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($selected_grade === '') {
         header('Location: ../pages/students.php?error=' . urlencode('Please select a grade'));
-        exit();
-    }
-
-    if (!isHighSchoolGrade($selected_grade)) {
-        header('Location: ../pages/students.php?error=' . urlencode('Only high school grades 9 to 12 are allowed'));
         exit();
     }
 

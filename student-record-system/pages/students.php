@@ -38,14 +38,6 @@ function normalizeGradeLabel($grade) {
     return $grade;
 }
 
-function highSchoolGrades() {
-    return ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-}
-
-function isHighSchoolGrade($grade) {
-    return in_array(normalizeGradeLabel($grade), highSchoolGrades(), true);
-}
-
 function gradesMatch($left_grade, $right_grade) {
     return strtolower(normalizeGradeLabel($left_grade)) === strtolower(normalizeGradeLabel($right_grade));
 }
@@ -165,18 +157,9 @@ function saveStudentAccount($conn, $student_id, $username, $email, $plain_passwo
 $grade_rows = [];
 $grade_result = $conn->query('SELECT grade_id, grade_name FROM grades ORDER BY grade_id');
 if ($grade_result) {
-    $grade_order = array_flip(highSchoolGrades());
     while ($grade_row = $grade_result->fetch_assoc()) {
-        $grade_name = normalizeGradeLabel($grade_row['grade_name']);
-        if (!isset($grade_order[$grade_name])) {
-            continue;
-        }
-
-        $grade_rows[$grade_order[$grade_name]] = $grade_row;
+        $grade_rows[] = $grade_row;
     }
-
-    ksort($grade_rows);
-    $grade_rows = array_values($grade_rows);
 }
 
 $teacher_scope = null;
@@ -214,11 +197,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($selected_grade === '') {
         header('Location: students.php?error=' . urlencode('Please select a grade'));
-        exit();
-    }
-
-    if (!isHighSchoolGrade($selected_grade)) {
-        header('Location: students.php?error=' . urlencode('Only high school grades 9 to 12 are allowed'));
         exit();
     }
 
@@ -726,17 +704,3 @@ $csrf_token = urlencode(getCsrfToken());
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-

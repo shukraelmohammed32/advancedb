@@ -21,10 +21,6 @@ function normalizeGradeLabel($grade) {
     return $grade;
 }
 
-function isHighSchoolGrade($grade) {
-    return in_array(normalizeGradeLabel($grade), ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'], true);
-}
-
 function normalizeSubjectIds($raw_subject_ids) {
     $subject_ids = [];
 
@@ -86,11 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 
-    if (!isHighSchoolGrade($assigned_grade_input)) {
-        header('Location: ../pages/teachers.php?error=' . urlencode('Only high school grades 9 to 12 are allowed'));
-        exit();
-    }
-
     $grade_safe = $conn->real_escape_string($assigned_grade_input);
     $grade_lookup = $conn->query("SELECT grade_name FROM grades WHERE grade_name = '$grade_safe' LIMIT 1");
     if (!$grade_lookup || $grade_lookup->num_rows === 0) {
@@ -139,4 +130,3 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     exit();
 }
 ?>
-

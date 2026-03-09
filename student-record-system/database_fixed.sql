@@ -403,11 +403,9 @@ DEALLOCATE PREPARE stmt;
 -- SEED DATA
 -- ============================================
 
-DELETE FROM grades
-WHERE grade_name NOT IN ('Grade 9', 'Grade 10', 'Grade 11', 'Grade 12');
-
 INSERT INTO grades (grade_name) VALUES
-('Grade 9'), ('Grade 10'), ('Grade 11'), ('Grade 12')
+('Grade 1'), ('Grade 2'), ('Grade 3'), ('Grade 4'),
+('Grade 5'), ('Grade 6'), ('Grade 7'), ('Grade 8')
 ON DUPLICATE KEY UPDATE grade_name = VALUES(grade_name);
 
 INSERT INTO academic_years (year_name, is_active) VALUES
@@ -551,4 +549,3 @@ SELECT COUNT(*) AS subjects_count FROM subjects;
 SELECT COUNT(*) AS marks_count FROM marks;
 SELECT COUNT(*) AS student_profiles_count FROM student_profiles;
 SELECT username, role, is_active FROM users WHERE username = 'admin';
-

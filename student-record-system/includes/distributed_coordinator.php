@@ -116,38 +116,251 @@ class DistributedCoordinator {
         return $site ? (string)$site['site_name'] : 'Central Coordinator';
     }
 
+    private function connectionTableExists($connection, $table_name) {
+        if (!($connection instanceof mysqli)) {
+            return false;
+        }
+
+        $table_name = preg_replace('/[^A-Za-z0-9_]/', '', (string)$table_name);
+        if ($table_name === '') {
+            return false;
+        }
+
+        $table_name_safe = $connection->real_escape_string($table_name);
+        $result = $connection->query("SHOW TABLES LIKE '$table_name_safe'");
+        return $result && $result->num_rows > 0;
+    }
+
+    private function connectionColumnExists($connection, $table_name, $column_name) {
+        if (!($connection instanceof mysqli) || !$this->connectionTableExists($connection, $table_name)) {
+            return false;
+        }
+
+        $table_name = preg_replace('/[^A-Za-z0-9_]/', '', (string)$table_name);
+        $column_name = preg_replace('/[^A-Za-z0-9_]/', '', (string)$column_name);
+        if ($table_name === '' || $column_name === '') {
+            return false;
+        }
+
+        $column_name_safe = $connection->real_escape_string($column_name);
+        $result = $connection->query("SHOW COLUMNS FROM `$table_name` LIKE '$column_name_safe'");
+        return $result && $result->num_rows > 0;
+    }
+
+    private function connectionTableCount($connection, $table_name) {
+        if (!$this->connectionTableExists($connection, $table_name)) {
+            return 0;
+        }
+
+        $table_name = preg_replace('/[^A-Za-z0-9_]/', '', (string)$table_name);
+        $result = $connection->query("SELECT COUNT(*) AS total FROM `$table_name`");
+        if (!$result || $result->num_rows === 0) {
+            return 0;
+        }
+
+        $row = $result->fetch_assoc();
+        return (int)($row['total'] ?? 0);
+    }
+
+    private function connectionMaxTimestamp($connection, $table_name, $column_name) {
+        if (!$this->connectionColumnExists($connection, $table_name, $column_name)) {
+            return null;
+        }
+
+        $table_name = preg_replace('/[^A-Za-z0-9_]/', '', (string)$table_name);
+        $column_name = preg_replace('/[^A-Za-z0-9_]/', '', (string)$column_name);
+        $result = $connection->query("SELECT MAX(`$column_name`) AS latest_value FROM `$table_name`");
+        if (!$result || $result->num_rows === 0) {
+            return null;
+        }
+
+        $row = $result->fetch_assoc();
+        $value = isset($row['latest_value']) ? trim((string)$row['latest_value']) : '';
+        return $value === '' ? null : $value;
+    }
+
+    private function newestTimestamp(array $timestamps) {
+        $timestamps = array_values(array_filter($timestamps, static function ($value) {
+            return is_string($value) && trim($value) !== '';
+        }));
+
+        if (empty($timestamps)) {
+            return null;
+        }
+
+        rsort($timestamps);
+        return $timestamps[0];
+    }
+
+    private function siteRecentActivity($site, $connection, $limit_per_table) {
+        if (!($connection instanceof mysqli)) {
+            return [];
+        }
+
+        $site_id = (int)($site['site_id'] ?? 0);
+        $site_name = (string)($site['site_name'] ?? 'Unknown Site');
+        $site_code = (string)($site['site_code'] ?? 'N/A');
+        $limit_per_table = max(1, (int)$limit_per_table);
+        $activities = [];
+
+        if ($this->connectionTableExists($connection, 'teachers') && $this->connectionColumnExists($connection, 'teachers', 'created_at')) {
+            $result = $connection->query("SELECT teacher_id, teacher_name, assigned_grade, created_at FROM teachers ORDER BY created_at DESC LIMIT $limit_per_table");
+            if ($result) {
+                while ($row = $result->fetch_assoc()) {
+                    $activities[] = [
+                        'site_id' => $site_id,
+                        'site_name' => $site_name,
+                        'site_code' => $site_code,
+                        'entity_type' => 'teacher',
+                        'title' => (string)($row['teacher_name'] ?? 'Teacher created'),
+                        'description' => 'Assigned grade: ' . (string)($row['assigned_grade'] ?? 'N/A'),
+                        'activity_at' => (string)($row['created_at'] ?? ''),
+                    ];
+                }
+            }
+        }
+
+        if ($this->connectionTableExists($connection, 'subjects') && $this->connectionColumnExists($connection, 'subjects', 'created_at')) {
+            $result = $connection->query("SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY created_at DESC LIMIT $limit_per_table");
+            if ($result) {
+                while ($row = $result->fetch_assoc()) {
+                    $activities[] = [
+                        'site_id' => $site_id,
+                        'site_name' => $site_name,
+                        'site_code' => $site_code,
+                        'entity_type' => 'subject',
+                        'title' => (string)($row['subject_name'] ?? 'Subject created'),
+                        'description' => 'Total mark: ' . (int)($row['total_mark'] ?? 0),
+                        'activity_at' => (string)($row['created_at'] ?? ''),
+                    ];
+                }
+            }
+        }
+
+        if ($this->connectionTableExists($connection, 'students') && $this->connectionColumnExists($connection, 'students', 'created_at')) {
+            $result = $connection->query("SELECT student_id, name, grade, created_at FROM students ORDER BY created_at DESC LIMIT $limit_per_table");
+            if ($result) {
+                while ($row = $result->fetch_assoc()) {
+                    $activities[] = [
+                        'site_id' => $site_id,
+                        'site_name' => $site_name,
+                        'site_code' => $site_code,
+                        'entity_type' => 'student',
+                        'title' => (string)($row['name'] ?? 'Student created'),
+                        'description' => 'Grade: ' . (string)($row['grade'] ?? 'N/A'),
+                        'activity_at' => (string)($row['created_at'] ?? ''),
+                    ];
+                }
+            }
+        }
+
+        if ($this->connectionTableExists($connection, 'marks')) {
+            $order_column = $this->connectionColumnExists($connection, 'marks', 'updated_at') ? 'updated_at' : 'created_at';
+            if ($this->connectionColumnExists($connection, 'marks', $order_column)) {
+                $result = $connection->query("SELECT mark_id, student_id, subject_id, score, `$order_column` AS activity_at FROM marks ORDER BY `$order_column` DESC LIMIT $limit_per_table");
+                if ($result) {
+                    while ($row = $result->fetch_assoc()) {
+                        $activities[] = [
+                            'site_id' => $site_id,
+                            'site_name' => $site_name,
+                            'site_code' => $site_code,
+                            'entity_type' => 'mark',
+                            'title' => 'Mark saved',
+                            'description' => 'Student #' . (int)($row['student_id'] ?? 0) . ' | Subject #' . (int)($row['subject_id'] ?? 0) . ' | Score ' . (int)($row['score'] ?? 0),
+                            'activity_at' => (string)($row['activity_at'] ?? ''),
+                        ];
+                    }
+                }
+            }
+        }
+
+        return array_values(array_filter($activities, static function ($activity) {
+            return !empty($activity['activity_at']);
+        }));
+    }
+
     public function getSiteStats() {
         if (!$this->isDistributedReady()) {
+            $central_connection = $this->database->getCentralConnection();
             return [[
                 'site_id' => 1,
                 'site_name' => 'Central Coordinator',
                 'site_code' => 'CENTRAL',
                 'db_name' => $this->database->getDefaultDatabaseName(),
-                'total_students' => 0,
-                'total_marks' => 0,
+                'is_default' => 1,
+                'is_active' => 1,
+                'connection_status' => 'online',
+                'total_teachers' => $this->connectionTableCount($central_connection, 'teachers'),
+                'total_subjects' => $this->connectionTableCount($central_connection, 'subjects'),
+                'total_students' => $this->connectionTableCount($central_connection, 'students'),
+                'total_marks' => $this->connectionTableCount($central_connection, 'marks'),
+                'last_activity_at' => $this->newestTimestamp([
+                    $this->connectionMaxTimestamp($central_connection, 'teachers', 'created_at'),
+                    $this->connectionMaxTimestamp($central_connection, 'subjects', 'created_at'),
+                    $this->connectionMaxTimestamp($central_connection, 'students', 'created_at'),
+                    $this->connectionMaxTimestamp($central_connection, 'marks', 'updated_at'),
+                    $this->connectionMaxTimestamp($central_connection, 'marks', 'created_at'),
+                ]),
             ]];
         }
 
         $stats = [];
-        $sql = "SELECT
-                    ds.site_id,
-                    ds.site_code,
-                    ds.site_name,
-                    ds.db_name,
-                    ds.is_default,
-                    ds.is_active,
-                    (SELECT COUNT(*) FROM students s WHERE s.site_id = ds.site_id) AS total_students,
-                    (SELECT COUNT(*) FROM marks m WHERE m.site_id = ds.site_id) AS total_marks
-                FROM distributed_sites ds
-                ORDER BY ds.is_default DESC, ds.site_name ASC";
-        $result = $this->central->query($sql);
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $stats[] = $row;
-            }
+        foreach ($this->getSites(false) as $site) {
+            $connection = $this->siteConnection((int)$site['site_id']);
+            $is_connected = $connection instanceof mysqli;
+            $teacher_total = $is_connected ? $this->connectionTableCount($connection, 'teachers') : null;
+            $subject_total = $is_connected ? $this->connectionTableCount($connection, 'subjects') : null;
+            $student_total = $is_connected ? $this->connectionTableCount($connection, 'students') : null;
+            $mark_total = $is_connected ? $this->connectionTableCount($connection, 'marks') : null;
+            $last_activity_at = $is_connected ? $this->newestTimestamp([
+                $this->connectionMaxTimestamp($connection, 'teachers', 'created_at'),
+                $this->connectionMaxTimestamp($connection, 'subjects', 'created_at'),
+                $this->connectionMaxTimestamp($connection, 'students', 'created_at'),
+                $this->connectionMaxTimestamp($connection, 'marks', 'updated_at'),
+                $this->connectionMaxTimestamp($connection, 'marks', 'created_at'),
+            ]) : null;
+
+            $stats[] = [
+                'site_id' => (int)($site['site_id'] ?? 0),
+                'site_code' => (string)($site['site_code'] ?? ''),
+                'site_name' => (string)($site['site_name'] ?? 'Unknown Site'),
+                'db_name' => (string)($site['db_name'] ?? ''),
+                'is_default' => (int)($site['is_default'] ?? 0),
+                'is_active' => (int)($site['is_active'] ?? 1),
+                'connection_status' => $is_connected ? 'online' : 'offline',
+                'total_teachers' => $teacher_total,
+                'total_subjects' => $subject_total,
+                'total_students' => $student_total,
+                'total_marks' => $mark_total,
+                'last_activity_at' => $last_activity_at,
+            ];
         }
 
         return $stats;
+    }
+
+    public function getRecentBranchActivity($limit = 12) {
+        $limit = max(1, (int)$limit);
+        if (!$this->isDistributedReady()) {
+            return [];
+        }
+
+        $activities = [];
+        $limit_per_table = max(1, min(5, $limit));
+        foreach ($this->getSites() as $site) {
+            $connection = $this->siteConnection((int)$site['site_id']);
+            if (!($connection instanceof mysqli)) {
+                continue;
+            }
+
+            $activities = array_merge($activities, $this->siteRecentActivity($site, $connection, $limit_per_table));
+        }
+
+        usort($activities, static function ($left, $right) {
+            return strcmp((string)($right['activity_at'] ?? ''), (string)($left['activity_at'] ?? ''));
+        });
+
+        return array_slice($activities, 0, $limit);
     }
 
     public function studentSiteId($student_id) {

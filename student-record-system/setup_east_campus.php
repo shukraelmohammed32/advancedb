@@ -10,6 +10,15 @@ const EAST_ADMIN_USERNAME = 'east_admin';
 const EAST_ADMIN_PASSWORD = 'eastadmin123';
 const EAST_ADMIN_EMAIL = 'eastadmin@school.edu';
 
+function eastGradeLabels() {
+    $grades = [];
+    for ($grade = 1; $grade <= 8; $grade++) {
+        $grades[] = 'Grade ' . $grade;
+    }
+
+    return $grades;
+}
+
 function out($message) {
     if (PHP_SAPI === 'cli') {
         echo $message . PHP_EOL;
@@ -47,7 +56,7 @@ function queryOrFail(mysqli $connection, $sql, $errorPrefix) {
     }
 }
 
-heading('Setting Up East Campus Branch');
+heading('Setting Up Independent East Campus Branch');
 
 $db = new Database();
 $credentials = $db->getCredentials();
@@ -87,7 +96,7 @@ out('Central distributed_sites entry confirmed for East Campus.');
 
 $dropOrder = ['student_profiles', 'marks', 'teacher_subjects', 'users', 'students', 'teachers', 'subjects', 'academic_years', 'grades'];
 $createOrder = ['grades', 'academic_years', 'subjects', 'teachers', 'students', 'teacher_subjects', 'users', 'marks', 'student_profiles'];
-$copyAllTables = ['grades', 'academic_years', 'subjects', 'teachers', 'teacher_subjects'];
+$sharedReferenceTables = ['academic_years'];
 
 queryOrFail($branch, 'SET FOREIGN_KEY_CHECKS=0', 'Failed to disable foreign key checks');
 foreach ($dropOrder as $table) {
@@ -104,42 +113,23 @@ foreach ($createOrder as $table) {
 }
 out('Cloned current schema from central database.');
 
-foreach ($copyAllTables as $table) {
+foreach ($sharedReferenceTables as $table) {
     queryOrFail(
         $branch,
         'INSERT INTO `' . $table . '` SELECT * FROM `' . $centralDbName . '`.`' . $table . '`',
         'Failed to copy reference table ' . $table
     );
 }
-
+$gradeValues = [];
+foreach (eastGradeLabels() as $gradeName) {
+    $gradeValues[] = "('" . $branch->real_escape_string($gradeName) . "')";
+}
 queryOrFail(
     $branch,
-    'INSERT INTO `students` SELECT * FROM `' . $centralDbName . '`.`students` WHERE site_id = ' . EAST_SITE_ID,
-    'Failed to copy East students'
+    'INSERT INTO `grades` (grade_name) VALUES ' . implode(', ', $gradeValues),
+    'Failed to seed East branch grades'
 );
-queryOrFail(
-    $branch,
-    'INSERT INTO `marks` SELECT * FROM `' . $centralDbName . '`.`marks` WHERE site_id = ' . EAST_SITE_ID,
-    'Failed to copy East marks'
-);
-queryOrFail(
-    $branch,
-    'INSERT INTO `student_profiles`
-     SELECT sp.*
-     FROM `' . $centralDbName . '`.`student_profiles` sp
-     INNER JOIN `' . $centralDbName . '`.`students` s ON s.student_id = sp.student_id
-     WHERE s.site_id = ' . EAST_SITE_ID,
-    'Failed to copy East student profiles'
-);
-queryOrFail(
-    $branch,
-    "INSERT INTO `users`
-     SELECT *
-     FROM `" . $centralDbName . "`.`users`
-     WHERE role = 'teacher'
-        OR (role = 'student' AND student_id IN (SELECT student_id FROM `" . $centralDbName . "`.`students` WHERE site_id = " . EAST_SITE_ID . '))',
-    'Failed to copy East branch user accounts'
-);
+out('Copied academic years and seeded East grades (Grade 1 to Grade 8).');
 
 $adminPasswordHash = password_hash(EAST_ADMIN_PASSWORD, PASSWORD_DEFAULT);
 $adminUsername = $branch->real_escape_string(EAST_ADMIN_USERNAME);
@@ -148,45 +138,37 @@ $adminPasswordHashEscaped = $branch->real_escape_string($adminPasswordHash);
 queryOrFail(
     $branch,
     "INSERT INTO users (username, password, email, role, student_id, teacher_id, is_active)
-     VALUES ('" . $adminUsername . "', '" . $adminPasswordHashEscaped . "', '" . $adminEmail . "', 'admin', NULL, NULL, 1)
-     ON DUPLICATE KEY UPDATE
-        password = VALUES(password),
-        email = VALUES(email),
-        role = 'admin',
-        is_active = 1",
+     VALUES ('" . $adminUsername . "', '" . $adminPasswordHashEscaped . "', '" . $adminEmail . "', 'admin', NULL, NULL, 1)",
     'Failed to create East admin account'
 );
-out('Reference data and East admin account seeded.');
+out('Created standalone East admin account.');
 
-$studentCount = 0;
-$result = $branch->query('SELECT COUNT(*) AS count FROM students');
-if ($result) {
-    $row = $result->fetch_assoc();
-    $studentCount = (int)($row['count'] ?? 0);
-}
+$counts = [
+    'students' => 0,
+    'teachers' => 0,
+    'subjects' => 0,
+    'marks' => 0,
+];
 
-$markCount = 0;
-$result = $branch->query('SELECT COUNT(*) AS count FROM marks');
-if ($result) {
-    $row = $result->fetch_assoc();
-    $markCount = (int)($row['count'] ?? 0);
-}
-
-$teacherCount = 0;
-$result = $branch->query('SELECT COUNT(*) AS count FROM teachers');
-if ($result) {
-    $row = $result->fetch_assoc();
-    $teacherCount = (int)($row['count'] ?? 0);
+foreach (array_keys($counts) as $table) {
+    $result = $branch->query('SELECT COUNT(*) AS count FROM `' . $table . '`');
+    if ($result) {
+        $row = $result->fetch_assoc();
+        $counts[$table] = (int)($row['count'] ?? 0);
+    }
 }
 
 heading('East Campus Setup Complete', 3);
+out('Mode: standalone branch with independent local data');
 out('Database: ' . EAST_DB_NAME);
 out('Site ID: ' . EAST_SITE_ID);
 out('Admin login: ' . EAST_ADMIN_USERNAME . ' / ' . EAST_ADMIN_PASSWORD);
-out('Teachers copied: ' . $teacherCount);
-out('East students copied: ' . $studentCount);
-out('East marks copied: ' . $markCount);
-out('Next step: copy this app to C:\\xampp\\htdocs\\east_campus and place .env.east there as .env.');
+out('Grade range: Grade 1 to Grade 8');
+out('Teachers: ' . $counts['teachers']);
+out('Subjects: ' . $counts['subjects']);
+out('Students: ' . $counts['students']);
+out('Marks: ' . $counts['marks']);
+out('You can now add East-only teachers, subjects, students, and marks inside the branch app.');
 
 $branch->close();
 $server->close();
