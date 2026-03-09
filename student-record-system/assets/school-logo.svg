@@ -1,0 +1,22 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none">
+  <defs>
+    <linearGradient id="shield" x1="24" y1="18" x2="136" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F4F87"/>
+      <stop offset="1" stop-color="#2F90DF"/>
+    </linearGradient>
+    <linearGradient id="book" x1="44" y1="84" x2="116" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FDFF"/>
+      <stop offset="1" stop-color="#D9EEFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="18" width="124" height="124" rx="34" fill="rgba(255,255,255,0.04)"/>
+  <path d="M80 24C97 35 113 40 132 42V78C132 106 111 129 80 138C49 129 28 106 28 78V42C47 40 63 35 80 24Z" fill="url(#shield)"/>
+  <path d="M80 37L123 53L80 69L37 53L80 37Z" fill="#F6FBFF"/>
+  <path d="M50 77C50 71.477 62.536 67 78 67C93.464 67 106 71.477 106 77V98C106 103.523 93.464 108 78 108C62.536 108 50 103.523 50 98V77Z" fill="url(#book)"/>
+  <path d="M54 79.5C54 82.538 64.297 85 77 85C89.703 85 100 82.538 100 79.5" stroke="#78B7EC" stroke-width="3" stroke-linecap="round"/>
+  <path d="M74 64L34 48L28 52L74 70V64Z" fill="#CDE7FB"/>
+  <path d="M126 51V81" stroke="#DDF2FF" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="126" cy="86" r="6" fill="#9AD5FF"/>
+  <path d="M78 69C86.837 69 94 72.134 94 76V104C89.64 106.317 84.141 107.5 78 107.5C71.859 107.5 66.36 106.317 62 104V76C62 72.134 69.163 69 78 69Z" fill="#F7FCFF" fill-opacity="0.75"/>
+  <path d="M92 104.5C92 111.956 85.732 118 78 118C70.268 118 64 111.956 64 104.5" stroke="#E2F4FF" stroke-width="4" stroke-linecap="round"/>
+</svg>
