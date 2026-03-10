@@ -290,6 +290,125 @@ class DistributedCoordinator {
         return $resolved_rows;
     }
 
+    private function siteGrades($connection) {
+        if (!($connection instanceof mysqli) || !$this->connectionTableExists($connection, 'students') || !$this->connectionColumnExists($connection, 'students', 'grade')) {
+            return [];
+        }
+
+        $rows = $this->connectionQueryRows($connection, 'SELECT DISTINCT grade FROM students WHERE grade IS NOT NULL AND TRIM(grade) != "" ORDER BY grade ASC');
+        $grades = [];
+        foreach ($rows as $row) {
+            $grade = trim((string)($row['grade'] ?? ''));
+            if ($grade !== '') {
+                $grades[strtolower($grade)] = $grade;
+            }
+        }
+
+        return array_values($grades);
+    }
+
+    private function centralTeacherRowsByGrades(array $grades) {
+        $normalized_grades = [];
+        foreach ($grades as $grade) {
+            $grade = trim((string)$grade);
+            if ($grade === '') {
+                continue;
+            }
+
+            $normalized_grades[strtolower($grade)] = $grade;
+        }
+
+        if (empty($normalized_grades) || !$this->connectionTableExists($this->central, 'teachers')) {
+            return [];
+        }
+
+        $grade_list = [];
+        foreach (array_values($normalized_grades) as $grade) {
+            $grade_list[] = "'" . $this->central->real_escape_string($grade) . "'";
+        }
+
+        $sql = 'SELECT teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at FROM teachers WHERE assigned_grade IN (' . implode(', ', $grade_list) . ') ORDER BY teacher_name ASC';
+        return $this->connectionQueryRows($this->central, $sql);
+    }
+
+    private function centralSubjectNamesByTeacherIds(array $teacher_ids) {
+        $teacher_ids = array_values(array_filter(array_map('intval', array_unique($teacher_ids)), static function ($teacher_id) {
+            return $teacher_id > 0;
+        }));
+
+        if (empty($teacher_ids) || !$this->connectionTableExists($this->central, 'teacher_subjects') || !$this->connectionTableExists($this->central, 'subjects')) {
+            return [];
+        }
+
+        $id_list = implode(', ', $teacher_ids);
+        $rows = $this->connectionQueryRows(
+            $this->central,
+            "SELECT ts.teacher_id, s.subject_name
+             FROM teacher_subjects ts
+             INNER JOIN subjects s ON s.subject_id = ts.subject_id
+             WHERE ts.teacher_id IN ($id_list)
+             ORDER BY ts.teacher_id ASC, s.subject_name ASC"
+        );
+
+        $subject_names_by_teacher = [];
+        foreach ($rows as $row) {
+            $teacher_id = (int)($row['teacher_id'] ?? 0);
+            $subject_name = trim((string)($row['subject_name'] ?? ''));
+            if ($teacher_id > 0 && $subject_name !== '') {
+                $subject_names_by_teacher[$teacher_id][$subject_name] = $subject_name;
+            }
+        }
+
+        foreach ($subject_names_by_teacher as $teacher_id => $subject_names) {
+            $subject_names_by_teacher[$teacher_id] = array_values($subject_names);
+        }
+
+        return $subject_names_by_teacher;
+    }
+
+    private function mergeTeacherRows(array ...$teacher_sets) {
+        $merged_rows = [];
+
+        foreach ($teacher_sets as $teacher_rows) {
+            foreach ($teacher_rows as $teacher_row) {
+                $teacher_id = (int)($teacher_row['teacher_id'] ?? 0);
+                if ($teacher_id <= 0) {
+                    continue;
+                }
+
+                if (!isset($merged_rows[$teacher_id])) {
+                    $merged_rows[$teacher_id] = $teacher_row;
+                    continue;
+                }
+
+                $merged_rows[$teacher_id] = array_merge($teacher_row, $merged_rows[$teacher_id]);
+            }
+        }
+
+        uasort($merged_rows, static function ($left, $right) {
+            return strcasecmp((string)($left['teacher_name'] ?? ''), (string)($right['teacher_name'] ?? ''));
+        });
+
+        return array_values($merged_rows);
+    }
+
+    private function inferredTeacherRowsForSite($connection, array $reference_ids = []) {
+        if (!($connection instanceof mysqli)) {
+            return [];
+        }
+
+        $reference_ids = array_merge([
+            'teacher_ids' => [],
+            'subject_ids' => [],
+        ], $reference_ids);
+
+        $grade_rows = $this->siteGrades($connection);
+        $central_by_ids = $this->centralTeacherRowsByIds($reference_ids['teacher_ids']);
+        $central_by_grades = $this->centralTeacherRowsByGrades($grade_rows);
+
+        return $this->mergeTeacherRows($central_by_ids, $central_by_grades);
+    }
+
     private function centralSubjectRowsByIds(array $subject_ids) {
         $subject_ids = array_values(array_filter(array_map('intval', array_unique($subject_ids)), static function ($subject_id) {
             return $subject_id > 0;
@@ -442,11 +561,14 @@ class DistributedCoordinator {
             $connection = $this->siteConnection((int)$site['site_id']);
             $is_connected = $connection instanceof mysqli;
             $reference_ids = $is_connected ? $this->siteReferenceIdsFromMarks($connection) : ['teacher_ids' => [], 'subject_ids' => []];
-            $teacher_total = $is_connected
-                ? ($this->connectionTableExists($connection, 'teachers')
-                    ? $this->connectionTableCount($connection, 'teachers')
-                    : count($reference_ids['teacher_ids']))
-                : null;
+            $site_teacher_rows = [];
+            if ($is_connected) {
+                $local_teacher_rows = $this->connectionTableExists($connection, 'teachers')
+                    ? $this->connectionQueryRows($connection, 'SELECT teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at FROM teachers ORDER BY teacher_name ASC')
+                    : [];
+                $site_teacher_rows = $this->mergeTeacherRows($local_teacher_rows, $this->inferredTeacherRowsForSite($connection, $reference_ids));
+            }
+            $teacher_total = $is_connected ? count($site_teacher_rows) : null;
             $subject_total = $is_connected
                 ? ($this->connectionTableExists($connection, 'subjects')
                     ? $this->connectionTableCount($connection, 'subjects')
@@ -596,14 +718,20 @@ class DistributedCoordinator {
         unset($subject_row);
         $details['subjects'] = $subject_rows;
 
-        $teacher_rows = $has_teachers
+        $local_teacher_rows = $has_teachers
             ? $this->connectionQueryRows($connection, 'SELECT teacher_id, teacher_name, department, assigned_grade, is_homeroom, created_at FROM teachers ORDER BY teacher_name ASC')
-            : $this->centralTeacherRowsByIds($reference_ids['teacher_ids']);
+            : [];
+        $teacher_rows = $this->mergeTeacherRows($local_teacher_rows, $this->inferredTeacherRowsForSite($connection, $reference_ids));
+        $details['stats']['teachers'] = count($teacher_rows);
+
+        $central_subject_names_by_teacher = $this->centralSubjectNamesByTeacherIds(array_map(static function ($teacher_row) {
+            return (int)($teacher_row['teacher_id'] ?? 0);
+        }, $teacher_rows));
         $teacher_lookup = [];
         foreach ($teacher_rows as &$teacher_row) {
             $teacher_id = (int)($teacher_row['teacher_id'] ?? 0);
             $teacher_lookup[$teacher_id] = (string)($teacher_row['teacher_name'] ?? 'Unknown Teacher');
-            $subjects_taught = $subject_names_by_teacher[$teacher_id] ?? [];
+            $subjects_taught = $subject_names_by_teacher[$teacher_id] ?? ($central_subject_names_by_teacher[$teacher_id] ?? []);
             $teacher_row['subjects_taught'] = !empty($subjects_taught)
                 ? implode(', ', array_unique($subjects_taught))
                 : (string)($teacher_row['department'] ?? '');
