@@ -423,6 +423,10 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                     </button>
 
                     <div class="login-links">
+                        <a href="#" class="forgot-link" data-bs-toggle="modal" data-bs-target="#aboutSystemModal">
+                            <i class="bi bi-info-circle"></i>
+                            <?php echo htmlspecialchars(t('About'), ENT_QUOTES, 'UTF-8'); ?>
+                        </a>
                         <a href="#" class="forgot-link" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
                             <i class="bi bi-question-circle"></i>
                             Forgot password?
@@ -447,6 +451,32 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                     <div class="forgot-contact">
                         <span><i class="bi bi-building-fill"></i> <?php echo htmlspecialchars($campusLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                         <span><i class="bi bi-person-workspace"></i> Academic support desk</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="aboutSystemModal" tabindex="-1" aria-labelledby="aboutSystemModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content forgot-modal">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="aboutSystemModalLabel"><?php echo htmlspecialchars(t('About This System'), ENT_QUOTES, 'UTF-8'); ?></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo htmlspecialchars(t('Close'), ENT_QUOTES, 'UTF-8'); ?>"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="forgot-icon"><i class="bi bi-journal-bookmark-fill"></i></div>
+                    <p><?php echo htmlspecialchars(t('Student Record System centralizes student records, teacher assignments, marks, summaries, and reports in one school platform.'), ENT_QUOTES, 'UTF-8'); ?></p>
+                    <div class="forgot-contact text-start">
+                        <div class="fw-semibold mb-2"><?php echo htmlspecialchars(t('Core Modules'), ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div><?php echo htmlspecialchars(t('Student profiles and academic records'), ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div><?php echo htmlspecialchars(t('Teacher assignments and homeroom management'), ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div><?php echo htmlspecialchars(t('Marks entry, summaries, and printable reports'), ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div><?php echo htmlspecialchars(t('Distributed branch oversight for campus operations'), ENT_QUOTES, 'UTF-8'); ?></div>
+                    </div>
+                    <div class="forgot-contact mt-3 text-start">
+                        <div class="fw-semibold mb-2"><?php echo htmlspecialchars(t('Who Uses It'), ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div><?php echo htmlspecialchars(t('Super Admin manages the full platform, Branch Admin oversees campus operations, teachers manage marks, and students view results.'), ENT_QUOTES, 'UTF-8'); ?></div>
                     </div>
                 </div>
             </div>

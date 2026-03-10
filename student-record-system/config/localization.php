@@ -81,6 +81,50 @@ if (!function_exists('translationCatalog')) {
                 'om' => 'Amaaraa',
                 'am' => 'አማርኛ',
             ],
+            'About' => [
+                'om' => 'Waaee',
+                'am' => 'ስለ እኛ',
+            ],
+            'About This System' => [
+                'om' => 'Waaee Sirnichaa',
+                'am' => 'ስለዚህ ስርዓት',
+            ],
+            'Student Record System centralizes student records, teacher assignments, marks, summaries, and reports in one school platform.' => [
+                'om' => 'Sirni Galmee Barattootaa kun galmee barattootaa, ramaddii barsiisotaa, qabxii, cuunfaa fi ripoortii hunda platformii mana barumsaa tokko keessatti walitti qaba.',
+                'am' => 'የተማሪ መዝገብ ስርዓቱ የተማሪ መረጃዎችን፣ የመምህራን ምደባዎችን፣ ውጤቶችን፣ ማጠቃለያዎችን እና ሪፖርቶችን በአንድ የትምህርት ቤት መድረክ ያከማቻል።',
+            ],
+            'Core Modules' => [
+                'om' => 'Kutaa Ijoowwan',
+                'am' => 'ዋና ክፍሎች',
+            ],
+            'Student profiles and academic records' => [
+                'om' => 'Piroofaayilii barattootaa fi galmee barnootaa',
+                'am' => 'የተማሪ መገለጫዎች እና የትምህርት መዝገቦች',
+            ],
+            'Teacher assignments and homeroom management' => [
+                'om' => 'Ramaddii barsiisotaa fi bulchiinsa barsiisaa kutaa',
+                'am' => 'የመምህራን ምደባ እና የክፍል መምህር አስተዳደር',
+            ],
+            'Marks entry, summaries, and printable reports' => [
+                'om' => 'Galmee qabxii, cuunfaa fi ripoortii maxxanfamuu danda’an',
+                'am' => 'የውጤት ማስገቢያ፣ ማጠቃለያ እና ሊታተሙ የሚችሉ ሪፖርቶች',
+            ],
+            'Distributed branch oversight for campus operations' => [
+                'om' => 'Hojiiwwan kaampaasii irratti to’annoo damee raabsame',
+                'am' => 'ለካምፓስ ስራዎች የተከፋፈለ የቅርንጫፍ ቁጥጥር',
+            ],
+            'Who Uses It' => [
+                'om' => 'Eenyutu Fayyadama',
+                'am' => 'ማን ይጠቀማል',
+            ],
+            'Super Admin manages the full platform, Branch Admin oversees campus operations, teachers manage marks, and students view results.' => [
+                'om' => 'Bulchaan Olaanaan platformii guutuu bulcha; Bulchaan Damee hojii kaampaasii to’ata; barsiisonni qabxii bulchu; barattoonni immoo bu’aa isaanii ilaalu.',
+                'am' => 'ዋና አስተዳዳሪው መድረኩን ሙሉ በሙሉ ያስተዳድራል፣ የቅርንጫፍ አስተዳዳሪው የካምፓስ ስራዎችን ይቆጣጠራል፣ መምህራን ውጤቶችን ያስተዳድራሉ፣ ተማሪዎችም ውጤታቸውን ያያሉ።',
+            ],
+            'Close' => [
+                'om' => 'Cufi',
+                'am' => 'ዝጋ',
+            ],
             'Quick Links' => [
                 'om' => 'Hidhaa Ariifachiisaa',
                 'am' => 'ፈጣን አገናኞች',

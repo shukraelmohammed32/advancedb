@@ -14,6 +14,7 @@ $db = new Database();
 $conn = $db->getConnection();
 $coordinator = new DistributedCoordinator($db);
 $is_admin = hasRole('admin');
+$is_super_admin = $is_admin && (string)($_SESSION['admin_scope'] ?? 'main') === 'main';
 $is_teacher = hasRole('teacher');
 $is_student = hasRole('student');
 $distributed_ready = $coordinator->isDistributedReady();
@@ -81,6 +82,39 @@ function teacherCanAccessStudent($conn, $teacher_id, $student_id) {
     return gradesMatch($row['assigned_grade'], $row['grade']);
 }
 
+function fetchTeacherReportData($conn, $teacher_id) {
+    $teacher_id = (int)$teacher_id;
+    if ($teacher_id <= 0) {
+        return null;
+    }
+
+    $sql = "SELECT
+                t.teacher_id,
+                t.teacher_name,
+                t.department,
+                t.assigned_grade,
+                t.is_homeroom,
+                t.created_at,
+                COALESCE(GROUP_CONCAT(DISTINCT s.subject_name ORDER BY s.subject_name SEPARATOR ', '), t.department) AS subjects_taught,
+                COUNT(DISTINCT ts.subject_id) AS subject_count,
+                COUNT(DISTINCT m.mark_id) AS marks_recorded,
+                COUNT(DISTINCT m.student_id) AS students_graded,
+                ROUND(AVG(m.score), 2) AS average_score,
+                MAX(COALESCE(m.updated_at, m.created_at)) AS latest_mark_at,
+                (SELECT u.username FROM users u WHERE u.teacher_id = t.teacher_id AND u.role = 'teacher' ORDER BY u.user_id ASC LIMIT 1) AS login_username,
+                (SELECT u.email FROM users u WHERE u.teacher_id = t.teacher_id AND u.role = 'teacher' ORDER BY u.user_id ASC LIMIT 1) AS login_email,
+                EXISTS(SELECT 1 FROM users u WHERE u.teacher_id = t.teacher_id AND u.role = 'teacher' AND u.is_active = 1) AS has_login
+            FROM teachers t
+            LEFT JOIN teacher_subjects ts ON ts.teacher_id = t.teacher_id
+            LEFT JOIN subjects s ON s.subject_id = ts.subject_id
+            LEFT JOIN marks m ON m.teacher_id = t.teacher_id
+            WHERE t.teacher_id = $teacher_id
+            GROUP BY t.teacher_id, t.teacher_name, t.department, t.assigned_grade, t.is_homeroom, t.created_at";
+
+    $result = $conn->query($sql);
+    return $result && $result->num_rows > 0 ? $result->fetch_assoc() : null;
+}
+
 $teacher_grade = $is_teacher ? getTeacherAssignedGrade($conn, $session_teacher_id) : '';
 $page_title = $is_admin ? 'School Reports' : (isHomeroomTeacher() ? 'Homeroom Reports' : 'My Academic Report');
 $student_site_select = $show_site_details
@@ -90,6 +124,8 @@ $student_site_join = $show_site_details ? 'LEFT JOIN distributed_sites ds ON ds.
 
 // Handle form submission for generating report
 $report_data = null;
+$teacher_report_data = null;
+$report_type = ($is_super_admin && isset($_POST['report_type']) && $_POST['report_type'] === 'teacher') ? 'teacher' : 'student';
 $selected_student = null;
 $error_message = '';
 $info_message = '';
@@ -101,7 +137,9 @@ if (isHomeroomTeacher()) {
         $error_message = 'Your homeroom teacher account is not linked to an assigned grade. Contact admin.';
     }
 } elseif ($is_admin) {
-    $info_message = 'Admins can generate academic reports for any student in the system.';
+    $info_message = $is_super_admin
+        ? 'Super Admin can generate academic reports for any student and activity reports for every teacher in the system.'
+        : 'Admins can generate academic reports for any student in the system.';
 } elseif ($is_student) {
     $info_message = 'You can view only your own academic report, marks, rank, and pass or fail status.';
 }
@@ -122,11 +160,27 @@ if ($should_generate_report) {
         $student_id = (int)($_POST['student_id'] ?? 0);
     }
 
-    if (empty($error_message) && $is_teacher && !teacherCanAccessStudent($conn, $session_teacher_id, $student_id)) {
+    if (empty($error_message) && $report_type === 'teacher' && !$is_super_admin) {
+        $error_message = 'Only Super Admin can generate teacher reports.';
+    }
+
+    if (empty($error_message) && $report_type === 'student' && $is_teacher && !teacherCanAccessStudent($conn, $session_teacher_id, $student_id)) {
         $error_message = 'You can generate reports only for students in your assigned grade.';
     }
 
-    if (empty($error_message) && $student_id > 0) {
+    if (empty($error_message) && $report_type === 'teacher') {
+        $teacher_id = (int)($_POST['teacher_id'] ?? 0);
+        if ($teacher_id <= 0) {
+            $error_message = 'Teacher not found.';
+        } else {
+            $teacher_report_data = fetchTeacherReportData($conn, $teacher_id);
+            if (!$teacher_report_data) {
+                $error_message = 'Teacher not found.';
+            }
+        }
+    }
+
+    if (empty($error_message) && $report_type === 'student' && $student_id > 0) {
         $student_result = $conn->query("SELECT s.*, $student_site_select FROM students s $student_site_join WHERE s.student_id = $student_id");
         $selected_student = $student_result ? $student_result->fetch_assoc() : null;
 
@@ -226,6 +280,22 @@ if ($students_query) {
         }
 
         $student_rows[] = $student;
+    }
+}
+
+$teacher_rows = [];
+if ($is_super_admin) {
+    $teachers_query = $conn->query("SELECT t.teacher_id, t.teacher_name, t.assigned_grade,
+                                           COALESCE(GROUP_CONCAT(DISTINCT s.subject_name ORDER BY s.subject_name SEPARATOR ', '), t.department) AS subjects_taught
+                                    FROM teachers t
+                                    LEFT JOIN teacher_subjects ts ON ts.teacher_id = t.teacher_id
+                                    LEFT JOIN subjects s ON s.subject_id = ts.subject_id
+                                    GROUP BY t.teacher_id, t.teacher_name, t.assigned_grade, t.department
+                                    ORDER BY t.teacher_name ASC");
+    if ($teachers_query) {
+        while ($teacher = $teachers_query->fetch_assoc()) {
+            $teacher_rows[] = $teacher;
+        }
     }
 }
 
@@ -356,9 +426,19 @@ if ($subjects) {
                         <?php echo $is_student ? 'View My Report' : 'Generate Report'; ?>
                     </div>
                     <div class="card-body">
-                        <form method="POST">
+                        <form method="POST" id="reportGeneratorForm">
                             <?php csrfInput(); ?>
+                            <?php if ($is_super_admin): ?>
                             <div class="mb-3">
+                                <label for="report_type" class="form-label">Report Type</label>
+                                <select class="form-control" id="report_type" name="report_type">
+                                    <option value="student" <?php echo $report_type === 'student' ? 'selected' : ''; ?>>Student Report</option>
+                                    <option value="teacher" <?php echo $report_type === 'teacher' ? 'selected' : ''; ?>>Teacher Report</option>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+
+                            <div class="mb-3" id="studentSelectorGroup" <?php echo $report_type === 'teacher' ? 'style="display:none;"' : ''; ?>>
                                 <label for="student_id" class="form-label">Select Student</label>
                                 <select class="form-control" id="student_id" name="student_id" required <?php echo canOnlyViewOwnRecords() ? 'disabled' : ''; ?>>
                                     <option value="">Select Student</option>
@@ -374,10 +454,24 @@ if ($subjects) {
                                 <?php endif; ?>
                             </div>
 
+                            <?php if ($is_super_admin): ?>
+                            <div class="mb-3" id="teacherSelectorGroup" <?php echo $report_type === 'teacher' ? '' : 'style="display:none;"'; ?>>
+                                <label for="teacher_id" class="form-label">Select Teacher</label>
+                                <select class="form-control" id="teacher_id" name="teacher_id">
+                                    <option value="">Select Teacher</option>
+                                    <?php foreach ($teacher_rows as $teacher): ?>
+                                        <option value="<?php echo (int)$teacher['teacher_id']; ?>" <?php echo isset($_POST['teacher_id']) && (int)$_POST['teacher_id'] === (int)$teacher['teacher_id'] ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($teacher['teacher_name'] . ' - ' . normalizeGradeLabel($teacher['assigned_grade']) . ' - ' . ($teacher['subjects_taught'] ?: 'No subjects assigned'), ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+
                             <button type="submit" class="btn btn-primary" name="generate_report">
-                                <?php echo $is_student ? 'View My Report' : 'Generate Report'; ?>
+                                <?php echo $is_student ? 'View My Report' : ($report_type === 'teacher' ? 'Generate Teacher Report' : 'Generate Report'); ?>
                             </button>
-                            <?php if ($report_data): ?>
+                            <?php if ($report_data || $teacher_report_data): ?>
                                 <button type="button" class="btn btn-secondary" onclick="window.print()">
                                     <i class="fas fa-print"></i> Print Report
                                 </button>
@@ -524,12 +618,108 @@ if ($subjects) {
                             </small>
                         </div>
                     </div>
+                <?php elseif ($teacher_report_data): ?>
+                    <div class="card report-card">
+                        <div class="report-header">
+                            <h2>Teacher Activity Report</h2>
+                            <p>Generated for Super Admin review</p>
+                        </div>
+
+                        <div class="student-info">
+                            <h4>Teacher Information</h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Name:</strong> <?php echo htmlspecialchars((string)$teacher_report_data['teacher_name'], ENT_QUOTES, 'UTF-8'); ?><br>
+                                    <strong>Teacher ID:</strong> <?php echo (int)$teacher_report_data['teacher_id']; ?><br>
+                                    <strong>Assigned Grade:</strong> <?php echo htmlspecialchars(normalizeGradeLabel((string)$teacher_report_data['assigned_grade']), ENT_QUOTES, 'UTF-8'); ?><br>
+                                    <strong>Homeroom:</strong> <?php echo !empty($teacher_report_data['is_homeroom']) ? 'Yes' : 'No'; ?>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Username:</strong> <?php echo htmlspecialchars((string)($teacher_report_data['login_username'] ?? 'Not Available'), ENT_QUOTES, 'UTF-8'); ?><br>
+                                    <strong>Email:</strong> <?php echo htmlspecialchars((string)($teacher_report_data['login_email'] ?? 'Not Available'), ENT_QUOTES, 'UTF-8'); ?><br>
+                                    <strong>Account Status:</strong> <?php echo !empty($teacher_report_data['has_login']) ? 'Secured' : 'Missing Login'; ?><br>
+                                    <strong>Created At:</strong> <?php echo htmlspecialchars(date('M d, Y', strtotime((string)$teacher_report_data['created_at'])), ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Subjects Taught</th>
+                                        <th>Assigned Subject Count</th>
+                                        <th>Students Graded</th>
+                                        <th>Marks Recorded</th>
+                                        <th>Average Score</th>
+                                        <th>Latest Mark Activity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars((string)$teacher_report_data['department'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td><?php echo htmlspecialchars((string)$teacher_report_data['subjects_taught'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td><?php echo (int)($teacher_report_data['subject_count'] ?? 0); ?></td>
+                                        <td><?php echo (int)($teacher_report_data['students_graded'] ?? 0); ?></td>
+                                        <td><?php echo (int)($teacher_report_data['marks_recorded'] ?? 0); ?></td>
+                                        <td>
+                                            <?php if ($teacher_report_data['average_score'] !== null): ?>
+                                                <?php echo htmlspecialchars(number_format((float)$teacher_report_data['average_score'], 2), ENT_QUOTES, 'UTF-8'); ?>%
+                                            <?php else: ?>
+                                                <span class="text-muted">N/A</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($teacher_report_data['latest_mark_at'])): ?>
+                                                <?php echo htmlspecialchars(date('Y-m-d H:i:s', strtotime((string)$teacher_report_data['latest_mark_at'])), ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php else: ?>
+                                                <span class="text-muted">No mark activity yet</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="summary-card">
+                            <h4>Summary</h4>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>Subjects:</strong><br>
+                                    <h3><?php echo (int)($teacher_report_data['subject_count'] ?? 0); ?></h3>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Students Graded:</strong><br>
+                                    <h3><?php echo (int)($teacher_report_data['students_graded'] ?? 0); ?></h3>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Marks Recorded:</strong><br>
+                                    <h3><?php echo (int)($teacher_report_data['marks_recorded'] ?? 0); ?></h3>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Average Score:</strong><br>
+                                    <h3>
+                                        <?php echo $teacher_report_data['average_score'] !== null
+                                            ? htmlspecialchars(number_format((float)$teacher_report_data['average_score'], 2), ENT_QUOTES, 'UTF-8') . '%'
+                                            : '<span class="text-muted">N/A</span>'; ?>
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4 no-print">
+                            <small class="text-muted">
+                                Generated on: <?php echo date('Y-m-d H:i:s'); ?>
+                            </small>
+                        </div>
+                    </div>
                 <?php else: ?>
                     <div class="card">
                         <div class="card-body text-center">
                             <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
                             <h4>No Report Generated</h4>
-                            <p class="text-muted"><?php echo $is_student ? 'Use the form to load your current academic report.' : 'Select a student from the form to generate their academic report.'; ?></p>
+                            <p class="text-muted"><?php echo $is_student ? 'Use the form to load your current academic report.' : ($is_super_admin && $report_type === 'teacher' ? 'Select a teacher from the form to generate their activity report.' : 'Select a student from the form to generate their academic report.'); ?></p>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -543,6 +733,42 @@ if ($subjects) {
     ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script>
+        (function () {
+            var reportType = document.getElementById('report_type');
+            var studentGroup = document.getElementById('studentSelectorGroup');
+            var teacherGroup = document.getElementById('teacherSelectorGroup');
+            var studentSelect = document.getElementById('student_id');
+            var teacherSelect = document.getElementById('teacher_id');
+
+            function toggleReportSelectors() {
+                if (!reportType) {
+                    return;
+                }
+
+                var isTeacher = reportType.value === 'teacher';
+                if (studentGroup) {
+                    studentGroup.style.display = isTeacher ? 'none' : '';
+                }
+                if (teacherGroup) {
+                    teacherGroup.style.display = isTeacher ? '' : 'none';
+                }
+                if (studentSelect) {
+                    studentSelect.disabled = isTeacher;
+                    studentSelect.required = !isTeacher;
+                }
+                if (teacherSelect) {
+                    teacherSelect.disabled = !isTeacher;
+                    teacherSelect.required = isTeacher;
+                }
+            }
+
+            if (reportType) {
+                reportType.addEventListener('change', toggleReportSelectors);
+                toggleReportSelectors();
+            }
+        }());
+    </script>
 </body>
 </html>
 
