@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
+require_once '../includes/distributed_coordinator.php';
 
 requireLogin();
 if (!canAccessSummary()) {
@@ -90,17 +91,28 @@ function buildStudentSummaryRecord($student, $defaultTotalSubjects) {
 
 $db = new Database();
 $conn = $db->getConnection();
+$coordinator = new DistributedCoordinator($db);
+$is_admin = hasRole('admin');
+$is_super_admin = $is_admin && (string)($_SESSION['admin_scope'] ?? 'main') === 'main';
+$distributed_ready = $coordinator->isDistributedReady();
+$can_access_distributed = canAccessDistributedCoordinator();
+$site_stats = ($is_super_admin && $can_access_distributed && $distributed_ready) ? $coordinator->getSiteStats() : [];
 
 $totalStudents = (int)$conn->query("SELECT COUNT(*) as count FROM students")->fetch_assoc()['count'];
+$totalTeachers = (int)$conn->query("SELECT COUNT(*) as count FROM teachers")->fetch_assoc()['count'];
 $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_assoc()['count'];
 $totalMarks = (int)$conn->query("SELECT COUNT(*) as count FROM marks")->fetch_assoc()['count'];
 
 $summary_title = isHomeroomTeacher()
     ? 'Compile final results for your homeroom without jumping between multiple pages.'
-    : 'Review compiled results, completion, and subject health across the whole school.';
+    : ($is_super_admin
+        ? 'Monitor completion, performance, and branch health across the entire platform.'
+        : 'Review compiled results, completion, and subject health across the whole school.');
 $summary_intro = isHomeroomTeacher()
     ? 'This page helps homeroom teachers collect subject marks, monitor completion, and move directly into final student reports.'
-    : 'This page gives administrators a single place to review completion, averages, pass rate, and subject trends before opening reports.';
+    : ($is_super_admin
+        ? 'This page gives Super Admin a single place to review school-wide completion, subject trends, and branch-level summary health before moving into reports or branch details.'
+        : 'This page gives administrators a single place to review completion, averages, pass rate, and subject trends before opening reports.');
 
 $studentSummaryResult = $conn->query("
     SELECT
@@ -378,6 +390,96 @@ if ($subjectPerformance === false) {
             margin-top: 1.6rem;
         }
 
+        .summary-site-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-site-card {
+            display: block;
+            padding: 1rem;
+            border: 1px solid #eee1d2;
+            border-radius: 20px;
+            text-decoration: none;
+            color: inherit;
+            background: #ffffff;
+            box-shadow: 0 8px 18px rgba(76, 55, 36, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .summary-site-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 26px rgba(76, 55, 36, 0.1);
+        }
+
+        .summary-site-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .summary-site-name {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1f292c;
+        }
+
+        .summary-site-db {
+            margin: 0.25rem 0 0;
+            color: #7a8284;
+            font-size: 0.82rem;
+        }
+
+        .summary-site-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.32rem 0.65rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(31, 92, 88, 0.1);
+            color: #1f5c58;
+        }
+
+        .summary-site-badge-offline {
+            background: rgba(89, 98, 115, 0.12);
+            color: #56626f;
+        }
+
+        .summary-site-stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-top: 1rem;
+        }
+
+        .summary-site-stat {
+            padding: 0.65rem 0.75rem;
+            border-radius: 16px;
+            background: #f8f2ea;
+        }
+
+        .summary-site-stat strong {
+            display: block;
+            font-size: 1rem;
+            color: #1d2f30;
+        }
+
+        .summary-site-stat span {
+            font-size: 0.78rem;
+            color: #6c7678;
+        }
+
+        .summary-site-link {
+            margin-top: 0.9rem;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: #8c5228;
+        }
+
         .summary-panel {
             overflow: hidden;
             border: 1px solid rgba(87, 68, 44, 0.1);
@@ -596,6 +698,10 @@ if ($subjectPerformance === false) {
             .summary-grid {
                 grid-template-columns: 1fr;
             }
+
+            .summary-site-grid {
+                grid-template-columns: 1fr 1fr;
+            }
         }
 
         @media (max-width: 768px) {
@@ -629,6 +735,11 @@ if ($subjectPerformance === false) {
 
         @media (max-width: 575px) {
             .summary-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-site-grid,
+            .summary-site-stats {
                 grid-template-columns: 1fr;
             }
 
@@ -703,6 +814,9 @@ if ($subjectPerformance === false) {
                         <?php if (canViewStudentReports()): ?>
                         <a href="report.php" class="summary-action summary-action-secondary">Open Reports</a>
                         <?php endif; ?>
+                        <?php if ($is_super_admin && !empty($site_stats)): ?>
+                        <a href="../index.php" class="summary-action summary-action-secondary">Open Branch Oversight</a>
+                        <?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -713,22 +827,77 @@ if ($subjectPerformance === false) {
                         <p>Learners currently tracked in the system.</p>
                     </div>
                     <div class="summary-stat-card summary-stat-card-clay">
+                        <span>Teachers</span>
+                        <strong><?php echo $totalTeachers; ?></strong>
+                        <p>Faculty records linked to grades, subjects, and reports.</p>
+                    </div>
+                    <div class="summary-stat-card summary-stat-card-sand">
                         <span>Subjects</span>
                         <strong><?php echo $totalSubjects; ?></strong>
                         <p>Courses contributing to progress and reports.</p>
                     </div>
-                    <div class="summary-stat-card summary-stat-card-sand">
+                    <div class="summary-stat-card summary-stat-card-ink">
                         <span>Marks</span>
                         <strong><?php echo $totalMarks; ?></strong>
                         <p>Recorded assessments available for analysis.</p>
                     </div>
-                    <div class="summary-stat-card summary-stat-card-ink">
+                    <div class="summary-stat-card summary-stat-card-clay">
                         <span>Focus</span>
                         <strong><?php echo $totalSubjects > 0 ? number_format(($totalMarks / max($totalSubjects, 1)), 1) : '0.0'; ?></strong>
                         <p>Average recorded marks per subject slot.</p>
                     </div>
                 </div>
             </section>
+
+            <?php if ($is_super_admin && !empty($site_stats)): ?>
+            <section class="summary-panel mt-4">
+                <div class="summary-panel-header">
+                    <div>
+                        <span class="summary-panel-label">Branch Summary</span>
+                        <h2 class="summary-panel-title">All campus summary in one place</h2>
+                        <p class="summary-panel-copy">Super Admin can review each campus connection, teacher and student totals, and open branch details from here.</p>
+                    </div>
+                    <span class="summary-panel-meta"><?php echo count($site_stats); ?> campuses</span>
+                </div>
+                <div class="summary-panel-body">
+                    <div class="summary-site-grid">
+                        <?php foreach ($site_stats as $site_stat): ?>
+                        <?php $isOnline = ($site_stat['connection_status'] ?? '') === 'online'; ?>
+                        <a href="branch_details.php?site_id=<?php echo (int)$site_stat['site_id']; ?>" class="summary-site-card">
+                            <div class="summary-site-top">
+                                <div>
+                                    <h3 class="summary-site-name"><?php echo htmlspecialchars((string)$site_stat['site_name'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                                    <p class="summary-site-db"><?php echo htmlspecialchars((string)$site_stat['db_name'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                </div>
+                                <span class="summary-site-badge<?php echo $isOnline ? '' : ' summary-site-badge-offline'; ?>">
+                                    <?php echo $isOnline ? 'Online' : 'Offline'; ?>
+                                </span>
+                            </div>
+                            <div class="summary-site-stats">
+                                <div class="summary-site-stat">
+                                    <strong><?php echo (int)($site_stat['total_teachers'] ?? 0); ?></strong>
+                                    <span>Teachers</span>
+                                </div>
+                                <div class="summary-site-stat">
+                                    <strong><?php echo (int)($site_stat['total_students'] ?? 0); ?></strong>
+                                    <span>Students</span>
+                                </div>
+                                <div class="summary-site-stat">
+                                    <strong><?php echo (int)($site_stat['total_subjects'] ?? 0); ?></strong>
+                                    <span>Subjects</span>
+                                </div>
+                                <div class="summary-site-stat">
+                                    <strong><?php echo (int)($site_stat['total_marks'] ?? 0); ?></strong>
+                                    <span>Marks</span>
+                                </div>
+                            </div>
+                            <div class="summary-site-link">Open branch details</div>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </section>
+            <?php endif; ?>
 
             <div class="summary-grid">
                 <section class="summary-panel">
