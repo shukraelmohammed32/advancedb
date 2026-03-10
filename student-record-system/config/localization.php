@@ -1,0 +1,354 @@
+<?php
+
+if (!function_exists('availableLanguages')) {
+    function availableLanguages() {
+        return [
+            'en' => [
+                'label' => 'English',
+                'native_label' => 'English',
+                'html_lang' => 'en',
+            ],
+            'om' => [
+                'label' => 'Oromo',
+                'native_label' => 'Afaan Oromoo',
+                'html_lang' => 'om',
+            ],
+            'am' => [
+                'label' => 'Amharic',
+                'native_label' => 'አማርኛ',
+                'html_lang' => 'am',
+            ],
+        ];
+    }
+}
+
+if (!function_exists('translationCatalog')) {
+    function translationCatalog() {
+        return [
+            'Student Record System' => [
+                'om' => 'Sirna Galmee Barattootaa',
+                'am' => 'የተማሪ መዝገብ ስርዓት',
+            ],
+            'Dashboard' => [
+                'om' => 'Daashboordii',
+                'am' => 'ዳሽቦርድ',
+            ],
+            'Students' => [
+                'om' => 'Barattoota',
+                'am' => 'ተማሪዎች',
+            ],
+            'Subjects' => [
+                'om' => 'Barnoota',
+                'am' => 'ትምህርቶች',
+            ],
+            'Teachers' => [
+                'om' => 'Barsiisota',
+                'am' => 'መምህራን',
+            ],
+            'Marks' => [
+                'om' => 'Qabxii',
+                'am' => 'ውጤቶች',
+            ],
+            'Summary' => [
+                'om' => 'Cuunfaa',
+                'am' => 'ማጠቃለያ',
+            ],
+            'Reports' => [
+                'om' => 'Ripoortii',
+                'am' => 'ሪፖርቶች',
+            ],
+            'Profile' => [
+                'om' => 'Piroofaayilii',
+                'am' => 'መገለጫ',
+            ],
+            'Logout' => [
+                'om' => 'Baai',
+                'am' => 'ውጣ',
+            ],
+            'Language' => [
+                'om' => 'Afaan',
+                'am' => 'ቋንቋ',
+            ],
+            'English' => [
+                'om' => 'Ingiliffa',
+                'am' => 'እንግሊዝኛ',
+            ],
+            'Oromo' => [
+                'om' => 'Afaan Oromoo',
+                'am' => 'ኦሮምኛ',
+            ],
+            'Amharic' => [
+                'om' => 'Amaaraa',
+                'am' => 'አማርኛ',
+            ],
+            'Quick Links' => [
+                'om' => 'Hidhaa Ariifachiisaa',
+                'am' => 'ፈጣን አገናኞች',
+            ],
+            'System' => [
+                'om' => 'Sirna',
+                'am' => 'ስርዓት',
+            ],
+            'Version' => [
+                'om' => 'Baayina',
+                'am' => 'ስሪት',
+            ],
+            'Built with PHP and MySQL' => [
+                'om' => 'PHP fi MySQL waliin ijaarame',
+                'am' => 'በPHP እና MySQL የተገነባ',
+            ],
+            'All rights reserved.' => [
+                'om' => 'Mirgi hundi kan eegame dha.',
+                'am' => 'መብቱ ሁሉ የተጠበቀ ነው።',
+            ],
+            'Dashboard' => [
+                'om' => 'Daashboordii',
+                'am' => 'ዳሽቦርድ',
+            ],
+            'Total Students' => [
+                'om' => 'Walumaagalatti Barattoota',
+                'am' => 'ጠቅላላ ተማሪዎች',
+            ],
+            'Total Teachers' => [
+                'om' => 'Walumaagalatti Barsiisota',
+                'am' => 'ጠቅላላ መምህራን',
+            ],
+            'Total Subjects' => [
+                'om' => 'Walumaagalatti Barnoota',
+                'am' => 'ጠቅላላ ትምህርቶች',
+            ],
+            'All registered learners currently stored in the system.' => [
+                'om' => 'Barattoonni galmaa’an hundi amma sirnicha keessatti kuufamanii jiru.',
+                'am' => 'በስርዓቱ ውስጥ አሁን የተመዘገቡ ተማሪዎች ሁሉ።',
+            ],
+            'Faculty members handling subjects, classes, and compiled results.' => [
+                'om' => 'Barsiisonni barnoota, kutaa fi bu’aa walitti qabame hojii irra oolchani.',
+                'am' => 'ትምህርቶችን፣ ክፍሎችን እና የተጠናቀሩ ውጤቶችን የሚያስተዳድሩ መምህራን።',
+            ],
+            'Courses used for marks, rankings, and final academic reports.' => [
+                'om' => 'Barnootni qabxii, sadarkaa fi ripoortii xumuraa keessatti fayyadaman.',
+                'am' => 'ለውጤት፣ ደረጃ እና የመጨረሻ የትምህርት ሪፖርቶች የሚጠቀሙ ትምህርቶች።',
+            ],
+            'Branch Oversight' => [
+                'om' => 'To’annoo Damee',
+                'am' => 'የቅርንጫፍ ቁጥጥር',
+            ],
+            'Online' => [
+                'om' => 'Toora irratti',
+                'am' => 'በመስመር ላይ',
+            ],
+            'Unavailable' => [
+                'om' => 'Hin argamu',
+                'am' => 'አይገኝም',
+            ],
+            'Default' => [
+                'om' => 'Durtii',
+                'am' => 'ነባሪ',
+            ],
+            'Latest activity:' => [
+                'om' => 'Sochiin mootummaa dhihoo:',
+                'am' => 'የቅርብ እንቅስቃሴ:',
+            ],
+            'Open campus details' => [
+                'om' => 'Balbala damee bani',
+                'am' => 'የካምፓስ ዝርዝሮችን ክፈት',
+            ],
+            'Quick Actions' => [
+                'om' => 'Tarkaanfii Ariifachiisaa',
+                'am' => 'ፈጣን እርምጃዎች',
+            ],
+            'Manage Students' => [
+                'om' => 'Barattoota Bulchi',
+                'am' => 'ተማሪዎችን አስተዳድር',
+            ],
+            'Manage Subjects' => [
+                'om' => 'Barnoota Bulchi',
+                'am' => 'ትምህርቶችን አስተዳድር',
+            ],
+            'Manage Teachers' => [
+                'om' => 'Barsiisota Bulchi',
+                'am' => 'መምህራንን አስተዳድር',
+            ],
+            'Review Summary' => [
+                'om' => 'Cuunfaa Ilaali',
+                'am' => 'ማጠቃለያን አርም',
+            ],
+            'Generate Reports' => [
+                'om' => 'Ripoortii Uumi',
+                'am' => 'ሪፖርቶችን ፍጠር',
+            ],
+            'My Class Roster' => [
+                'om' => 'Galmee Kutaakoo',
+                'am' => 'የክፍሌ ዝርዝር',
+            ],
+            'My Subjects' => [
+                'om' => 'Barnoota Koo',
+                'am' => 'ትምህርቶቼ',
+            ],
+            'Enter Marks' => [
+                'om' => 'Qabxii Galchi',
+                'am' => 'ውጤት አስገባ',
+            ],
+            'Compile Results' => [
+                'om' => 'Bu’aa Walitti Qabi',
+                'am' => 'ውጤቶችን አጠናቅቅ',
+            ],
+            'Assigned Students' => [
+                'om' => 'Barattoota Ramadaman',
+                'am' => 'የተመደቡ ተማሪዎች',
+            ],
+            'Submit Marks' => [
+                'om' => 'Qabxii Ergi',
+                'am' => 'ውጤት አስገባ',
+            ],
+            'View My Report' => [
+                'om' => 'Ripoortii Koo Ilaali',
+                'am' => 'ሪፖርቴን ይመልከቱ',
+            ],
+            'Update Profile' => [
+                'om' => 'Piroofaayilii Haaromsi',
+                'am' => 'መገለጫን አዘምን',
+            ],
+            'Reliable record management for classes, teachers, marks, and reports.' => [
+                'om' => 'Kutaa, barsiisota, qabxii fi ripoortii irratti bulchiinsa galmee amanamaa.',
+                'am' => 'ለክፍሎች፣ ለመምህራን፣ ለውጤቶች እና ለሪፖርቶች አስተማማኝ የመዝገብ አስተዳደር።',
+            ],
+            'Role-based access keeps admin, teachers, homeroom teachers, and students inside their correct workflow.' => [
+                'om' => 'Seensa gahee irratti hundaa’e hojii sirrii keessatti hojii mootummaa, barsiisota, barsiisota kutaa fi barattoota eega.',
+                'am' => 'በሚና ላይ የተመሠረተ መዳረሻ አስተዳዳሪዎችን፣ መምህራንን፣ የክፍል መምህራንን እና ተማሪዎችን በትክክለኛ የስራ ፍሰት ውስጥ ያቆያል።',
+            ],
+            'Sign In' => [
+                'om' => 'Seeni',
+                'am' => 'ግባ',
+            ],
+            'Username or Email' => [
+                'om' => 'Maqaa Fayyadamaa yookaan Imeelii',
+                'am' => 'የተጠቃሚ ስም ወይም ኢሜይል',
+            ],
+            'Password' => [
+                'om' => 'Jecha Icciitii',
+                'am' => 'የይለፍ ቃል',
+            ],
+            'Role' => [
+                'om' => 'Gahee',
+                'am' => 'ሚና',
+            ],
+            'Super Admin' => [
+                'om' => 'Bulchaa Olaanaa',
+                'am' => 'ዋና አስተዳዳሪ',
+            ],
+            'Branch Admin' => [
+                'om' => 'Bulchaa Damee',
+                'am' => 'የቅርንጫፍ አስተዳዳሪ',
+            ],
+            'Teacher' => [
+                'om' => 'Barsiisaa',
+                'am' => 'መምህር',
+            ],
+            'Student' => [
+                'om' => 'Barataa',
+                'am' => 'ተማሪ',
+            ],
+            'Enter your email or username and password to continue.' => [
+                'om' => 'Itti fufuuf imeelii yookaan maqaa fayyadamaa fi jecha icciitii galchi.',
+                'am' => 'ለመቀጠል ኢሜይልዎን ወይም የተጠቃሚ ስምዎን እና የይለፍ ቃልዎን ያስገቡ።',
+            ],
+            'Login failed. Please verify your credentials and selected role.' => [
+                'om' => 'Seensichi hin milkoofne. Maaloo ragaa kee fi gahee filatame mirkaneessi.',
+                'am' => 'መግቢያው አልተሳካም። እባክዎ መረጃዎን እና የተመረጠውን ሚና ያረጋግጡ።',
+            ],
+        ];
+    }
+}
+
+if (!function_exists('normalizeLanguage')) {
+    function normalizeLanguage($language) {
+        $language = strtolower(trim((string)$language));
+        return array_key_exists($language, availableLanguages()) ? $language : 'en';
+    }
+}
+
+if (!function_exists('setCurrentLanguage')) {
+    function setCurrentLanguage($language) {
+        $language = normalizeLanguage($language);
+        $_SESSION['app_language'] = $language;
+        return $language;
+    }
+}
+
+if (!function_exists('currentLanguage')) {
+    function currentLanguage() {
+        if (!empty($_GET['lang'])) {
+            return setCurrentLanguage($_GET['lang']);
+        }
+
+        if (!empty($_POST['app_language'])) {
+            return setCurrentLanguage($_POST['app_language']);
+        }
+
+        if (!empty($_SESSION['app_language'])) {
+            return normalizeLanguage($_SESSION['app_language']);
+        }
+
+        return setCurrentLanguage('en');
+    }
+}
+
+if (!function_exists('currentLanguageTag')) {
+    function currentLanguageTag() {
+        $language = currentLanguage();
+        $languages = availableLanguages();
+        return $languages[$language]['html_lang'] ?? 'en';
+    }
+}
+
+if (!function_exists('t')) {
+    function t($text) {
+        $language = currentLanguage();
+        if ($language === 'en') {
+            return $text;
+        }
+
+        $catalog = translationCatalog();
+        return $catalog[$text][$language] ?? $text;
+    }
+}
+
+if (!function_exists('languageSwitcherUrl')) {
+    function languageSwitcherUrl($basePath = '') {
+        $basePath = rtrim((string)$basePath, '/');
+        if ($basePath !== '') {
+            $basePath .= '/';
+        }
+
+        $requestPath = $_SERVER['PHP_SELF'] ?? ($basePath . 'index.php');
+        $scriptName = basename((string)$requestPath);
+        return $basePath . $scriptName;
+    }
+}
+
+if (!function_exists('renderLanguageSwitcher')) {
+    function renderLanguageSwitcher($basePath = '') {
+        $languages = availableLanguages();
+        $current = currentLanguage();
+        $action = languageSwitcherUrl($basePath);
+
+        ob_start();
+        ?>
+        <form method="get" action="<?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?>" class="d-flex align-items-center gap-2 language-switcher">
+            <label class="text-white small mb-0" for="app_language_switcher"><?php echo htmlspecialchars(t('Language'), ENT_QUOTES, 'UTF-8'); ?></label>
+            <select class="form-select form-select-sm" id="app_language_switcher" name="lang" onchange="this.form.submit()">
+                <?php foreach ($languages as $code => $language): ?>
+                <option value="<?php echo htmlspecialchars($code, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $current === $code ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars($language['native_label'], ENT_QUOTES, 'UTF-8'); ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+        </form>
+        <?php
+        return ob_get_clean();
+    }
+}
+
+currentLanguage();
+?>

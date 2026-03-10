@@ -1,6 +1,7 @@
 <?php
 require_once '../config/session.php';
 startAppSession();
+require_once '../config/localization.php';
 require_once '../config/database.php';
 
 if ((getenv('APP_ENV') ?: 'local') !== 'production') {
@@ -32,7 +33,7 @@ function normalizeLoginPortal($value, $isBranchPortal) {
 function loginRoleProfiles($isBranchPortal, $siteName) {
     return [
         'main_admin' => [
-            'label' => 'Super Admin',
+            'label' => t('Super Admin'),
             'badge' => $isBranchPortal ? 'Central Portal Only' : 'Full ERP Control',
             'icon' => 'bi bi-shield-lock-fill',
             'headline' => $isBranchPortal
@@ -46,7 +47,7 @@ function loginRoleProfiles($isBranchPortal, $siteName) {
                 : 'Best for central office administrators responsible for system-wide setup and reporting.',
         ],
         'branch_admin' => [
-            'label' => 'Branch Admin',
+            'label' => t('Branch Admin'),
             'badge' => $isBranchPortal ? $siteName . ' Portal' : 'Branch Operations',
             'icon' => 'bi bi-building-fill-gear',
             'headline' => $isBranchPortal
@@ -60,7 +61,7 @@ function loginRoleProfiles($isBranchPortal, $siteName) {
                 : 'If your school uses separate branch portals, sign in from the correct campus URL for access.',
         ],
         'teacher' => [
-            'label' => 'Teacher',
+            'label' => t('Teacher'),
             'badge' => 'Faculty Access',
             'icon' => 'bi bi-easel2-fill',
             'headline' => 'Update marks, view classes, and manage academic progress quickly.',
@@ -68,7 +69,7 @@ function loginRoleProfiles($isBranchPortal, $siteName) {
             'support' => 'Choose Teacher when your account is used for lesson delivery, grading, and student progress tracking.',
         ],
         'student' => [
-            'label' => 'Student',
+            'label' => t('Student'),
             'badge' => 'Student Portal',
             'icon' => 'bi bi-mortarboard-fill',
             'headline' => 'Access results, academic reports, and your personal learning records.',
@@ -187,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string)($_POST['password'] ?? '');
 
     if ($loginInput === '' || $password === '') {
-        $error = 'Enter your email or username and password to continue.';
+        $error = t('Enter your email or username and password to continue.');
     } elseif (!$conn) {
         $error = 'Database connection failed. Please try again in a moment.';
     } else {
@@ -256,7 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         exit();
                     }
                 } else {
-                    $error = 'Login failed. Please verify your credentials and selected role.';
+                    $error = t('Login failed. Please verify your credentials and selected role.');
                 }
             } else {
                 $error = 'Unable to process your sign-in request right now.';
@@ -272,11 +273,11 @@ $roleProfilesJson = json_encode($roleProfiles, JSON_HEX_TAG | JSON_HEX_APOS | JS
 $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Portal';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo htmlspecialchars(currentLanguageTag(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Academic Record Management System - Login</title>
+    <title><?php echo htmlspecialchars(t('Student Record System') . ' - ' . t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -290,15 +291,19 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
             <div class="login-hero">
                 <div class="hero-topline">
                     <span class="hero-pill"><i class="bi bi-building"></i> <?php echo htmlspecialchars($campusLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                    <span class="hero-pill hero-pill-soft"><i class="bi bi-shield-check"></i> Secure ERP Access</span>
+                    <span class="hero-pill hero-pill-soft"><i class="bi bi-shield-check"></i> <?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
+                </div>
+
+                <div class="mt-3 mb-2">
+                    <?php echo renderLanguageSwitcher(''); ?>
                 </div>
 
                 <div class="brand-lockup">
                     <img src="../assets/school-logo.svg" alt="School logo" class="school-logo">
                     <div class="brand-copy">
-                        <span class="brand-kicker">School ERP Login</span>
-                        <h1>Student Academic Record Management System</h1>
-                        <p>Professional access for administrators, teachers, and students from one academic portal.</p>
+                        <span class="brand-kicker"><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
+                        <h1><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?></h1>
+                        <p><?php echo htmlspecialchars(t('Professional access for administrators, teachers, and students from one academic portal.'), ENT_QUOTES, 'UTF-8'); ?></p>
                     </div>
                 </div>
 
@@ -335,16 +340,16 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
 
             <div class="login-panel">
                 <div class="panel-header">
-                    <span class="panel-kicker"><i class="bi bi-person-badge-fill"></i> Sign In</span>
-                    <h2>Welcome back</h2>
-                    <p>Enter your school credentials and choose the correct role to access your dashboard.</p>
+                    <span class="panel-kicker"><i class="bi bi-person-badge-fill"></i> <?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
+                    <h2><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></h2>
+                    <p><?php echo htmlspecialchars(t('Enter your email or username and password to continue.'), ENT_QUOTES, 'UTF-8'); ?></p>
                 </div>
 
                 <?php if ($error !== ''): ?>
                     <div class="alert alert-danger login-alert" id="loginError" role="alert" aria-live="assertive">
                         <i class="bi bi-exclamation-octagon-fill"></i>
                         <div>
-                            <strong>Login failed</strong>
+                            <strong><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></strong>
                             <span><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></span>
                         </div>
                     </div>
@@ -352,7 +357,7 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
 
                 <form action="login.php" method="POST" class="login-form" id="loginForm" novalidate>
                     <div class="field-group">
-                        <label for="username" class="form-label">Email or Username</label>
+                        <label for="username" class="form-label"><?php echo htmlspecialchars(t('Username or Email'), ENT_QUOTES, 'UTF-8'); ?></label>
                         <div class="field-shell">
                             <span class="field-icon"><i class="bi bi-person-circle"></i></span>
                             <input
@@ -360,7 +365,7 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                                 class="form-control<?php echo $error !== '' ? ' is-invalid' : ''; ?>"
                                 id="username"
                                 name="username"
-                                placeholder="Enter email or username"
+                                placeholder="<?php echo htmlspecialchars(t('Username or Email'), ENT_QUOTES, 'UTF-8'); ?>"
                                 value="<?php echo htmlspecialchars($loginInput, ENT_QUOTES, 'UTF-8'); ?>"
                                 autocomplete="username"
                                 required
@@ -369,7 +374,7 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                     </div>
 
                     <div class="field-group">
-                        <label for="password" class="form-label">Password</label>
+                        <label for="password" class="form-label"><?php echo htmlspecialchars(t('Password'), ENT_QUOTES, 'UTF-8'); ?></label>
                         <div class="field-shell">
                             <span class="field-icon"><i class="bi bi-lock-fill"></i></span>
                             <input
@@ -377,7 +382,7 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                                 class="form-control<?php echo $error !== '' ? ' is-invalid' : ''; ?>"
                                 id="password"
                                 name="password"
-                                placeholder="Enter password"
+                                placeholder="<?php echo htmlspecialchars(t('Password'), ENT_QUOTES, 'UTF-8'); ?>"
                                 autocomplete="current-password"
                                 required
                             >
@@ -389,16 +394,16 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
 
                     <div class="field-group">
                         <div class="field-header">
-                            <label for="role" class="form-label">Role</label>
+                            <label for="role" class="form-label"><?php echo htmlspecialchars(t('Role'), ENT_QUOTES, 'UTF-8'); ?></label>
                             <span class="field-meta">Choose your portal access level</span>
                         </div>
                         <div class="field-shell select-shell">
                             <span class="field-icon" id="roleIconShell"><i class="<?php echo htmlspecialchars($currentRoleProfile['icon'], ENT_QUOTES, 'UTF-8'); ?>" id="roleIcon"></i></span>
                             <select class="form-select<?php echo $error !== '' ? ' is-invalid' : ''; ?>" id="role" name="role" required>
-                                <option value="main_admin"<?php echo $loginPortal === 'main_admin' ? ' selected' : ''; ?>>Super Admin</option>
-                                <option value="branch_admin"<?php echo $loginPortal === 'branch_admin' ? ' selected' : ''; ?>>Branch Admin</option>
-                                <option value="teacher"<?php echo $loginPortal === 'teacher' ? ' selected' : ''; ?>>Teacher</option>
-                                <option value="student"<?php echo $loginPortal === 'student' ? ' selected' : ''; ?>>Student</option>
+                                <option value="main_admin"<?php echo $loginPortal === 'main_admin' ? ' selected' : ''; ?>><?php echo htmlspecialchars(t('Super Admin'), ENT_QUOTES, 'UTF-8'); ?></option>
+                                <option value="branch_admin"<?php echo $loginPortal === 'branch_admin' ? ' selected' : ''; ?>><?php echo htmlspecialchars(t('Branch Admin'), ENT_QUOTES, 'UTF-8'); ?></option>
+                                <option value="teacher"<?php echo $loginPortal === 'teacher' ? ' selected' : ''; ?>><?php echo htmlspecialchars(t('Teacher'), ENT_QUOTES, 'UTF-8'); ?></option>
+                                <option value="student"<?php echo $loginPortal === 'student' ? ' selected' : ''; ?>><?php echo htmlspecialchars(t('Student'), ENT_QUOTES, 'UTF-8'); ?></option>
                             </select>
                             <span class="select-caret"><i class="bi bi-chevron-down"></i></span>
                         </div>
@@ -413,7 +418,7 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                     </div>
 
                     <button type="submit" class="btn btn-login" id="loginButton">
-                        <span class="btn-copy">Login</span>
+                        <span class="btn-copy"><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
                         <i class="bi bi-arrow-right-circle-fill"></i>
                     </button>
 

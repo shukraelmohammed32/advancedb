@@ -22,6 +22,7 @@ date_default_timezone_set('UTC');
 // Start application session with an app-specific cookie name and path.
 require_once __DIR__ . '/session.php';
 startAppSession();
+require_once __DIR__ . '/localization.php';
 
 // Set session lifetime
 if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > AppConfig::getSessionLifetime() * 60)) {

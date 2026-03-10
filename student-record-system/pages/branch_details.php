@@ -36,7 +36,7 @@ function formatBranchValue($value, $fallback = 'N/A') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo htmlspecialchars(currentLanguageTag(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -47,24 +47,25 @@ function formatBranchValue($value, $fallback = 'N/A') {
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="../index.php">Student Record System</a>
+            <a class="navbar-brand" href="../index.php"><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="../index.php">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="students.php">Students</a></li>
-                    <li class="nav-item"><a class="nav-link" href="subjects.php">Subjects</a></li>
-                    <li class="nav-item"><a class="nav-link" href="teachers.php">Teachers</a></li>
-                    <li class="nav-item"><a class="nav-link" href="summary.php">Summary</a></li>
-                    <li class="nav-item"><a class="nav-link" href="report.php">Reports</a></li>
+                    <li class="nav-item"><a class="nav-link" href="../index.php"><?php echo htmlspecialchars(t('Dashboard'), ENT_QUOTES, 'UTF-8'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" href="students.php"><?php echo htmlspecialchars(t('Students'), ENT_QUOTES, 'UTF-8'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" href="subjects.php"><?php echo htmlspecialchars(t('Subjects'), ENT_QUOTES, 'UTF-8'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" href="teachers.php"><?php echo htmlspecialchars(t('Teachers'), ENT_QUOTES, 'UTF-8'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" href="summary.php"><?php echo htmlspecialchars(t('Summary'), ENT_QUOTES, 'UTF-8'); ?></a></li>
+                    <li class="nav-item"><a class="nav-link" href="report.php"><?php echo htmlspecialchars(t('Reports'), ENT_QUOTES, 'UTF-8'); ?></a></li>
+                    <li class="nav-item d-flex align-items-center ms-lg-3 me-lg-2"><?php echo renderLanguageSwitcher('../pages'); ?></li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <?php echo htmlspecialchars((string)($_SESSION['display_name'] ?? 'Admin'), ENT_QUOTES, 'UTF-8'); ?> (<?php echo htmlspecialchars(getRoleLabel(), ENT_QUOTES, 'UTF-8'); ?>)
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="../auth/logout.php">Logout</a></li>
+                            <li><a class="dropdown-item" href="../auth/logout.php"><?php echo htmlspecialchars(t('Logout'), ENT_QUOTES, 'UTF-8'); ?></a></li>
                         </ul>
                     </li>
                 </ul>

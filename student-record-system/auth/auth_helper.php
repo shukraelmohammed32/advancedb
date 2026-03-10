@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/session.php';
 startAppSession();
+require_once __DIR__ . '/../config/localization.php';
 
 function isLoggedIn() {
     return isset($_SESSION['user_id']);

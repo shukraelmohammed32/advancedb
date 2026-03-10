@@ -413,7 +413,7 @@ $csrf_token = urlencode(getCsrfToken());
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo htmlspecialchars(currentLanguageTag(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -424,41 +424,44 @@ $csrf_token = urlencode(getCsrfToken());
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="../index.php">Student Record System</a>
+            <a class="navbar-brand" href="../index.php"><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="../index.php">Dashboard</a>
+                        <a class="nav-link" href="../index.php"><?php echo htmlspecialchars(t('Dashboard'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="students.php">Students</a>
+                        <a class="nav-link active" href="students.php"><?php echo htmlspecialchars(t('Students'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="subjects.php">Subjects</a>
+                        <a class="nav-link" href="subjects.php"><?php echo htmlspecialchars(t('Subjects'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <?php if ($is_admin): ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="teachers.php">Teachers</a>
+                        <a class="nav-link" href="teachers.php"><?php echo htmlspecialchars(t('Teachers'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <?php endif; ?>
                     <?php if (canManageMarks()): ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="marks.php">Marks</a>
+                        <a class="nav-link" href="marks.php"><?php echo htmlspecialchars(t('Marks'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <?php endif; ?>
                     <?php if (canAccessSummary()): ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="summary.php">Summary</a>
+                        <a class="nav-link" href="summary.php"><?php echo htmlspecialchars(t('Summary'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <?php endif; ?>
                     <?php if (canViewStudentReports()): ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="report.php">Reports</a>
+                        <a class="nav-link" href="report.php"><?php echo htmlspecialchars(t('Reports'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <?php endif; ?>
+                    <li class="nav-item d-flex align-items-center ms-lg-3">
+                        <?php echo renderLanguageSwitcher('../pages'); ?>
+                    </li>
                 </ul>
             </div>
         </div>
