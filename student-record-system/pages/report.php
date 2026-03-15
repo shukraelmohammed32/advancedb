@@ -391,9 +391,6 @@ if ($subjects) {
                         <a class="nav-link" href="profile.php"><?php echo htmlspecialchars(t('Profile'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <?php endif; ?>
-                    <li class="nav-item d-flex align-items-center ms-lg-3">
-                        <?php echo renderLanguageSwitcher('../pages'); ?>
-                    </li>
                 </ul>
             </div>
         </div>

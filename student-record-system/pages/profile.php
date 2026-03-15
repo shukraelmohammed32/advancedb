@@ -379,9 +379,6 @@ if (!$profile_table_exists && $error_message === '') {
                     <li class="nav-item">
                         <a class="nav-link active" href="profile.php"><?php echo htmlspecialchars(t('Profile'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
-                    <li class="nav-item d-flex align-items-center ms-lg-3 me-lg-2">
-                        <?php echo renderLanguageSwitcher('../pages'); ?>
-                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <?php echo htmlspecialchars((string)($_SESSION['display_name'] ?? 'Student'), ENT_QUOTES, 'UTF-8'); ?>

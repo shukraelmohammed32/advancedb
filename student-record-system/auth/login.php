@@ -294,10 +294,6 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                     <span class="hero-pill hero-pill-soft"><i class="bi bi-shield-check"></i> <?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
 
-                <div class="mt-3 mb-2">
-                    <?php echo renderLanguageSwitcher(''); ?>
-                </div>
-
                 <div class="brand-lockup">
                     <img src="../assets/school-logo.svg" alt="School logo" class="school-logo">
                     <div class="brand-copy">

@@ -117,9 +117,6 @@ function formatDashboardDateTime($value, $fallback = 'No activity yet') {
                         <a class="nav-link" href="pages/profile.php"><?php echo htmlspecialchars(t('Profile'), ENT_QUOTES, 'UTF-8'); ?></a>
                     </li>
                     <?php endif; ?>
-                    <li class="nav-item d-flex align-items-center ms-lg-3 me-lg-2">
-                        <?php echo renderLanguageSwitcher(''); ?>
-                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <?php echo htmlspecialchars((string)($_SESSION['display_name'] ?? 'User'), ENT_QUOTES, 'UTF-8'); ?> (<?php echo htmlspecialchars(getRoleLabel(), ENT_QUOTES, 'UTF-8'); ?>)

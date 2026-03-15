@@ -67,7 +67,6 @@ function formatBranchValue($value, $fallback = null) {
                     <li class="nav-item"><a class="nav-link" href="teachers.php"><?php echo htmlspecialchars(t('Teachers'), ENT_QUOTES, 'UTF-8'); ?></a></li>
                     <li class="nav-item"><a class="nav-link" href="summary.php"><?php echo htmlspecialchars(t('Summary'), ENT_QUOTES, 'UTF-8'); ?></a></li>
                     <li class="nav-item"><a class="nav-link" href="report.php"><?php echo htmlspecialchars(t('Reports'), ENT_QUOTES, 'UTF-8'); ?></a></li>
-                    <li class="nav-item d-flex align-items-center ms-lg-3 me-lg-2"><?php echo renderLanguageSwitcher('../pages'); ?></li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <?php echo htmlspecialchars((string)($_SESSION['display_name'] ?? 'Admin'), ENT_QUOTES, 'UTF-8'); ?> (<?php echo htmlspecialchars(getRoleLabel(), ENT_QUOTES, 'UTF-8'); ?>)
