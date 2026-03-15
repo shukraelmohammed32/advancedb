@@ -6,6 +6,7 @@
 # Database files
 *.sql
 !database_fixed.sql
+!update_first_last_names.sql
 *.db
 *.sqlite
 database/

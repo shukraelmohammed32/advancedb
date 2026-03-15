@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS academic_years (
 
 CREATE TABLE IF NOT EXISTS students (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    name VARCHAR(100) GENERATED ALWAYS AS (CONCAT(first_name, ' ', last_name)) STORED,
     gender ENUM('Male', 'Female') NOT NULL,
     grade VARCHAR(20) NOT NULL,
     grade_id INT NULL,
@@ -52,7 +54,9 @@ CREATE TABLE IF NOT EXISTS subjects (
 
 CREATE TABLE IF NOT EXISTS teachers (
     teacher_id INT AUTO_INCREMENT PRIMARY KEY,
-    teacher_name VARCHAR(100) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    teacher_name VARCHAR(100) GENERATED ALWAYS AS (CONCAT(first_name, ' ', last_name)) STORED,
     department VARCHAR(100) NOT NULL,
     assigned_grade VARCHAR(20) NOT NULL,
     is_homeroom TINYINT(1) NOT NULL DEFAULT 0,
@@ -111,7 +115,59 @@ CREATE TABLE IF NOT EXISTS student_profiles (
 -- UPGRADE SUPPORT FOR OLDER/PARTIAL IMPORTS
 -- ============================================
 
+ALTER TABLE students ADD COLUMN IF NOT EXISTS first_name VARCHAR(50) NOT NULL DEFAULT '' AFTER student_id;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS last_name VARCHAR(50) NOT NULL DEFAULT '' AFTER first_name;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS grade_id INT NULL AFTER gender;
+
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS first_name VARCHAR(50) NOT NULL DEFAULT '' AFTER teacher_id;
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS last_name VARCHAR(50) NOT NULL DEFAULT '' AFTER first_name;
+
+-- Migrate existing name data to first_name and last_name
+UPDATE students SET 
+    first_name = CASE 
+        WHEN LOCATE(' ', TRIM(name)) > 0 
+        THEN SUBSTRING_INDEX(TRIM(name), ' ', 1)
+        ELSE TRIM(name)
+    END,
+    last_name = CASE 
+        WHEN LOCATE(' ', TRIM(name)) > 0 
+        THEN SUBSTRING_INDEX(TRIM(name), ' ', -1)
+        ELSE ''
+    END
+WHERE first_name = '' OR last_name = '';
+
+UPDATE teachers SET 
+    first_name = CASE 
+        WHEN LOCATE(' ', TRIM(teacher_name)) > 0 
+        THEN SUBSTRING_INDEX(TRIM(teacher_name), ' ', 1)
+        ELSE TRIM(teacher_name)
+    END,
+    last_name = CASE 
+        WHEN LOCATE(' ', TRIM(teacher_name)) > 0 
+        THEN SUBSTRING_INDEX(TRIM(teacher_name), ' ', -1)
+        ELSE ''
+    END
+WHERE first_name = '' OR last_name = '';
+
+-- Add generated columns for backward compatibility (MySQL 5.7+)
+SET @version = (SELECT VERSION());
+SET @mysql_version = CAST(SUBSTRING_INDEX(@version, '.', 2) AS DECIMAL(3,1));
+
+SET @sql = IF(@mysql_version >= 5.7,
+    'ALTER TABLE students ADD COLUMN IF NOT EXISTS name VARCHAR(100) GENERATED ALWAYS AS (CONCAT(first_name, \" \", last_name)) STORED',
+    'SELECT \"MySQL version too old for generated columns\" AS info'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(@mysql_version >= 5.7,
+    'ALTER TABLE teachers ADD COLUMN IF NOT EXISTS teacher_name VARCHAR(100) GENERATED ALWAYS AS (CONCAT(first_name, \" \", last_name)) STORED',
+    'SELECT \"MySQL version too old for generated columns\" AS info'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 ALTER TABLE marks ADD COLUMN IF NOT EXISTS academic_year_id INT NULL AFTER teacher_id;
 ALTER TABLE marks ADD COLUMN IF NOT EXISTS assessment_type ENUM('Exam', 'Quiz', 'Assignment', 'Final') NOT NULL DEFAULT 'Exam' AFTER score;
@@ -505,7 +561,7 @@ UPDATE users u
 JOIN teachers t
   ON t.teacher_id = u.teacher_id
 SET u.email = CONCAT(
-    LOWER(REPLACE(REPLACE(REPLACE(TRIM(t.teacher_name), ' ', '.'), '..', '.'), '''', '')),
+    LOWER(REPLACE(REPLACE(REPLACE(CONCAT(t.first_name, '.', t.last_name), ' ', '.'), '..', '.'), '''', '')),
     '.', u.user_id, '@', @teacher_domain
 )
 WHERE u.role = 'teacher'
@@ -516,7 +572,7 @@ UPDATE users u
 JOIN students s
   ON s.student_id = u.student_id
 SET u.email = CONCAT(
-    LOWER(REPLACE(REPLACE(REPLACE(TRIM(s.name), ' ', '.'), '..', '.'), '''', '')),
+    LOWER(REPLACE(REPLACE(REPLACE(CONCAT(s.first_name, '.', s.last_name), ' ', '.'), '..', '.'), '''', '')),
     '.', u.user_id, '@', @student_domain
 )
 WHERE u.role = 'student'
