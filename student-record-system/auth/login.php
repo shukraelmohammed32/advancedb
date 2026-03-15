@@ -205,7 +205,7 @@ function ensureDefaultAdminEmail($conn) {
 }
 
 $error = '';
-$loginEmail = '';
+$loginIdentity = '';
 
 $databaseName = getenv('DB_DATABASE') ?: 'student_record_system';
 $isBranchPortal = isBranchPortalDatabase($databaseName);
@@ -218,12 +218,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $db = new Database();
     $conn = $db->getConnection();
     $loginPortal = normalizeLoginPortal($_POST['role'] ?? ($_POST['login_portal'] ?? ''), $isBranchPortal);
-    $loginEmail = trim((string)($_POST['email'] ?? ''));
+    $loginIdentity = trim((string)($_POST['email'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
 
-    if ($loginEmail === '' || $password === '') {
+    if ($loginIdentity === '' || $password === '') {
         $error = t('Enter your email and password to continue.');
-    } elseif (!filter_var($loginEmail, FILTER_VALIDATE_EMAIL)) {
+    } elseif (strpos($loginIdentity, '@') !== false && !filter_var($loginIdentity, FILTER_VALIDATE_EMAIL)) {
         $error = t('Please enter a valid email address.');
     } elseif (!$conn) {
         $error = 'Database connection failed. Please try again in a moment.';
@@ -245,12 +245,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             FROM users u
             LEFT JOIN students s ON u.student_id = s.student_id
             LEFT JOIN teachers t ON u.teacher_id = t.teacher_id
-            WHERE u.email = ? AND u.is_active = 1");
+            WHERE (u.email = ? OR u.username = ?) AND u.is_active = 1");
 
         if ($stmt === false) {
             $error = 'Unable to process your sign-in request right now.';
         } else {
-            $stmt->bind_param('s', $loginEmail);
+            $stmt->bind_param('ss', $loginIdentity, $loginIdentity);
             $executed = $stmt->execute();
 
             if ($executed) {
@@ -400,7 +400,7 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                                 id="email"
                                 name="email"
                                 placeholder="<?php echo htmlspecialchars(t('Email'), ENT_QUOTES, 'UTF-8'); ?>"
-                                value="<?php echo htmlspecialchars($loginEmail, ENT_QUOTES, 'UTF-8'); ?>"
+                                value="<?php echo htmlspecialchars($loginIdentity, ENT_QUOTES, 'UTF-8'); ?>"
                                 autocomplete="email"
                                 required
                             >
