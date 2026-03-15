@@ -2,7 +2,6 @@
 
 /**
  * Load environment variables from a configuration file.
- * Falls back to visible filenames for hosts that hide dotfiles.
  */
 function loadEnv($path = null) {
     if ($path !== null) {
@@ -10,10 +9,7 @@ function loadEnv($path = null) {
     } else {
         $basePath = dirname(__DIR__);
         $paths = [
-            __DIR__ . '/hosting.env',
             $basePath . '/.env',
-            __DIR__ . '/app.env',
-            $basePath . '/app.env',
         ];
     }
 
