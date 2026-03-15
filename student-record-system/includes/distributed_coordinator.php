@@ -586,10 +586,10 @@ class DistributedCoordinator {
                     : 0;
                 $referenced_subject_total = count($reference_ids['subject_ids']);
 
-                $subject_total = max($local_subject_total, $referenced_subject_total);
-                if ($subject_total === 0 && $central_subject_total > 0) {
-                    $subject_total = $central_subject_total;
-                }
+                // Keep campus oversight consistent with the central curriculum catalog.
+                $subject_total = $central_subject_total > 0
+                    ? $central_subject_total
+                    : max($local_subject_total, $referenced_subject_total);
             }
             $student_total = $is_connected ? $this->connectionTableCount($connection, 'students') : null;
             $mark_total = $is_connected ? $this->connectionTableCount($connection, 'marks') : null;
@@ -688,10 +688,9 @@ class DistributedCoordinator {
         $central_subject_total = count($this->centralSubjectRows());
         $local_subject_total = $has_subjects ? $this->connectionTableCount($connection, 'subjects') : 0;
         $referenced_subject_total = count($reference_ids['subject_ids']);
-        $resolved_subject_total = max($local_subject_total, $referenced_subject_total);
-        if ($resolved_subject_total === 0 && $central_subject_total > 0) {
-            $resolved_subject_total = $central_subject_total;
-        }
+        $resolved_subject_total = $central_subject_total > 0
+            ? $central_subject_total
+            : max($local_subject_total, $referenced_subject_total);
 
         $details['stats'] = [
             'teachers' => $has_teachers ? $this->connectionTableCount($connection, 'teachers') : count($reference_ids['teacher_ids']),
@@ -707,16 +706,15 @@ class DistributedCoordinator {
             ]),
         ];
 
-        $subject_rows = [];
-        if ($has_subjects) {
-            $subject_rows = $this->connectionQueryRows($connection, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC');
-        }
-
+        // Prefer central subject catalog to keep branch details aligned across campuses.
+        $subject_rows = $this->centralSubjectRows();
         if (empty($subject_rows)) {
-            if (!empty($reference_ids['subject_ids'])) {
+            if ($has_subjects) {
+                $subject_rows = $this->connectionQueryRows($connection, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC');
+            }
+
+            if (empty($subject_rows) && !empty($reference_ids['subject_ids'])) {
                 $subject_rows = $this->centralSubjectRowsByIds($reference_ids['subject_ids']);
-            } else {
-                $subject_rows = $this->centralSubjectRows();
             }
         }
 
