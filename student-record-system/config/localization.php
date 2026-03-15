@@ -333,6 +333,10 @@ if (!function_exists('translationCatalog')) {
                 'om' => 'Maqaa Fayyadamaa yookaan Imeelii',
                 'am' => 'የተጠቃሚ ስም ወይም ኢሜይል',
             ],
+            'Email' => [
+                'om' => 'Imeelii',
+                'am' => 'ኢሜይል',
+            ],
             'Password' => [
                 'om' => 'Jecha Icciitii',
                 'am' => 'የይለፍ ቃል',
@@ -360,6 +364,14 @@ if (!function_exists('translationCatalog')) {
             'Enter your email or username and password to continue.' => [
                 'om' => 'Itti fufuuf imeelii yookaan maqaa fayyadamaa fi jecha icciitii galchi.',
                 'am' => 'ለመቀጠል ኢሜይልዎን ወይም የተጠቃሚ ስምዎን እና የይለፍ ቃልዎን ያስገቡ።',
+            ],
+            'Enter your email and password to continue.' => [
+                'om' => 'Itti fufuuf imeelii fi jecha icciitii kee galchi.',
+                'am' => 'ለመቀጠል ኢሜይልዎን እና የይለፍ ቃልዎን ያስገቡ።',
+            ],
+            'Please enter a valid email address.' => [
+                'om' => 'Maaloo teessoo imeelii sirrii galchi.',
+                'am' => 'እባክዎ ትክክለኛ የኢሜይል አድራሻ ያስገቡ።',
             ],
             'Login failed. Please verify your credentials and selected role.' => [
                 'om' => 'Seensichi hin milkoofne. Maaloo ragaa kee fi gahee filatame mirkaneessi.',

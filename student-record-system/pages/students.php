@@ -61,12 +61,108 @@ function getTeacherScope($conn, $teacher_id) {
     return $teacher ?: null;
 }
 
-function normalizeLoginUsername($value) {
-    return trim((string)$value);
+function normalizeEmailLocalPart($value) {
+    $value = strtolower(trim((string)$value));
+    $value = preg_replace('/[^a-z0-9]+/', '.', $value);
+    $value = trim((string)$value, '.');
+    return $value === '' ? 'student' : $value;
 }
 
-function isValidLoginUsername($value) {
-    return preg_match('/^[A-Za-z][A-Za-z0-9._-]{2,49}$/', (string)$value) === 1;
+function studentLoginEmailDomain() {
+    $domain = strtolower(trim((string)(getenv('STUDENT_LOGIN_DOMAIN') ?: 'school.local')));
+    if (!preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/', $domain)) {
+        return 'school.local';
+    }
+    return $domain;
+}
+
+function usernameExists($conn, $username, $exclude_user_id = 0) {
+    $stmt = $conn->prepare('SELECT user_id FROM users WHERE user_id != ? AND (username = ? OR email = ?) LIMIT 1');
+    if (!$stmt) {
+        return true;
+    }
+
+    $stmt->bind_param('iss', $exclude_user_id, $username, $username);
+    $stmt->execute();
+    $exists = dbStatementHasRows($stmt);
+    $stmt->close();
+
+    return $exists;
+}
+
+function emailExists($conn, $email, $exclude_user_id = 0) {
+    $stmt = $conn->prepare('SELECT user_id FROM users WHERE user_id != ? AND (email = ? OR username = ?) LIMIT 1');
+    if (!$stmt) {
+        return true;
+    }
+
+    $stmt->bind_param('iss', $exclude_user_id, $email, $email);
+    $stmt->execute();
+    $exists = dbStatementHasRows($stmt);
+    $stmt->close();
+
+    return $exists;
+}
+
+function generateUniqueStudentLoginEmail($conn, $student_name, $student_id = 0, $exclude_user_id = 0) {
+    $base = normalizeEmailLocalPart($student_name);
+    $domain = studentLoginEmailDomain();
+    $student_id = (int)$student_id;
+
+    $candidates = [];
+    if ($student_id > 0) {
+        $candidates[] = $base . '.' . $student_id . '@' . $domain;
+    }
+    $candidates[] = $base . '@' . $domain;
+
+    foreach ($candidates as $candidate) {
+        if (!emailExists($conn, $candidate, $exclude_user_id)) {
+            return $candidate;
+        }
+    }
+
+    for ($attempt = 1; $attempt <= 999; $attempt++) {
+        $candidate = $base . '.' . $attempt . '@' . $domain;
+        if (!emailExists($conn, $candidate, $exclude_user_id)) {
+            return $candidate;
+        }
+    }
+
+    return $base . '.' . time() . '@' . $domain;
+}
+
+function generateUniqueStudentLoginUsername($conn, $student_name, $student_id = 0, $exclude_user_id = 0) {
+    $base = normalizeEmailLocalPart($student_name);
+    $base = preg_replace('/[^a-z0-9._-]/', '', $base);
+    $base = trim((string)$base, '._-');
+
+    if ($base === '') {
+        $base = 'student';
+    }
+
+    if (!preg_match('/^[a-z]/', $base)) {
+        $base = 's' . $base;
+    }
+
+    if ($student_id > 0) {
+        $candidate = $base . '.' . (int)$student_id;
+        if (!usernameExists($conn, $candidate, $exclude_user_id)) {
+            return $candidate;
+        }
+    }
+
+    if (!usernameExists($conn, $base, $exclude_user_id)) {
+        return $base;
+    }
+
+    for ($attempt = 1; $attempt <= 999; $attempt++) {
+        $candidate = $base . '.' . $attempt;
+        if (!usernameExists($conn, $candidate, $exclude_user_id)) {
+            return $candidate;
+        }
+    }
+
+    return $base . '.' . time();
 }
 
 function getStudentAccount($conn, $student_id) {
@@ -183,8 +279,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $academic_year = trim((string)($_POST['academic_year'] ?? ''));
     $semester = trim((string)($_POST['semester'] ?? ''));
     $selected_site_id = $distributed_ready ? $coordinator->normalizeSiteId((int)($_POST['site_id'] ?? $default_site_id)) : $default_site_id;
-    $login_username = normalizeLoginUsername($_POST['login_username'] ?? '');
-    $login_email = trim((string)($_POST['login_email'] ?? ''));
     $login_password = (string)($_POST['login_password'] ?? '');
 
     if ($name === '') {
@@ -194,21 +288,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($selected_grade === '') {
         header('Location: students.php?error=' . urlencode('Please select a grade'));
-        exit();
-    }
-
-    if ($login_username === '' || !isValidLoginUsername($login_username)) {
-        header('Location: students.php?error=' . urlencode('Login username must start with a letter and use only letters, numbers, dot, dash, or underscore'));
-        exit();
-    }
-
-    if ($login_email === '' || !filter_var($login_email, FILTER_VALIDATE_EMAIL)) {
-        header('Location: students.php?error=' . urlencode('Please enter a valid student login email'));
-        exit();
-    }
-
-    if (strcasecmp($login_username, $login_email) === 0) {
-        header('Location: students.php?error=' . urlencode('Login username and email must be different'));
         exit();
     }
 
@@ -230,11 +309,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($password_required && strlen($login_password) < 6) {
         header('Location: students.php?error=' . urlencode('Student login password must be at least 6 characters'));
-        exit();
-    }
-
-    if (loginIdentityExists($conn, $login_username, $login_email, $existing_user_id)) {
-        header('Location: students.php?error=' . urlencode('That student login username or email is already used by another account'));
         exit();
     }
 
@@ -284,6 +358,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             header('Location: students.php?error=' . urlencode('Error updating student'));
             exit();
         }
+    }
+
+    $login_email = generateUniqueStudentLoginEmail($conn, $name, $student_id, $existing_user_id);
+    $login_username = generateUniqueStudentLoginUsername($conn, $name, $student_id, $existing_user_id);
+
+    if (loginIdentityExists($conn, $login_username, $login_email, $existing_user_id)) {
+        $conn->rollback();
+        header('Location: students.php?error=' . urlencode('Unable to generate a unique student login identity. Please try again.'));
+        exit();
     }
 
     if (!saveStudentAccount($conn, $student_id, $login_username, $login_email, $login_password, $existing_user_id)) {
@@ -573,19 +656,11 @@ $csrf_token = urlencode(getCsrfToken());
                             <h6 class="mb-3">Student Login Security</h6>
 
                             <div class="mb-3">
-                                <label for="login_username" class="form-label">Login Username</label>
-                                <input type="text" class="form-control" id="login_username" name="login_username"
-                                       value="<?php echo $edit_student ? htmlspecialchars((string)($edit_student['login_username'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
-                                       placeholder="student.username" required>
-                                <div class="form-text">Unique login name used on the sign-in page.</div>
-                            </div>
-
-                            <div class="mb-3">
                                 <label for="login_email" class="form-label">Login Email</label>
-                                <input type="email" class="form-control" id="login_email" name="login_email"
+                                <input type="email" class="form-control" id="login_email"
                                        value="<?php echo $edit_student ? htmlspecialchars((string)($edit_student['login_email'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
-                                       placeholder="student@school.edu" required>
-                                <div class="form-text">Must be unique across all user accounts.</div>
+                                    placeholder="Auto-generated from student name" readonly>
+                                <div class="form-text">Automatically generated from student name and always unique.</div>
                             </div>
 
                             <div class="mb-3">
@@ -640,7 +715,6 @@ $csrf_token = urlencode(getCsrfToken());
                                                 <th>Site</th>
                                                 <?php endif; ?>
                                                 <?php if ($is_admin): ?>
-                                                <th>Username</th>
                                                 <th>Email</th>
                                                 <?php endif; ?>
                                                 <th>Academic Year</th>
@@ -660,7 +734,6 @@ $csrf_token = urlencode(getCsrfToken());
                                                     <td><?php echo htmlspecialchars((string)($student['site_name'] ?? 'Central Coordinator'), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <?php endif; ?>
                                                     <?php if ($is_admin): ?>
-                                                    <td><?php echo htmlspecialchars((string)($student['login_username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars((string)($student['login_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <?php endif; ?>
                                                     <td><?php echo htmlspecialchars($student['academic_year'], ENT_QUOTES, 'UTF-8'); ?></td>

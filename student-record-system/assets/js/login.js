@@ -70,8 +70,8 @@
 
     if (loginForm && loginButton) {
         loginForm.addEventListener('submit', function () {
-            const username = document.getElementById('username');
-            if (!username || !passwordInput || username.value.trim() === '' || passwordInput.value.trim() === '') {
+            const email = document.getElementById('email');
+            if (!email || !passwordInput || email.value.trim() === '' || passwordInput.value.trim() === '') {
                 return;
             }
 

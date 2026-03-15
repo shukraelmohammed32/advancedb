@@ -171,7 +171,7 @@ function fetchLoginUserFromStatement($stmt) {
 }
 
 $error = '';
-$loginInput = '';
+$loginEmail = '';
 
 $databaseName = getenv('DB_DATABASE') ?: 'student_record_system';
 $isBranchPortal = isBranchPortalDatabase($databaseName);
@@ -184,11 +184,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $db = new Database();
     $conn = $db->getConnection();
     $loginPortal = normalizeLoginPortal($_POST['role'] ?? ($_POST['login_portal'] ?? ''), $isBranchPortal);
-    $loginInput = trim((string)($_POST['username'] ?? ''));
+    $loginEmail = trim((string)($_POST['email'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
 
-    if ($loginInput === '' || $password === '') {
-        $error = t('Enter your email or username and password to continue.');
+    if ($loginEmail === '' || $password === '') {
+        $error = t('Enter your email and password to continue.');
+    } elseif (!filter_var($loginEmail, FILTER_VALIDATE_EMAIL)) {
+        $error = t('Please enter a valid email address.');
     } elseif (!$conn) {
         $error = 'Database connection failed. Please try again in a moment.';
     } else {
@@ -207,12 +209,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             FROM users u
             LEFT JOIN students s ON u.student_id = s.student_id
             LEFT JOIN teachers t ON u.teacher_id = t.teacher_id
-            WHERE (u.username = ? OR u.email = ?) AND u.is_active = 1");
+            WHERE u.email = ? AND u.is_active = 1");
 
         if ($stmt === false) {
             $error = 'Unable to process your sign-in request right now.';
         } else {
-            $stmt->bind_param('ss', $loginInput, $loginInput);
+            $stmt->bind_param('s', $loginEmail);
             $executed = $stmt->execute();
 
             if ($executed) {
@@ -338,7 +340,7 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
                 <div class="panel-header">
                     <span class="panel-kicker"><i class="bi bi-person-badge-fill"></i> <?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
                     <h2><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></h2>
-                    <p><?php echo htmlspecialchars(t('Enter your email or username and password to continue.'), ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p><?php echo htmlspecialchars(t('Enter your email and password to continue.'), ENT_QUOTES, 'UTF-8'); ?></p>
                 </div>
 
                 <?php if ($error !== ''): ?>
@@ -353,17 +355,17 @@ $campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Porta
 
                 <form action="login.php" method="POST" class="login-form" id="loginForm" novalidate>
                     <div class="field-group">
-                        <label for="username" class="form-label"><?php echo htmlspecialchars(t('Username or Email'), ENT_QUOTES, 'UTF-8'); ?></label>
+                        <label for="email" class="form-label"><?php echo htmlspecialchars(t('Email'), ENT_QUOTES, 'UTF-8'); ?></label>
                         <div class="field-shell">
                             <span class="field-icon"><i class="bi bi-person-circle"></i></span>
                             <input
-                                type="text"
+                                type="email"
                                 class="form-control<?php echo $error !== '' ? ' is-invalid' : ''; ?>"
-                                id="username"
-                                name="username"
-                                placeholder="<?php echo htmlspecialchars(t('Username or Email'), ENT_QUOTES, 'UTF-8'); ?>"
-                                value="<?php echo htmlspecialchars($loginInput, ENT_QUOTES, 'UTF-8'); ?>"
-                                autocomplete="username"
+                                id="email"
+                                name="email"
+                                placeholder="<?php echo htmlspecialchars(t('Email'), ENT_QUOTES, 'UTF-8'); ?>"
+                                value="<?php echo htmlspecialchars($loginEmail, ENT_QUOTES, 'UTF-8'); ?>"
+                                autocomplete="email"
                                 required
                             >
                         </div>
