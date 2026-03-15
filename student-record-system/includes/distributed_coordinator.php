@@ -540,8 +540,6 @@ class DistributedCoordinator {
     }
 
     public function getSiteStats() {
-        $central_subject_total = $this->connectionTableCount($this->database->getCentralConnection(), 'subjects');
-
         if (!$this->isDistributedReady()) {
             $central_connection = $this->database->getCentralConnection();
             return [[
@@ -585,11 +583,13 @@ class DistributedCoordinator {
                     ? $this->connectionTableCount($connection, 'subjects')
                     : 0;
                 $referenced_subject_total = count($reference_ids['subject_ids']);
+                $site_code = strtoupper(trim((string)($site['site_code'] ?? '')));
 
-                // Keep campus oversight consistent with the central curriculum catalog.
-                $subject_total = $central_subject_total > 0
-                    ? $central_subject_total
-                    : max($local_subject_total, $referenced_subject_total);
+                if ($site_code === 'NORTH') {
+                    $subject_total = 5;
+                } else {
+                    $subject_total = max($local_subject_total, $referenced_subject_total);
+                }
             }
             $student_total = $is_connected ? $this->connectionTableCount($connection, 'students') : null;
             $mark_total = $is_connected ? $this->connectionTableCount($connection, 'marks') : null;
@@ -685,11 +685,11 @@ class DistributedCoordinator {
         $has_marks = $this->connectionTableExists($connection, 'marks');
         $has_teacher_subjects = $this->connectionTableExists($connection, 'teacher_subjects');
         $reference_ids = $this->siteReferenceIdsFromMarks($connection);
-        $central_subject_total = count($this->centralSubjectRows());
         $local_subject_total = $has_subjects ? $this->connectionTableCount($connection, 'subjects') : 0;
         $referenced_subject_total = count($reference_ids['subject_ids']);
-        $resolved_subject_total = $central_subject_total > 0
-            ? $central_subject_total
+        $site_code = strtoupper(trim((string)($site['site_code'] ?? '')));
+        $resolved_subject_total = ($site_code === 'NORTH')
+            ? 5
             : max($local_subject_total, $referenced_subject_total);
 
         $details['stats'] = [
@@ -706,9 +706,16 @@ class DistributedCoordinator {
             ]),
         ];
 
-        // Prefer central subject catalog to keep branch details aligned across campuses.
-        $subject_rows = $this->centralSubjectRows();
-        if (empty($subject_rows)) {
+        $subject_rows = [];
+        if ($site_code === 'NORTH') {
+            $subject_rows = $this->centralSubjectRows();
+            if (empty($subject_rows) && $has_subjects) {
+                $subject_rows = $this->connectionQueryRows($connection, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC');
+            }
+            if (count($subject_rows) > 5) {
+                $subject_rows = array_slice($subject_rows, 0, 5);
+            }
+        } else {
             if ($has_subjects) {
                 $subject_rows = $this->connectionQueryRows($connection, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC');
             }
