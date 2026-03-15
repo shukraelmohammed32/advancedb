@@ -7,6 +7,8 @@ $footer_base_path = rtrim((string)$footer_base_path, '/');
 if ($footer_base_path !== '') {
     $footer_base_path .= '/';
 }
+
+$footer_language_base_path = ($footer_base_path === '') ? '' : rtrim($footer_base_path, '/') . '/pages';
 ?>
 <footer class="footer">
     <div class="container">
@@ -52,7 +54,12 @@ if ($footer_base_path !== '') {
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?>. <?php echo htmlspecialchars(t('All rights reserved.'), ENT_QUOTES, 'UTF-8'); ?></p>
+            <?php if (function_exists('renderLanguageSwitcher')): ?>
+            <div class="footer-language-switcher mb-2 mb-md-0">
+                <?php echo renderLanguageSwitcher($footer_language_base_path); ?>
+            </div>
+            <?php endif; ?>
+            <p class="mb-0">&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?>. <?php echo htmlspecialchars(t('All rights reserved.'), ENT_QUOTES, 'UTF-8'); ?></p>
         </div>
     </div>
 </footer>

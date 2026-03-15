@@ -185,11 +185,30 @@ body {
 }
 
 .footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
     padding-top: 14px;
     border-top: 1px solid rgba(214, 231, 247, 0.2);
-    text-align: center;
     color: #a8c0d8;
     font-size: 0.86rem;
+}
+
+.footer-language-switcher .language-switcher {
+    margin: 0;
+}
+
+.footer-language-switcher .language-switcher .form-select {
+    min-width: 150px;
+}
+
+@media (max-width: 768px) {
+    .footer-bottom {
+        justify-content: center;
+        text-align: center;
+    }
 }
 
 /* Cards */
