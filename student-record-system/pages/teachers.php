@@ -30,12 +30,108 @@ function normalizeGradeLabel($grade) {
     return $grade;
 }
 
-function normalizeLoginUsername($value) {
-    return trim((string)$value);
+function normalizeEmailLocalPart($value) {
+    $value = strtolower(trim((string)$value));
+    $value = preg_replace('/[^a-z0-9]+/', '.', $value);
+    $value = trim((string)$value, '.');
+    return $value === '' ? 'teacher' : $value;
 }
 
-function isValidLoginUsername($value) {
-    return preg_match('/^[A-Za-z][A-Za-z0-9._-]{2,49}$/', (string)$value) === 1;
+function teacherLoginEmailDomain() {
+    $domain = strtolower(trim((string)(getenv('TEACHER_LOGIN_DOMAIN') ?: 'school.local')));
+    if (!preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/', $domain)) {
+        return 'school.local';
+    }
+    return $domain;
+}
+
+function usernameExists($conn, $username, $exclude_user_id = 0) {
+    $stmt = $conn->prepare('SELECT user_id FROM users WHERE user_id != ? AND (username = ? OR email = ?) LIMIT 1');
+    if (!$stmt) {
+        return true;
+    }
+
+    $stmt->bind_param('iss', $exclude_user_id, $username, $username);
+    $stmt->execute();
+    $exists = dbStatementHasRows($stmt);
+    $stmt->close();
+
+    return $exists;
+}
+
+function emailExists($conn, $email, $exclude_user_id = 0) {
+    $stmt = $conn->prepare('SELECT user_id FROM users WHERE user_id != ? AND (email = ? OR username = ?) LIMIT 1');
+    if (!$stmt) {
+        return true;
+    }
+
+    $stmt->bind_param('iss', $exclude_user_id, $email, $email);
+    $stmt->execute();
+    $exists = dbStatementHasRows($stmt);
+    $stmt->close();
+
+    return $exists;
+}
+
+function generateUniqueTeacherLoginEmail($conn, $teacher_name, $teacher_id = 0, $exclude_user_id = 0) {
+    $base = normalizeEmailLocalPart($teacher_name);
+    $domain = teacherLoginEmailDomain();
+    $teacher_id = (int)$teacher_id;
+
+    $candidates = [];
+    if ($teacher_id > 0) {
+        $candidates[] = $base . '.' . $teacher_id . '@' . $domain;
+    }
+    $candidates[] = $base . '@' . $domain;
+
+    foreach ($candidates as $candidate) {
+        if (!emailExists($conn, $candidate, $exclude_user_id)) {
+            return $candidate;
+        }
+    }
+
+    for ($attempt = 1; $attempt <= 999; $attempt++) {
+        $candidate = $base . '.' . $attempt . '@' . $domain;
+        if (!emailExists($conn, $candidate, $exclude_user_id)) {
+            return $candidate;
+        }
+    }
+
+    return $base . '.' . time() . '@' . $domain;
+}
+
+function generateUniqueTeacherLoginUsername($conn, $teacher_name, $teacher_id = 0, $exclude_user_id = 0) {
+    $base = normalizeEmailLocalPart($teacher_name);
+    $base = preg_replace('/[^a-z0-9._-]/', '', $base);
+    $base = trim((string)$base, '._-');
+
+    if ($base === '') {
+        $base = 'teacher';
+    }
+
+    if (!preg_match('/^[a-z]/', $base)) {
+        $base = 't' . $base;
+    }
+
+    if ($teacher_id > 0) {
+        $candidate = $base . '.' . (int)$teacher_id;
+        if (!usernameExists($conn, $candidate, $exclude_user_id)) {
+            return $candidate;
+        }
+    }
+
+    if (!usernameExists($conn, $base, $exclude_user_id)) {
+        return $base;
+    }
+
+    for ($attempt = 1; $attempt <= 999; $attempt++) {
+        $candidate = $base . '.' . $attempt;
+        if (!usernameExists($conn, $candidate, $exclude_user_id)) {
+            return $candidate;
+        }
+    }
+
+    return $base . '.' . time();
 }
 
 function normalizeSubjectIds($raw_subject_ids) {
@@ -224,38 +320,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $existing_account = $teacher_id > 0 ? getTeacherAccount($conn, $teacher_id) : null;
     $existing_user_id = (int)($existing_account['user_id'] ?? 0);
-    $login_username = '';
-    $login_email = '';
     $login_password = '';
 
     if ($can_manage_teacher_accounts) {
-        $login_username = normalizeLoginUsername($_POST['login_username'] ?? '');
-        $login_email = trim((string)($_POST['login_email'] ?? ''));
         $login_password = (string)($_POST['login_password'] ?? '');
         $password_required = isset($_POST['add_teacher']) || $existing_user_id === 0;
 
-        if ($login_username === '' || !isValidLoginUsername($login_username)) {
-            header('Location: teachers.php?error=' . urlencode('Teacher login username must start with a letter and use only letters, numbers, dot, dash, or underscore'));
-            exit();
-        }
-
-        if ($login_email === '' || !filter_var($login_email, FILTER_VALIDATE_EMAIL)) {
-            header('Location: teachers.php?error=' . urlencode('Please enter a valid teacher login email'));
-            exit();
-        }
-
-        if (strcasecmp($login_username, $login_email) === 0) {
-            header('Location: teachers.php?error=' . urlencode('Teacher login username and email must be different'));
-            exit();
-        }
-
         if ($password_required && strlen($login_password) < 6) {
             header('Location: teachers.php?error=' . urlencode('Teacher login password must be at least 6 characters'));
-            exit();
-        }
-
-        if (loginIdentityExists($conn, $login_username, $login_email, $existing_user_id)) {
-            header('Location: teachers.php?error=' . urlencode('That teacher login username or email is already used by another account'));
             exit();
         }
     }
@@ -281,6 +353,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!saveTeacherSubjects($conn, $teacher_id, $subject_ids)) {
             $conn->rollback();
             header('Location: teachers.php?error=' . urlencode('Teacher saved but subjects failed to save'));
+            exit();
+        }
+
+        $login_email = generateUniqueTeacherLoginEmail($conn, $teacher_name, $teacher_id, $existing_user_id);
+        $login_username = generateUniqueTeacherLoginUsername($conn, $teacher_name, $teacher_id, $existing_user_id);
+
+        if (loginIdentityExists($conn, $login_username, $login_email, $existing_user_id)) {
+            $conn->rollback();
+            header('Location: teachers.php?error=' . urlencode('Unable to generate a unique teacher login identity. Please try again.'));
             exit();
         }
 
@@ -322,6 +403,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!saveTeacherSubjects($conn, $teacher_id, $subject_ids)) {
             $conn->rollback();
             header('Location: teachers.php?error=' . urlencode('Teacher updated but subjects failed to save'));
+            exit();
+        }
+
+        $login_email = generateUniqueTeacherLoginEmail($conn, $teacher_name, $teacher_id, $existing_user_id);
+        $login_username = generateUniqueTeacherLoginUsername($conn, $teacher_name, $teacher_id, $existing_user_id);
+
+        if (loginIdentityExists($conn, $login_username, $login_email, $existing_user_id)) {
+            $conn->rollback();
+            header('Location: teachers.php?error=' . urlencode('Unable to generate a unique teacher login identity. Please try again.'));
             exit();
         }
 
@@ -542,19 +632,11 @@ $csrf_token = urlencode(getCsrfToken());
                                 <h6 class="mb-3">Teacher Login Security</h6>
 
                                 <div class="mb-3">
-                                    <label for="login_username" class="form-label">Login Username</label>
-                                    <input type="text" class="form-control" id="login_username" name="login_username"
-                                           value="<?php echo $edit_teacher ? htmlspecialchars((string)($edit_teacher['login_username'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
-                                           placeholder="teacher.username" required>
-                                    <div class="form-text">Unique teacher login managed by admin.</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="login_email" class="form-label">Login Email</label>
-                                    <input type="email" class="form-control" id="login_email" name="login_email"
+                                 <label for="login_email" class="form-label">Login Email</label>
+                                 <input type="email" class="form-control" id="login_email"
                                            value="<?php echo $edit_teacher ? htmlspecialchars((string)($edit_teacher['login_email'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
-                                           placeholder="teacher@school.edu" required>
-                                    <div class="form-text">Must be unique across all accounts.</div>
+                                     placeholder="Auto-generated from teacher name" readonly>
+                                 <div class="form-text">Automatically generated from teacher name and always unique.</div>
                                 </div>
 
                                 <div class="mb-3">
@@ -603,7 +685,6 @@ $csrf_token = urlencode(getCsrfToken());
                                         <th>Subjects</th>
                                         <th>Assigned Grade</th>
                                         <?php if ($can_manage_teacher_accounts): ?>
-                                            <th>Username</th>
                                             <th>Email</th>
                                             <th>Account</th>
                                         <?php endif; ?>
@@ -620,7 +701,6 @@ $csrf_token = urlencode(getCsrfToken());
                                             <td><?php echo htmlspecialchars($teacher['subjects_taught'], ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td><?php echo htmlspecialchars(normalizeGradeLabel($teacher['assigned_grade']), ENT_QUOTES, 'UTF-8'); ?></td>
                                             <?php if ($can_manage_teacher_accounts): ?>
-                                                <td><?php echo htmlspecialchars((string)($teacher['login_username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                                 <td><?php echo htmlspecialchars((string)($teacher['login_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                                 <td>
                                                     <?php if (!empty($teacher['has_login'])): ?>
