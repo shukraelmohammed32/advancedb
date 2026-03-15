@@ -170,6 +170,40 @@ function fetchLoginUserFromStatement($stmt) {
     ];
 }
 
+function ensureDefaultAdminEmail($conn) {
+    if (!($conn instanceof mysqli)) {
+        return;
+    }
+
+    $adminEmail = trim((string)(getenv('ADMIN_EMAIL') ?: 'admin@school.edu'));
+    if ($adminEmail === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+        return;
+    }
+
+    $checkStmt = $conn->prepare("SELECT user_id FROM users WHERE email = ? AND role != 'admin' LIMIT 1");
+    if (!$checkStmt) {
+        return;
+    }
+
+    $checkStmt->bind_param('s', $adminEmail);
+    $checkStmt->execute();
+    $conflictExists = dbStatementHasRows($checkStmt);
+    $checkStmt->close();
+
+    if ($conflictExists) {
+        return;
+    }
+
+    $stmt = $conn->prepare("UPDATE users SET email = ? WHERE role = 'admin' AND username = 'admin' AND (email IS NULL OR TRIM(email) = '') LIMIT 1");
+    if (!$stmt) {
+        return;
+    }
+
+    $stmt->bind_param('s', $adminEmail);
+    $stmt->execute();
+    $stmt->close();
+}
+
 $error = '';
 $loginEmail = '';
 
@@ -194,6 +228,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$conn) {
         $error = 'Database connection failed. Please try again in a moment.';
     } else {
+        ensureDefaultAdminEmail($conn);
+
         $stmt = $conn->prepare("SELECT
                 u.user_id,
                 u.username,
