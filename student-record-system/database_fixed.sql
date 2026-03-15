@@ -470,6 +470,17 @@ SET password = '$2y$10$jim8N8JPcSPg2sbajBD33uxZ/y/P3P6HXRy4UpRXSQu7bR9/9qySu',
     is_active = 1
 WHERE username = 'admin';
 
+-- Update default admin email if blank
+SET @admin_email = CONCAT('admin+', UNIX_TIMESTAMP(), '@school.edu');
+UPDATE users u
+LEFT JOIN users existing_user ON existing_user.email = @admin_email 
+   AND existing_user.role <> 'admin'
+SET u.email = @admin_email
+WHERE u.role = 'admin' 
+  AND u.username = 'admin' 
+  AND (u.email IS NULL OR TRIM(u.email) = '') 
+  AND existing_user.user_id IS NULL;
+
 INSERT INTO users (username, password, email, role, is_active)
 SELECT
     'admin',

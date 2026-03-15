@@ -5,6 +5,7 @@
 
 # Database files
 *.sql
+!database_fixed.sql
 *.db
 *.sqlite
 database/

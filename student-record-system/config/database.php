@@ -66,10 +66,10 @@ class Database {
     private $connections = [];
 
     public function __construct($database = null) {
-        $this->host = getenv('DB_HOST') ?: 'sql303.infinityfree.com';
-        $this->username = getenv('DB_USERNAME') ?: 'if0_41348166';
-        $this->password = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : 'RqMCVBiQVfEf4x';
-        $this->database = $database ?: (getenv('DB_DATABASE') ?: 'if0_41348166_student_record_system');
+        $this->host = getenv('DB_HOST') ?: 'localhost';
+        $this->username = getenv('DB_USERNAME') ?: 'root';
+        $this->password = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : '';
+        $this->database = $database ?: (getenv('DB_DATABASE') ?: 'student_record_system');
     }
 
     private function createConnection($databaseName) {
