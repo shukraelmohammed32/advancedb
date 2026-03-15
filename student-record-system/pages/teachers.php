@@ -30,6 +30,26 @@ function normalizeGradeLabel($grade) {
     return $grade;
 }
 
+function splitPersonName($full_name) {
+    $full_name = trim((string)$full_name);
+    if ($full_name === '') {
+        return ['first_name' => '', 'last_name' => ''];
+    }
+
+    $parts = preg_split('/\s+/', $full_name);
+    if (!$parts || count($parts) === 0) {
+        return ['first_name' => '', 'last_name' => ''];
+    }
+
+    $first_name = array_shift($parts);
+    $last_name = trim(implode(' ', $parts));
+
+    return [
+        'first_name' => $first_name,
+        'last_name' => $last_name,
+    ];
+}
+
 function normalizeEmailLocalPart($value) {
     $value = strtolower(trim((string)$value));
     $value = preg_replace('/[^a-z0-9]+/', '.', $value);
@@ -286,14 +306,16 @@ if ($subjects_result) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();
 
-    $teacher_name = trim((string)($_POST['teacher_name'] ?? ''));
+    $teacher_first_name = trim((string)($_POST['teacher_first_name'] ?? ''));
+    $teacher_last_name = trim((string)($_POST['teacher_last_name'] ?? ''));
+    $teacher_name = trim($teacher_first_name . ' ' . $teacher_last_name);
     $assigned_grade_input = normalizeGradeLabel($_POST['assigned_grade'] ?? '');
     $is_homeroom = isset($_POST['is_homeroom']) ? 1 : 0;
     $subject_ids = normalizeSubjectIds($_POST['subject_ids'] ?? []);
     $teacher_id = isset($_POST['teacher_id']) ? (int)$_POST['teacher_id'] : 0;
 
-    if ($teacher_name === '') {
-        header('Location: teachers.php?error=' . urlencode('Teacher name is required'));
+    if ($teacher_first_name === '' || $teacher_last_name === '') {
+        header('Location: teachers.php?error=' . urlencode('Teacher first name and last name are required'));
         exit();
     }
 
@@ -505,6 +527,7 @@ $teachers = $conn->query("SELECT t.*,
 $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
 $error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8') : '';
 $csrf_token = urlencode(getCsrfToken());
+$edit_teacher_name_parts = splitPersonName($edit_teacher['teacher_name'] ?? '');
 ?>
 
 <!DOCTYPE html>
@@ -592,9 +615,15 @@ $csrf_token = urlencode(getCsrfToken());
                             <?php endif; ?>
 
                             <div class="mb-3">
-                                <label for="teacher_name" class="form-label">Teacher Name</label>
-                                <input type="text" class="form-control" id="teacher_name" name="teacher_name"
-                                       value="<?php echo $edit_teacher ? htmlspecialchars($edit_teacher['teacher_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+                                <label for="teacher_first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="teacher_first_name" name="teacher_first_name"
+                                       value="<?php echo $edit_teacher ? htmlspecialchars((string)$edit_teacher_name_parts['first_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="teacher_last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="teacher_last_name" name="teacher_last_name"
+                                       value="<?php echo $edit_teacher ? htmlspecialchars((string)$edit_teacher_name_parts['last_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
                             </div>
 
                             <div class="mb-3">
@@ -767,10 +796,11 @@ $csrf_token = urlencode(getCsrfToken());
     ?>
     <script>
         (function () {
-            var nameInput = document.getElementById('teacher_name');
+            var firstNameInput = document.getElementById('teacher_first_name');
+            var lastNameInput = document.getElementById('teacher_last_name');
             var emailInput = document.getElementById('login_email');
 
-            if (!nameInput || !emailInput) {
+            if (!firstNameInput || !lastNameInput || !emailInput) {
                 return;
             }
 
@@ -786,10 +816,12 @@ $csrf_token = urlencode(getCsrfToken());
             }
 
             function updatePreview() {
-                emailInput.value = toLocalPart(nameInput.value || '') + '@' + domain;
+                var fullName = ((firstNameInput.value || '') + ' ' + (lastNameInput.value || '')).trim();
+                emailInput.value = toLocalPart(fullName) + '@' + domain;
             }
 
-            nameInput.addEventListener('input', updatePreview);
+            firstNameInput.addEventListener('input', updatePreview);
+            lastNameInput.addEventListener('input', updatePreview);
             updatePreview();
         })();
     </script>

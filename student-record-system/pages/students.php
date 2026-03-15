@@ -38,6 +38,26 @@ function normalizeGradeLabel($grade) {
     return $grade;
 }
 
+function splitPersonName($full_name) {
+    $full_name = trim((string)$full_name);
+    if ($full_name === '') {
+        return ['first_name' => '', 'last_name' => ''];
+    }
+
+    $parts = preg_split('/\s+/', $full_name);
+    if (!$parts || count($parts) === 0) {
+        return ['first_name' => '', 'last_name' => ''];
+    }
+
+    $first_name = array_shift($parts);
+    $last_name = trim(implode(' ', $parts));
+
+    return [
+        'first_name' => $first_name,
+        'last_name' => $last_name,
+    ];
+}
+
 function gradesMatch($left_grade, $right_grade) {
     return strtolower(normalizeGradeLabel($left_grade)) === strtolower(normalizeGradeLabel($right_grade));
 }
@@ -273,7 +293,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 
-    $name = trim((string)($_POST['name'] ?? ''));
+    $first_name = trim((string)($_POST['first_name'] ?? ''));
+    $last_name = trim((string)($_POST['last_name'] ?? ''));
+    $name = trim($first_name . ' ' . $last_name);
     $gender = trim((string)($_POST['gender'] ?? ''));
     $selected_grade = normalizeGradeLabel($_POST['grade'] ?? '');
     $academic_year = trim((string)($_POST['academic_year'] ?? ''));
@@ -282,8 +304,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $login_password = (string)($_POST['login_password'] ?? '');
     $login_password_confirm = (string)($_POST['login_password_confirm'] ?? '');
 
-    if ($name === '') {
-        header('Location: students.php?error=' . urlencode('Student name is required'));
+    if ($first_name === '' || $last_name === '') {
+        header('Location: students.php?error=' . urlencode('Student first name and last name are required'));
         exit();
     }
 
@@ -455,6 +477,8 @@ if ($is_admin && isset($_GET['edit'])) {
     $edit_student = $result ? $result->fetch_assoc() : null;
 }
 
+$edit_student_name_parts = splitPersonName($edit_student['name'] ?? '');
+
 // Get all students grouped by grade/class
 $students = $conn->query("SELECT
                             s.*,
@@ -618,9 +642,15 @@ $csrf_token = urlencode(getCsrfToken());
                             <?php endif; ?>
 
                             <div class="mb-3">
-                                <label for="name" class="form-label">Name</label>
-                                <input type="text" class="form-control" id="name" name="name"
-                                       value="<?php echo $edit_student ? htmlspecialchars($edit_student['name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name"
+                                       value="<?php echo $edit_student ? htmlspecialchars((string)$edit_student_name_parts['first_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name"
+                                       value="<?php echo $edit_student ? htmlspecialchars((string)$edit_student_name_parts['last_name'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
                             </div>
 
                             <div class="mb-3">
@@ -799,10 +829,11 @@ $csrf_token = urlencode(getCsrfToken());
     ?>
     <script>
         (function () {
-            var nameInput = document.getElementById('name');
+            var firstNameInput = document.getElementById('first_name');
+            var lastNameInput = document.getElementById('last_name');
             var emailInput = document.getElementById('login_email');
 
-            if (!nameInput || !emailInput) {
+            if (!firstNameInput || !lastNameInput || !emailInput) {
                 return;
             }
 
@@ -818,10 +849,12 @@ $csrf_token = urlencode(getCsrfToken());
             }
 
             function updatePreview() {
-                emailInput.value = toLocalPart(nameInput.value || '') + '@' + domain;
+                var fullName = ((firstNameInput.value || '') + ' ' + (lastNameInput.value || '')).trim();
+                emailInput.value = toLocalPart(fullName) + '@' + domain;
             }
 
-            nameInput.addEventListener('input', updatePreview);
+            firstNameInput.addEventListener('input', updatePreview);
+            lastNameInput.addEventListener('input', updatePreview);
             updatePreview();
         })();
     </script>
