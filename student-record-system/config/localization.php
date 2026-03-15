@@ -365,6 +365,146 @@ if (!function_exists('translationCatalog')) {
                 'om' => 'Seensichi hin milkoofne. Maaloo ragaa kee fi gahee filatame mirkaneessi.',
                 'am' => 'መግቢያው አልተሳካም። እባክዎ መረጃዎን እና የተመረጠውን ሚና ያረጋግጡ።',
             ],
+            'Details' => [
+                'om' => 'Bal’ina',
+                'am' => 'ዝርዝር',
+            ],
+            'Branch Details' => [
+                'om' => 'Bal’ina Damee',
+                'am' => 'የቅርንጫፍ ዝርዝር',
+            ],
+            'No activity yet' => [
+                'om' => 'Amma sochiin hin jiru',
+                'am' => 'እስካሁን እንቅስቃሴ የለም',
+            ],
+            'N/A' => [
+                'om' => 'Hin jiru',
+                'am' => 'የለም',
+            ],
+            'Branch-level records visible to the main admin.' => [
+                'om' => 'Galmeen sadarkaa damee bulchaa olaanaatiif mul’ata.',
+                'am' => 'የቅርንጫፍ ደረጃ መዝገቦች ለዋና አስተዳዳሪ ይታያሉ።',
+            ],
+            'Back to Dashboard' => [
+                'om' => 'Gara Daashboordiitti Deebi’i',
+                'am' => 'ወደ ዳሽቦርድ ተመለስ',
+            ],
+            'Distributed branch oversight is not enabled in the current system.' => [
+                'om' => 'To’annoon damee raabsame sirna amma jiru keessatti hin dandeessifamne.',
+                'am' => 'በአሁኑ ስርዓት ውስጥ የተከፋፈለ የቅርንጫፍ ቁጥጥር አልነቃም።',
+            ],
+            'The selected branch campus could not be found.' => [
+                'om' => 'Kaampaasii damee filatame argamuu hin dandeenye.',
+                'am' => 'የተመረጠው የቅርንጫፍ ካምፓስ ሊገኝ አልቻለም።',
+            ],
+            'Campus' => [
+                'om' => 'Kaampaasii',
+                'am' => 'ካምፓስ',
+            ],
+            'Database' => [
+                'om' => 'Kuusdeetaa',
+                'am' => 'ዳታቤዝ',
+            ],
+            'Connection' => [
+                'om' => 'Walqunnamtii',
+                'am' => 'ግንኙነት',
+            ],
+            'Latest Activity' => [
+                'om' => 'Sochii Dhihoo',
+                'am' => 'የቅርብ እንቅስቃሴ',
+            ],
+            'This branch database is currently unavailable, so only branch metadata can be shown.' => [
+                'om' => 'Kuusdeetaan damee kun amma hin argamu; kanaaf odeeffannoon waliigalaa damee qofa mul’achuu danda’a.',
+                'am' => 'ይህ የቅርንጫፍ ዳታቤዝ አሁን አይገኝም፣ ስለዚህ የቅርንጫፍ መረጃ ብቻ ሊታይ ይችላል።',
+            ],
+            'No teachers found in this branch.' => [
+                'om' => 'Damee kana keessatti barsiisotni hin argamne.',
+                'am' => 'በዚህ ቅርንጫፍ ውስጥ መምህራን አልተገኙም።',
+            ],
+            'ID' => [
+                'om' => 'ID',
+                'am' => 'መለያ',
+            ],
+            'Name' => [
+                'om' => 'Maqaa',
+                'am' => 'ስም',
+            ],
+            'Assigned Grade' => [
+                'om' => 'Kutaa Ramadame',
+                'am' => 'የተመደበ ክፍል',
+            ],
+            'Homeroom' => [
+                'om' => 'Barsiisaa Kutaa',
+                'am' => 'የክፍል መምህር',
+            ],
+            'Created' => [
+                'om' => 'Kan Uumame',
+                'am' => 'የተፈጠረ',
+            ],
+            'Yes' => [
+                'om' => 'Eeyyee',
+                'am' => 'አዎ',
+            ],
+            'No' => [
+                'om' => 'Lakki',
+                'am' => 'አይ',
+            ],
+            'No subjects found in this branch.' => [
+                'om' => 'Damee kana keessatti barnoonni hin argamne.',
+                'am' => 'በዚህ ቅርንጫፍ ውስጥ ትምህርቶች አልተገኙም።',
+            ],
+            'Subject' => [
+                'om' => 'Barnoota',
+                'am' => 'ትምህርት',
+            ],
+            'Total Mark' => [
+                'om' => 'Qabxii Waliigalaa',
+                'am' => 'ጠቅላላ ውጤት',
+            ],
+            'Teachers Assigned' => [
+                'om' => 'Barsiisota Ramadaman',
+                'am' => 'የተመደቡ መምህራን',
+            ],
+            'No students found in this branch.' => [
+                'om' => 'Damee kana keessatti barattoonni hin argamne.',
+                'am' => 'በዚህ ቅርንጫፍ ውስጥ ተማሪዎች አልተገኙም።',
+            ],
+            'Gender' => [
+                'om' => 'Saala',
+                'am' => 'ጾታ',
+            ],
+            'Grade' => [
+                'om' => 'Kutaa',
+                'am' => 'ክፍል',
+            ],
+            'Academic Year' => [
+                'om' => 'Waggaa Barnootaa',
+                'am' => 'የትምህርት ዓመት',
+            ],
+            'Semester' => [
+                'om' => 'Semisteera',
+                'am' => 'ሴሚስተር',
+            ],
+            'No marks found in this branch.' => [
+                'om' => 'Damee kana keessatti qabxiin hin argamne.',
+                'am' => 'በዚህ ቅርንጫፍ ውስጥ ውጤቶች አልተገኙም።',
+            ],
+            'Score' => [
+                'om' => 'Qabxii',
+                'am' => 'ነጥብ',
+            ],
+            'Type' => [
+                'om' => 'Gosa',
+                'am' => 'አይነት',
+            ],
+            'Assessment Date' => [
+                'om' => 'Guyyaa Madaallii',
+                'am' => 'የግምገማ ቀን',
+            ],
+            'Saved' => [
+                'om' => 'Kan Kuufame',
+                'am' => 'የተቀመጠ',
+            ],
         ];
     }
 }
