@@ -324,10 +324,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($can_manage_teacher_accounts) {
         $login_password = (string)($_POST['login_password'] ?? '');
+        $login_password_confirm = (string)($_POST['login_password_confirm'] ?? '');
         $password_required = isset($_POST['add_teacher']) || $existing_user_id === 0;
 
         if ($password_required && strlen($login_password) < 6) {
             header('Location: teachers.php?error=' . urlencode('Teacher login password must be at least 6 characters'));
+            exit();
+        }
+
+        if ($password_required && trim($login_password_confirm) === '') {
+            header('Location: teachers.php?error=' . urlencode('Please confirm the teacher login password'));
+            exit();
+        }
+
+        if ($login_password !== '' && $login_password !== $login_password_confirm) {
+            header('Location: teachers.php?error=' . urlencode('Teacher login password and confirm password do not match'));
             exit();
         }
     }
@@ -642,7 +653,7 @@ $csrf_token = urlencode(getCsrfToken());
 
                                 <div class="mb-3">
                                     <label for="login_password" class="form-label">
-                                        <?php echo $edit_teacher && !empty($edit_teacher['login_user_id']) ? 'Reset Password' : 'Login Password'; ?>
+                                        <?php echo $edit_teacher && !empty($edit_teacher['login_user_id']) ? 'New Password' : 'Login Password'; ?>
                                     </label>
                                     <input type="password" class="form-control" id="login_password" name="login_password"
                                            <?php echo $edit_teacher && !empty($edit_teacher['login_user_id']) ? '' : 'required'; ?>>
@@ -651,6 +662,19 @@ $csrf_token = urlencode(getCsrfToken());
                                             Leave blank to keep the current teacher password.
                                         <?php else: ?>
                                             Required for new teacher login accounts. Minimum 6 characters.
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="login_password_confirm" class="form-label">Confirm Password</label>
+                                    <input type="password" class="form-control" id="login_password_confirm" name="login_password_confirm"
+                                           <?php echo $edit_teacher && !empty($edit_teacher['login_user_id']) ? '' : 'required'; ?>>
+                                    <div class="form-text">
+                                        <?php if ($edit_teacher && !empty($edit_teacher['login_user_id'])): ?>
+                                            Enter the same new password again when resetting.
+                                        <?php else: ?>
+                                            Re-enter the same password to confirm.
                                         <?php endif; ?>
                                     </div>
                                 </div>

@@ -280,6 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $semester = trim((string)($_POST['semester'] ?? ''));
     $selected_site_id = $distributed_ready ? $coordinator->normalizeSiteId((int)($_POST['site_id'] ?? $default_site_id)) : $default_site_id;
     $login_password = (string)($_POST['login_password'] ?? '');
+    $login_password_confirm = (string)($_POST['login_password_confirm'] ?? '');
 
     if ($name === '') {
         header('Location: students.php?error=' . urlencode('Student name is required'));
@@ -309,6 +310,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($password_required && strlen($login_password) < 6) {
         header('Location: students.php?error=' . urlencode('Student login password must be at least 6 characters'));
+        exit();
+    }
+
+    if ($password_required && trim($login_password_confirm) === '') {
+        header('Location: students.php?error=' . urlencode('Please confirm the student login password'));
+        exit();
+    }
+
+    if ($login_password !== '' && $login_password !== $login_password_confirm) {
+        header('Location: students.php?error=' . urlencode('Student login password and confirm password do not match'));
         exit();
     }
 
@@ -667,7 +678,7 @@ $csrf_token = urlencode(getCsrfToken());
 
                             <div class="mb-3">
                                 <label for="login_password" class="form-label">
-                                    <?php echo $edit_student && !empty($edit_student['login_user_id']) ? 'Reset Password' : 'Login Password'; ?>
+                                    <?php echo $edit_student && !empty($edit_student['login_user_id']) ? 'New Password' : 'Login Password'; ?>
                                 </label>
                                 <input type="password" class="form-control" id="login_password" name="login_password"
                                        <?php echo $edit_student && !empty($edit_student['login_user_id']) ? '' : 'required'; ?>>
@@ -676,6 +687,19 @@ $csrf_token = urlencode(getCsrfToken());
                                         Leave blank to keep the current student password.
                                     <?php else: ?>
                                         Required for new student login accounts. Minimum 6 characters.
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="login_password_confirm" class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" id="login_password_confirm" name="login_password_confirm"
+                                       <?php echo $edit_student && !empty($edit_student['login_user_id']) ? '' : 'required'; ?>>
+                                <div class="form-text">
+                                    <?php if ($edit_student && !empty($edit_student['login_user_id'])): ?>
+                                        Enter the same new password again when resetting.
+                                    <?php else: ?>
+                                        Re-enter the same password to confirm.
                                     <?php endif; ?>
                                 </div>
                             </div>
