@@ -25,6 +25,8 @@ function normalizeGradeLabel($grade) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     requireValidCsrfToken();
 
+    $allowed_grade_names = ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+
     $db = new Database();
     $conn = $db->getConnection();
     $coordinator = new DistributedCoordinator($db);
@@ -40,6 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($selected_grade === '') {
         header('Location: ../pages/students.php?error=' . urlencode('Please select a grade'));
+        exit();
+    }
+
+    if (!in_array($selected_grade, $allowed_grade_names, true)) {
+        header('Location: ../pages/students.php?error=' . urlencode('Only Grade 9 to Grade 12 are allowed'));
         exit();
     }
 

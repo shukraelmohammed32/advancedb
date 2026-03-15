@@ -20,6 +20,7 @@ $can_access_distributed = canAccessDistributedCoordinator();
 $show_site_details = $can_access_distributed && $distributed_ready;
 $site_options = $show_site_details ? $coordinator->getSites() : [];
 $default_site_id = $coordinator->getDefaultSiteId();
+$allowed_grade_names = ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);
@@ -268,7 +269,7 @@ function saveStudentAccount($conn, $student_id, $username, $email, $plain_passwo
 
 // Get grade options
 $grade_rows = [];
-$grade_result = $conn->query('SELECT grade_id, grade_name FROM grades ORDER BY grade_id');
+$grade_result = $conn->query("SELECT grade_id, grade_name FROM grades WHERE grade_name IN ('Grade 9', 'Grade 10', 'Grade 11', 'Grade 12') ORDER BY grade_id");
 if ($grade_result) {
     while ($grade_row = $grade_result->fetch_assoc()) {
         $grade_rows[] = $grade_row;
@@ -311,6 +312,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($selected_grade === '') {
         header('Location: students.php?error=' . urlencode('Please select a grade'));
+        exit();
+    }
+
+    if (!in_array($selected_grade, $allowed_grade_names, true)) {
+        header('Location: students.php?error=' . urlencode('Only Grade 9 to Grade 12 are allowed'));
         exit();
     }
 
