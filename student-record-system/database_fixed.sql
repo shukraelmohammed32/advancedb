@@ -463,23 +463,106 @@ JOIN academic_years ay ON ay.is_active = 1
 SET m.academic_year_id = ay.year_id
 WHERE m.academic_year_id IS NULL;
 
--- Default admin user (password: admin123)
-UPDATE users
-SET password = '$2y$10$jim8N8JPcSPg2sbajBD33uxZ/y/P3P6HXRy4UpRXSQu7bR9/9qySu',
-    role = 'admin',
-    is_active = 1
-WHERE username = 'admin';
+-- ============================================
+-- EMAIL NORMALIZATION AND GENERATION
+-- ============================================
 
--- Update default admin email if blank
-SET @admin_email = CONCAT('admin+', UNIX_TIMESTAMP(), '@school.edu');
+SET @admin_email    = 'admin@school.edu';
+SET @admin_domain   = 'school.local';
+SET @teacher_domain = 'school.local';
+SET @student_domain = 'school.local';
+
+START TRANSACTION;
+
+-- 1) Normalize existing emails
+UPDATE users
+SET email = LOWER(TRIM(email))
+WHERE email IS NOT NULL
+  AND TRIM(email) <> '';
+
+-- 2) Set default admin email if blank (only if not used by non-admin)
 UPDATE users u
-LEFT JOIN users existing_user ON existing_user.email = @admin_email 
-   AND existing_user.role <> 'admin'
+LEFT JOIN users conflict
+    ON conflict.email = @admin_email
+   AND conflict.role <> 'admin'
 SET u.email = @admin_email
-WHERE u.role = 'admin' 
-  AND u.username = 'admin' 
-  AND (u.email IS NULL OR TRIM(u.email) = '') 
-  AND existing_user.user_id IS NULL;
+WHERE u.role = 'admin'
+  AND u.username = 'admin'
+  AND (u.email IS NULL OR TRIM(u.email) = '')
+  AND conflict.user_id IS NULL;
+
+-- 3) Fill blank admin emails (other admin accounts)
+UPDATE users u
+SET u.email = CONCAT(
+    LOWER(REPLACE(REPLACE(TRIM(u.username), ' ', '.'), '..', '.')),
+    '.', u.user_id, '@', @admin_domain
+)
+WHERE u.role = 'admin'
+  AND (u.email IS NULL OR TRIM(u.email) = '');
+
+-- 4) Fill blank teacher emails from teacher name + user_id
+UPDATE users u
+JOIN teachers t
+  ON t.teacher_id = u.teacher_id
+SET u.email = CONCAT(
+    LOWER(REPLACE(REPLACE(REPLACE(TRIM(t.teacher_name), ' ', '.'), '..', '.'), '''', '')),
+    '.', u.user_id, '@', @teacher_domain
+)
+WHERE u.role = 'teacher'
+  AND (u.email IS NULL OR TRIM(u.email) = '');
+
+-- 5) Fill blank student emails from student name + user_id
+UPDATE users u
+JOIN students s
+  ON s.student_id = u.student_id
+SET u.email = CONCAT(
+    LOWER(REPLACE(REPLACE(REPLACE(TRIM(s.name), ' ', '.'), '..', '.'), '''', '')),
+    '.', u.user_id, '@', @student_domain
+)
+WHERE u.role = 'student'
+  AND (u.email IS NULL OR TRIM(u.email) = '');
+
+-- 6) Final fallback for any still blank
+UPDATE users
+SET email = CONCAT('user.', user_id, '@', @student_domain)
+WHERE email IS NULL
+   OR TRIM(email) = '';
+
+-- 7) De-duplicate repeated emails by appending user_id
+UPDATE users u
+JOIN (
+    SELECT email
+    FROM users
+    GROUP BY email
+    HAVING COUNT(*) > 1
+) d
+  ON d.email = u.email
+SET u.email = CONCAT(
+    SUBSTRING_INDEX(u.email, '@', 1),
+    '.', u.user_id, '@',
+    SUBSTRING_INDEX(u.email, '@', -1)
+);
+
+COMMIT;
+
+-- 8) Add unique email index only if missing
+SET @idx_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE()
+      AND table_name = 'users'
+      AND index_name = 'uq_users_email'
+);
+
+SET @sql := IF(
+    @idx_exists = 0,
+    'ALTER TABLE users ADD UNIQUE KEY uq_users_email (email)',
+    'SELECT \"uq_users_email already exists\" AS info'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 INSERT INTO users (username, password, email, role, is_active)
 SELECT
