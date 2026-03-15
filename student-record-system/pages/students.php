@@ -387,6 +387,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             ? 'Student updated and synced to ' . $site_label
             : 'Student updated in central coordinator, but branch sync failed';
     }
+    $message .= ' Login email: ' . $login_email;
     header('Location: students.php?success=' . urlencode($message));
     exit();
 }
@@ -659,7 +660,8 @@ $csrf_token = urlencode(getCsrfToken());
                                 <label for="login_email" class="form-label">Login Email</label>
                                 <input type="email" class="form-control" id="login_email"
                                        value="<?php echo $edit_student ? htmlspecialchars((string)($edit_student['login_email'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
-                                    placeholder="Auto-generated from student name" readonly>
+                                       placeholder="Auto-generated from student name" readonly
+                                       data-domain="<?php echo htmlspecialchars(studentLoginEmailDomain(), ENT_QUOTES, 'UTF-8'); ?>">
                                 <div class="form-text">Automatically generated from student name and always unique.</div>
                             </div>
 
@@ -771,6 +773,34 @@ $csrf_token = urlencode(getCsrfToken());
     $footer_base_path = '../';
     include __DIR__ . '/../includes/footer.php';
     ?>
+    <script>
+        (function () {
+            var nameInput = document.getElementById('name');
+            var emailInput = document.getElementById('login_email');
+
+            if (!nameInput || !emailInput) {
+                return;
+            }
+
+            if (emailInput.value.trim() !== '') {
+                return;
+            }
+
+            var domain = (emailInput.getAttribute('data-domain') || 'school.local').toLowerCase();
+
+            function toLocalPart(value) {
+                var normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+                return normalized === '' ? 'student' : normalized;
+            }
+
+            function updatePreview() {
+                emailInput.value = toLocalPart(nameInput.value || '') + '@' + domain;
+            }
+
+            nameInput.addEventListener('input', updatePreview);
+            updatePreview();
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
