@@ -803,48 +803,48 @@ if ($subjectPerformance === false) {
         <div class="container mt-4 summary-shell">
             <section class="summary-hero">
                 <div>
-                    <span class="summary-kicker">Academic Summary</span>
+                    <span class="summary-kicker"><?php echo htmlspecialchars(t('Academic Summary'), ENT_QUOTES, 'UTF-8'); ?></span>
                     <h1 class="summary-title"><?php echo htmlspecialchars($summary_title, ENT_QUOTES, 'UTF-8'); ?></h1>
                     <p class="summary-intro"><?php echo htmlspecialchars($summary_intro, ENT_QUOTES, 'UTF-8'); ?></p>
                     <?php if (canEnterMarks() || canViewStudentReports()): ?>
                     <div class="summary-actions">
                         <?php if (canEnterMarks()): ?>
-                        <a href="marks.php" class="summary-action summary-action-primary">Open Mark Entry</a>
+                        <a href="marks.php" class="summary-action summary-action-primary"><?php echo htmlspecialchars(t('Open Mark Entry'), ENT_QUOTES, 'UTF-8'); ?></a>
                         <?php endif; ?>
                         <?php if (canViewStudentReports()): ?>
-                        <a href="report.php" class="summary-action summary-action-secondary">Open Reports</a>
+                        <a href="report.php" class="summary-action summary-action-secondary"><?php echo htmlspecialchars(t('Open Reports'), ENT_QUOTES, 'UTF-8'); ?></a>
                         <?php endif; ?>
                         <?php if ($is_super_admin && !empty($site_stats)): ?>
-                        <a href="../index.php" class="summary-action summary-action-secondary">Open Branch Oversight</a>
+                        <a href="../index.php" class="summary-action summary-action-secondary"><?php echo htmlspecialchars(t('Open Branch Oversight'), ENT_QUOTES, 'UTF-8'); ?></a>
                         <?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
                 <div class="summary-stats">
                     <div class="summary-stat-card summary-stat-card-emerald">
-                        <span>Students</span>
+                        <span><?php echo htmlspecialchars(t('Students'), ENT_QUOTES, 'UTF-8'); ?></span>
                         <strong><?php echo $totalStudents; ?></strong>
-                        <p>Learners currently tracked in the system.</p>
+                        <p><?php echo htmlspecialchars(t('Learners currently tracked in the system.'), ENT_QUOTES, 'UTF-8'); ?></p>
                     </div>
                     <div class="summary-stat-card summary-stat-card-clay">
-                        <span>Teachers</span>
+                        <span><?php echo htmlspecialchars(t('Teachers'), ENT_QUOTES, 'UTF-8'); ?></span>
                         <strong><?php echo $totalTeachers; ?></strong>
-                        <p>Faculty records linked to grades, subjects, and reports.</p>
+                        <p><?php echo htmlspecialchars(t('Faculty records linked to grades, subjects, and reports.'), ENT_QUOTES, 'UTF-8'); ?></p>
                     </div>
                     <div class="summary-stat-card summary-stat-card-sand">
-                        <span>Subjects</span>
+                        <span><?php echo htmlspecialchars(t('Subjects'), ENT_QUOTES, 'UTF-8'); ?></span>
                         <strong><?php echo $totalSubjects; ?></strong>
-                        <p>Courses contributing to progress and reports.</p>
+                        <p><?php echo htmlspecialchars(t('Courses contributing to progress and reports.'), ENT_QUOTES, 'UTF-8'); ?></p>
                     </div>
                     <div class="summary-stat-card summary-stat-card-ink">
-                        <span>Marks</span>
+                        <span><?php echo htmlspecialchars(t('Marks'), ENT_QUOTES, 'UTF-8'); ?></span>
                         <strong><?php echo $totalMarks; ?></strong>
-                        <p>Recorded assessments available for analysis.</p>
+                        <p><?php echo htmlspecialchars(t('Recorded assessments available for analysis.'), ENT_QUOTES, 'UTF-8'); ?></p>
                     </div>
                     <div class="summary-stat-card summary-stat-card-clay">
-                        <span>Focus</span>
+                        <span><?php echo htmlspecialchars(t('Focus'), ENT_QUOTES, 'UTF-8'); ?></span>
                         <strong><?php echo $totalSubjects > 0 ? number_format(($totalMarks / max($totalSubjects, 1)), 1) : '0.0'; ?></strong>
-                        <p>Average recorded marks per subject slot.</p>
+                        <p><?php echo htmlspecialchars(t('Average recorded marks per subject slot.'), ENT_QUOTES, 'UTF-8'); ?></p>
                     </div>
                 </div>
             </section>
@@ -853,11 +853,11 @@ if ($subjectPerformance === false) {
             <section class="summary-panel mt-4">
                 <div class="summary-panel-header">
                     <div>
-                        <span class="summary-panel-label">Branch Summary</span>
-                        <h2 class="summary-panel-title">All campus summary in one place</h2>
-                        <p class="summary-panel-copy">Super Admin can review each campus connection, teacher and student totals, and open branch details from here.</p>
+                        <span class="summary-panel-label"><?php echo htmlspecialchars(t('Branch Summary'), ENT_QUOTES, 'UTF-8'); ?></span>
+                        <h2 class="summary-panel-title"><?php echo htmlspecialchars(t('All campus summary in one place'), ENT_QUOTES, 'UTF-8'); ?></h2>
+                        <p class="summary-panel-copy"><?php echo htmlspecialchars(t('Super Admin can review each campus connection, teacher and student totals, and open branch details from here.'), ENT_QUOTES, 'UTF-8'); ?></p>
                     </div>
-                    <span class="summary-panel-meta"><?php echo count($site_stats); ?> campuses</span>
+                    <span class="summary-panel-meta"><?php echo count($site_stats) . ' ' . htmlspecialchars(t('campuses'), ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
                 <div class="summary-panel-body">
                     <div class="summary-site-grid">
@@ -870,28 +870,28 @@ if ($subjectPerformance === false) {
                                     <p class="summary-site-db"><?php echo htmlspecialchars((string)$site_stat['db_name'], ENT_QUOTES, 'UTF-8'); ?></p>
                                 </div>
                                 <span class="summary-site-badge<?php echo $isOnline ? '' : ' summary-site-badge-offline'; ?>">
-                                    <?php echo $isOnline ? 'Online' : 'Offline'; ?>
+                                    <?php echo htmlspecialchars($isOnline ? t('Online') : t('Offline'), ENT_QUOTES, 'UTF-8'); ?>
                                 </span>
                             </div>
                             <div class="summary-site-stats">
                                 <div class="summary-site-stat">
                                     <strong><?php echo (int)($site_stat['total_teachers'] ?? 0); ?></strong>
-                                    <span>Teachers</span>
+                                    <span><?php echo htmlspecialchars(t('Teachers'), ENT_QUOTES, 'UTF-8'); ?></span>
                                 </div>
                                 <div class="summary-site-stat">
                                     <strong><?php echo (int)($site_stat['total_students'] ?? 0); ?></strong>
-                                    <span>Students</span>
+                                    <span><?php echo htmlspecialchars(t('Students'), ENT_QUOTES, 'UTF-8'); ?></span>
                                 </div>
                                 <div class="summary-site-stat">
                                     <strong><?php echo (int)($site_stat['total_subjects'] ?? 0); ?></strong>
-                                    <span>Subjects</span>
+                                    <span><?php echo htmlspecialchars(t('Subjects'), ENT_QUOTES, 'UTF-8'); ?></span>
                                 </div>
                                 <div class="summary-site-stat">
                                     <strong><?php echo (int)($site_stat['total_marks'] ?? 0); ?></strong>
-                                    <span>Marks</span>
+                                    <span><?php echo htmlspecialchars(t('Marks'), ENT_QUOTES, 'UTF-8'); ?></span>
                                 </div>
                             </div>
-                            <div class="summary-site-link">Open branch details</div>
+                            <div class="summary-site-link"><?php echo htmlspecialchars(t('Open branch details'), ENT_QUOTES, 'UTF-8'); ?></div>
                         </a>
                         <?php endforeach; ?>
                     </div>

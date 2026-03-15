@@ -177,9 +177,29 @@ if (!function_exists('translationCatalog')) {
                 'om' => 'To’annoo Damee',
                 'am' => 'የቅርንጫፍ ቁጥጥር',
             ],
+            'Branch Summary' => [
+                'om' => 'Cuunfaa Damee',
+                'am' => 'የቅርንጫፍ ማጠቃለያ',
+            ],
+            'All campus summary in one place' => [
+                'om' => 'Cuunfaan kaampaasii hundaa bakka tokkotti',
+                'am' => 'የሁሉም ካምፓስ ማጠቃለያ በአንድ ቦታ',
+            ],
+            'Super Admin can review each campus connection, teacher and student totals, and open branch details from here.' => [
+                'om' => 'Bulchaan Olaanaan walqunnamtii kaampaasii hunda fi baayina barsiisotaa fi barattootaa ilaalee as irraa balbala damee banuu danda’a.',
+                'am' => 'ዋና አስተዳዳሪው የእያንዳንዱን ካምፓስ ግንኙነት እና የመምህራን የተማሪዎች ጠቅላላ ቁጥር ከዚህ ማየት እና የቅርንጫፍ ዝርዝር መክፈት ይችላል።',
+            ],
+            'campuses' => [
+                'om' => 'kaampaasota',
+                'am' => 'ካምፓሶች',
+            ],
             'Online' => [
                 'om' => 'Toora irratti',
                 'am' => 'በመስመር ላይ',
+            ],
+            'Offline' => [
+                'om' => 'Toora ala',
+                'am' => 'ከመስመር ውጭ',
             ],
             'Unavailable' => [
                 'om' => 'Hin argamu',
@@ -196,6 +216,50 @@ if (!function_exists('translationCatalog')) {
             'Open campus details' => [
                 'om' => 'Balbala damee bani',
                 'am' => 'የካምፓስ ዝርዝሮችን ክፈት',
+            ],
+            'Open branch details' => [
+                'om' => 'Balbala damee bani',
+                'am' => 'የቅርንጫፍ ዝርዝሮችን ክፈት',
+            ],
+            'Academic Summary' => [
+                'om' => 'Cuunfaa Barnootaa',
+                'am' => 'የትምህርት ማጠቃለያ',
+            ],
+            'Open Mark Entry' => [
+                'om' => 'Galmee Qabxii Bani',
+                'am' => 'የውጤት ማስገቢያ ክፈት',
+            ],
+            'Open Reports' => [
+                'om' => 'Ripoortii Bani',
+                'am' => 'ሪፖርቶችን ክፈት',
+            ],
+            'Open Branch Oversight' => [
+                'om' => 'To’annoo Damee Bani',
+                'am' => 'የቅርንጫፍ ቁጥጥር ክፈት',
+            ],
+            'Learners currently tracked in the system.' => [
+                'om' => 'Barattoonni yeroo ammaa sirnicha keessatti hordofaman.',
+                'am' => 'በአሁኑ ጊዜ በስርዓቱ ውስጥ የሚከታተሉ ተማሪዎች።',
+            ],
+            'Faculty records linked to grades, subjects, and reports.' => [
+                'om' => 'Galmeen barsiisotaa sadarkaa, barnoota fi ripoortii waliin walqabata.',
+                'am' => 'ከደረጃዎች ከትምህርቶች እና ከሪፖርቶች ጋር የተገናኙ የመምህራን መዝገቦች።',
+            ],
+            'Courses contributing to progress and reports.' => [
+                'om' => 'Barnootni guddina fi ripoortiif gumaachan.',
+                'am' => 'ለእድገት እና ለሪፖርቶች የሚያበረክቱ ኮርሶች።',
+            ],
+            'Recorded assessments available for analysis.' => [
+                'om' => 'Qorannoowwan galmaa’an xiinxalaaf qophaa’an.',
+                'am' => 'ለትንተና ዝግጁ የተመዘገቡ ግምገማዎች።',
+            ],
+            'Focus' => [
+                'om' => 'Xiyyeeffannoo',
+                'am' => 'ትኩረት',
+            ],
+            'Average recorded marks per subject slot.' => [
+                'om' => 'Barnoota tokko tokko keessatti giddugaleessa qabxii galmaa’e.',
+                'am' => 'በእያንዳንዱ የትምህርት ክፍል የተመዘገበ አማካይ ውጤት።',
             ],
             'Quick Actions' => [
                 'om' => 'Tarkaanfii Ariifachiisaa',
