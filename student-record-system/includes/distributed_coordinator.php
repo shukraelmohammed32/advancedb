@@ -444,6 +444,14 @@ class DistributedCoordinator {
         return $resolved_rows;
     }
 
+    private function centralSubjectRows() {
+        if (!$this->connectionTableExists($this->central, 'subjects')) {
+            return [];
+        }
+
+        return $this->connectionQueryRows($this->central, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC');
+    }
+
     private function siteRecentActivity($site, $connection, $limit_per_table) {
         if (!($connection instanceof mysqli)) {
             return [];
@@ -532,6 +540,8 @@ class DistributedCoordinator {
     }
 
     public function getSiteStats() {
+        $central_subject_total = $this->connectionTableCount($this->database->getCentralConnection(), 'subjects');
+
         if (!$this->isDistributedReady()) {
             $central_connection = $this->database->getCentralConnection();
             return [[
@@ -569,11 +579,18 @@ class DistributedCoordinator {
                 $site_teacher_rows = $this->mergeTeacherRows($local_teacher_rows, $this->inferredTeacherRowsForSite($connection, $reference_ids));
             }
             $teacher_total = $is_connected ? count($site_teacher_rows) : null;
-            $subject_total = $is_connected
-                ? ($this->connectionTableExists($connection, 'subjects')
+            $subject_total = null;
+            if ($is_connected) {
+                $local_subject_total = $this->connectionTableExists($connection, 'subjects')
                     ? $this->connectionTableCount($connection, 'subjects')
-                    : count($reference_ids['subject_ids']))
-                : null;
+                    : 0;
+                $referenced_subject_total = count($reference_ids['subject_ids']);
+
+                $subject_total = max($local_subject_total, $referenced_subject_total);
+                if ($subject_total === 0 && $central_subject_total > 0) {
+                    $subject_total = $central_subject_total;
+                }
+            }
             $student_total = $is_connected ? $this->connectionTableCount($connection, 'students') : null;
             $mark_total = $is_connected ? $this->connectionTableCount($connection, 'marks') : null;
             $last_activity_at = $is_connected ? $this->newestTimestamp([
@@ -668,10 +685,17 @@ class DistributedCoordinator {
         $has_marks = $this->connectionTableExists($connection, 'marks');
         $has_teacher_subjects = $this->connectionTableExists($connection, 'teacher_subjects');
         $reference_ids = $this->siteReferenceIdsFromMarks($connection);
+        $central_subject_total = count($this->centralSubjectRows());
+        $local_subject_total = $has_subjects ? $this->connectionTableCount($connection, 'subjects') : 0;
+        $referenced_subject_total = count($reference_ids['subject_ids']);
+        $resolved_subject_total = max($local_subject_total, $referenced_subject_total);
+        if ($resolved_subject_total === 0 && $central_subject_total > 0) {
+            $resolved_subject_total = $central_subject_total;
+        }
 
         $details['stats'] = [
             'teachers' => $has_teachers ? $this->connectionTableCount($connection, 'teachers') : count($reference_ids['teacher_ids']),
-            'subjects' => $has_subjects ? $this->connectionTableCount($connection, 'subjects') : count($reference_ids['subject_ids']),
+            'subjects' => $resolved_subject_total,
             'students' => $this->connectionTableCount($connection, 'students'),
             'marks' => $this->connectionTableCount($connection, 'marks'),
             'last_activity_at' => $this->newestTimestamp([
@@ -683,9 +707,19 @@ class DistributedCoordinator {
             ]),
         ];
 
-        $subject_rows = $has_subjects
-            ? $this->connectionQueryRows($connection, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC')
-            : $this->centralSubjectRowsByIds($reference_ids['subject_ids']);
+        $subject_rows = [];
+        if ($has_subjects) {
+            $subject_rows = $this->connectionQueryRows($connection, 'SELECT subject_id, subject_name, total_mark, created_at FROM subjects ORDER BY subject_name ASC');
+        }
+
+        if (empty($subject_rows)) {
+            if (!empty($reference_ids['subject_ids'])) {
+                $subject_rows = $this->centralSubjectRowsByIds($reference_ids['subject_ids']);
+            } else {
+                $subject_rows = $this->centralSubjectRows();
+            }
+        }
+
         $subject_lookup = [];
         foreach ($subject_rows as $subject_row) {
             $subject_lookup[(int)$subject_row['subject_id']] = (string)($subject_row['subject_name'] ?? 'Unknown Subject');

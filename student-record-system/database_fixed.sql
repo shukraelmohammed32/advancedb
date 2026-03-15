@@ -491,6 +491,20 @@ INSERT INTO subjects (subject_name, total_mark)
 SELECT 'Physics', 100
 WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE subject_name = 'Physics');
 
+-- Set default oversight to 5 subjects
+CREATE TABLE IF NOT EXISTS system_settings (
+    setting_id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL UNIQUE,
+    setting_value TEXT NOT NULL,
+    description TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+INSERT INTO system_settings (setting_key, setting_value, description)
+SELECT 'default_subject_count', '5', 'Default number of subjects for oversight calculations'
+WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE setting_key = 'default_subject_count');
+
 -- Migrate old one-subject teacher department into many-to-many mapping
 INSERT INTO teacher_subjects (teacher_id, subject_id)
 SELECT DISTINCT t.teacher_id, sub.subject_id
@@ -645,24 +659,21 @@ SELECT
     s.academic_year,
     s.semester,
     COUNT(m.mark_id) AS total_marks,
-    subject_totals.total_subjects AS total_subjects,
+    COALESCE((SELECT CAST(setting_value AS UNSIGNED) FROM system_settings WHERE setting_key = 'default_subject_count'), COUNT(DISTINCT sub.subject_id)) AS total_subjects,
     COALESCE(ROUND(AVG(m.score), 2), 0) AS average_score,
     SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_subjects,
-    GREATEST(subject_totals.total_subjects - COUNT(m.mark_id), 0) AS missing_marks,
+    GREATEST(COALESCE((SELECT CAST(setting_value AS UNSIGNED) FROM system_settings WHERE setting_key = 'default_subject_count'), COUNT(DISTINCT sub.subject_id)) - COUNT(m.mark_id), 0) AS missing_marks,
     CASE
-        WHEN subject_totals.total_subjects = 0 THEN 'NO SUBJECTS'
+        WHEN COALESCE((SELECT CAST(setting_value AS UNSIGNED) FROM system_settings WHERE setting_key = 'default_subject_count'), COUNT(DISTINCT sub.subject_id)) = 0 THEN 'NO SUBJECTS'
         WHEN COUNT(m.mark_id) = 0 THEN 'NO MARKS'
-        WHEN COUNT(m.mark_id) < subject_totals.total_subjects THEN 'INCOMPLETE'
-        WHEN SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) = subject_totals.total_subjects THEN 'PASS'
+        WHEN COUNT(m.mark_id) < COALESCE((SELECT CAST(setting_value AS UNSIGNED) FROM system_settings WHERE setting_key = 'default_subject_count'), COUNT(DISTINCT sub.subject_id)) THEN 'INCOMPLETE'
+        WHEN SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) = COALESCE((SELECT CAST(setting_value AS UNSIGNED) FROM system_settings WHERE setting_key = 'default_subject_count'), COUNT(DISTINCT sub.subject_id)) THEN 'PASS'
         ELSE 'FAIL'
     END AS overall_status
 FROM students s
-CROSS JOIN (
-    SELECT COUNT(*) AS total_subjects
-    FROM subjects
-) subject_totals
 LEFT JOIN marks m ON s.student_id = m.student_id
-GROUP BY s.student_id, s.name, s.grade, s.academic_year, s.semester, subject_totals.total_subjects;
+LEFT JOIN subjects sub ON 1=1  -- Cross join to get subject count
+GROUP BY s.student_id, s.name, s.grade, s.academic_year, s.semester;
 
 CREATE OR REPLACE VIEW subject_performance AS
 SELECT
