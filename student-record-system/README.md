@@ -172,9 +172,6 @@ student-record-system/
 ## Browser Compatibility
 
 - Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
 
 ## Support
 
