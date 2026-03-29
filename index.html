@@ -851,6 +851,136 @@
     .footer-bottom-links a:hover { color: rgba(255,255,255,.7); }
 
     /* =============================================
+       LOGIN FORM CARD
+    ============================================= */
+    .login-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      box-shadow: var(--shadow-strong);
+      border: 1px solid rgba(255,255,255,.12);
+      width: 100%;
+      max-width: 420px;
+    }
+    .login-card-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .login-card-icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(130deg, #c9e4ff 0%, #f3fbff 100%);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 14px;
+      color: var(--primary);
+      font-size: 1.4rem;
+      font-weight: 800;
+    }
+    .login-card-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .login-card-sub {
+      font-size: .85rem;
+      color: var(--text-muted);
+    }
+    .login-field {
+      margin-bottom: 16px;
+    }
+    .login-field label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+    .login-field-shell {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .login-field-icon {
+      position: absolute;
+      left: 12px;
+      color: var(--text-muted);
+      font-size: .9rem;
+      pointer-events: none;
+    }
+    .login-field input,
+    .login-field select {
+      width: 100%;
+      padding: .56rem .75rem .56rem 2.2rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: .9rem;
+      color: var(--text);
+      background: var(--surface-muted);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .login-field input:focus,
+    .login-field select:focus {
+      border-color: var(--primary-2);
+      box-shadow: 0 0 0 3px rgba(31,95,149,.12);
+      background: var(--surface);
+    }
+    .login-field select { cursor: pointer; }
+    .login-submit {
+      width: 100%;
+      padding: .7rem 1.5rem;
+      border-radius: 999px;
+      background: linear-gradient(120deg, #1a4f80 0%, #1f659d 100%);
+      color: #fff;
+      font-family: inherit;
+      font-size: .9375rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+      box-shadow: 0 4px 14px rgba(18,59,99,.28);
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .login-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(18,59,99,.40);
+    }
+    .login-divider {
+      text-align: center;
+      font-size: .78rem;
+      color: var(--text-muted);
+      margin-top: 18px;
+    }
+    .login-divider a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .login-divider a:hover { text-decoration: underline; }
+    .login-error {
+      background: rgba(193,57,57,.1);
+      border: 1px solid rgba(193,57,57,.25);
+      color: #a03232;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: .84rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* =============================================
        RESPONSIVE
     ============================================= */
     @media (max-width: 1024px) {
@@ -863,7 +993,8 @@
     }
     @media (max-width: 768px) {
       .hero-inner { grid-template-columns: 1fr; }
-      .hero-visual { display: none; }
+      .hero-visual { display: flex; justify-content: center; }
+      .login-card { max-width: 100%; }
       .nav-links { display: none; }
       .hamburger { display: block; }
       .programs-grid,
@@ -898,8 +1029,8 @@
       <li><a href="#testimonials">Testimonials</a></li>
     </ul>
     <div class="nav-actions">
-      <a href="student-record-system/auth/login_modern.php" class="signin">Sign In</a>
-      <a href="student-record-system/auth/login_modern.php" class="btn btn-accent">
+      <a href="#hero-login" class="signin">Sign In</a>
+      <a href="#hero-login" class="btn btn-accent">
         <i class="fas fa-sign-in-alt"></i> Access Portal
       </a>
     </div>
@@ -928,7 +1059,7 @@
           academic reports — all in one place.
         </p>
         <div class="hero-actions">
-          <a href="student-record-system/auth/login_modern.php" class="btn btn-accent">
+          <a href="#hero-login" class="btn btn-accent">
             <i class="fas fa-sign-in-alt"></i> Login to Portal
           </a>
           <a href="#programs" class="btn btn-outline-white">
@@ -951,57 +1082,58 @@
         </div>
       </div>
 
-      <!-- Right: Dashboard Preview Visual -->
-      <div class="hero-visual">
-        <div class="hero-card-wrap">
-          <!-- Floating badge top-left -->
-          <div class="hero-float top-left">
-            <div class="hero-float-icon icon-green"><i class="fas fa-check-circle"></i></div>
-            <div>
-              <div style="font-size:.75rem;color:var(--text-muted);font-weight:500;">Result Compiled</div>
-              <div>Grade 10 — Section A</div>
-            </div>
+      <!-- Right: Login Form -->
+      <div class="hero-visual" id="hero-login">
+        <div class="login-card">
+          <div class="login-card-header">
+            <div class="login-card-icon">SR</div>
+            <div class="login-card-title">Sign In to Your Portal</div>
+            <div class="login-card-sub">Enter your credentials to access the system</div>
           </div>
 
-          <!-- Main hero visual: dashboard preview -->
-          <div class="hero-img-container">
-            <div class="hero-dash-preview">
-              <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.55);margin-bottom:10px;">
-                Dashboard Overview
-              </div>
-              <div class="hero-stat-preview">
-                <div class="hsp-card blue">
-                  <div class="hsp-num">248</div>
-                  <div class="hsp-lbl">Students</div>
-                </div>
-                <div class="hsp-card green">
-                  <div class="hsp-num">18</div>
-                  <div class="hsp-lbl">Teachers</div>
-                </div>
-                <div class="hsp-card amber">
-                  <div class="hsp-num">12</div>
-                  <div class="hsp-lbl">Subjects</div>
-                </div>
-              </div>
-              <div class="hero-action-preview">
-                <div class="hap-title">Quick Actions</div>
-                <div class="hap-btns">
-                  <span class="hap-btn p">Manage Students</span>
-                  <span class="hap-btn s">Manage Subjects</span>
-                  <span class="hap-btn i">Manage Teachers</span>
-                  <span class="hap-btn d">Review Summary</span>
-                </div>
+          <form method="POST" action="student-record-system/auth/login.php">
+            <div class="login-field">
+              <label for="lf-email"><i class="fas fa-user" style="margin-right:4px;"></i> Email or Username</label>
+              <div class="login-field-shell">
+                <span class="login-field-icon"><i class="fas fa-envelope"></i></span>
+                <input type="text" id="lf-email" name="email"
+                       placeholder="Enter your email or username"
+                       autocomplete="username" required />
               </div>
             </div>
-          </div>
 
-          <!-- Floating badge bottom-right -->
-          <div class="hero-float bottom-right">
-            <div class="hero-float-icon" style="background:rgba(28,143,122,.15);color:#1c8f7a;"><i class="fas fa-file-alt"></i></div>
-            <div>
-              <div style="font-size:.75rem;color:var(--text-muted);font-weight:500;">Report Generated</div>
-              <div>Academic Year 2024–2025</div>
+            <div class="login-field">
+              <label for="lf-password"><i class="fas fa-lock" style="margin-right:4px;"></i> Password</label>
+              <div class="login-field-shell">
+                <span class="login-field-icon"><i class="fas fa-lock"></i></span>
+                <input type="password" id="lf-password" name="password"
+                       placeholder="Enter your password"
+                       autocomplete="current-password" required />
+              </div>
             </div>
+
+            <div class="login-field">
+              <label for="lf-role"><i class="fas fa-id-badge" style="margin-right:4px;"></i> Sign In As</label>
+              <div class="login-field-shell">
+                <span class="login-field-icon"><i class="fas fa-user-tag"></i></span>
+                <select id="lf-role" name="role" required>
+                  <option value="main_admin">Super Admin</option>
+                  <option value="branch_admin">Branch Admin</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="student" selected>Student</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="login-submit">
+              <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+          </form>
+
+          <div class="login-divider">
+            <i class="fas fa-lock" style="margin-right:4px;font-size:.7rem;"></i>
+            Protected academic access &mdash;
+            <a href="#programs">Learn more</a>
           </div>
         </div>
       </div>
@@ -1422,7 +1554,7 @@
         manage records, enter marks, and generate reports.
       </p>
       <div class="cta-actions">
-        <a href="student-record-system/auth/login_modern.php" class="btn btn-white">
+        <a href="#hero-login" class="btn btn-white">
           <i class="fas fa-sign-in-alt"></i> Login Now
         </a>
         <a href="#programs" class="btn btn-outline-white">
@@ -1515,8 +1647,8 @@
   </div>
 </footer>
 
-<!-- Minimal JS for mobile menu toggle -->
 <script>
+  // Mobile menu toggle
   const hamburger = document.querySelector('.hamburger');
   const navLinks  = document.querySelector('.nav-links');
   hamburger.addEventListener('click', () => {
@@ -1524,6 +1656,24 @@
     navLinks.style.cssText = open
       ? ''
       : 'display:flex;flex-direction:column;position:absolute;top:68px;left:0;right:0;background:#123b63;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.1);box-shadow:0 8px 24px rgba(8,24,38,.32);gap:2px;z-index:999;';
+  });
+
+  // Close mobile menu when a nav link is clicked
+  navLinks.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => { navLinks.style.cssText = ''; });
+  });
+
+  // Smooth scroll offset for sticky header
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        const offset = 80;
+        const top = target.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    });
   });
 </script>
 
