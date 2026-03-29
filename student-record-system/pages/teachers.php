@@ -475,8 +475,23 @@ if (isset($_GET['delete'])) {
 
     if ($teacher_id > 0) {
         $conn->begin_transaction();
+
+        // Remove login account, subject assignments, and marks attributed to this teacher
         $conn->query("DELETE FROM users WHERE teacher_id = $teacher_id AND role = 'teacher'");
-        $conn->query("DELETE FROM teachers WHERE teacher_id = $teacher_id");
+        $conn->query("DELETE FROM teacher_subjects WHERE teacher_id = $teacher_id");
+
+        // Only remove marks that carry a teacher_id FK (column may not exist on older schemas)
+        $marksColCheck = $conn->query("SHOW COLUMNS FROM marks LIKE 'teacher_id'");
+        if ($marksColCheck && $marksColCheck->num_rows > 0) {
+            $conn->query("DELETE FROM marks WHERE teacher_id = $teacher_id");
+        }
+
+        if (!$conn->query("DELETE FROM teachers WHERE teacher_id = $teacher_id")) {
+            $conn->rollback();
+            header('Location: teachers.php?error=' . urlencode('Failed to delete teacher. Please try again.'));
+            exit();
+        }
+
         $conn->commit();
     }
 

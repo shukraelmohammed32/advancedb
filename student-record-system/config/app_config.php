@@ -8,32 +8,32 @@ require_once __DIR__ . '/env.php';
  */
 class AppConfig {
     
-    // Database settings
+    // Database settings — defaults are safe local values only; real creds must come from .env
     public static function getDatabaseHost() {
-        return env('DB_HOST', 'sql303.infinityfree.com');
+        return env('DB_HOST', 'localhost');
     }
-    
+
     public static function getDatabaseUsername() {
-        return env('DB_USERNAME', 'if0_41348166');
+        return env('DB_USERNAME', 'root');
     }
-    
+
     public static function getDatabasePassword() {
-        return env('DB_PASSWORD', 'RqMCVBiQVfEf4x');
+        return env('DB_PASSWORD', '');
     }
-    
+
     public static function getDatabaseName() {
-        return env('DB_DATABASE', 'if0_41348166_student_record_system');
+        return env('DB_DATABASE', 'student_record_system');
     }
-    
-    // Admin settings
+
+    // Admin settings — no default password; must be set in .env
     public static function getAdminUsername() {
         return env('ADMIN_USERNAME', 'admin');
     }
-    
+
     public static function getAdminPassword() {
-        return env('ADMIN_PASSWORD', 'admin123');
+        return env('ADMIN_PASSWORD', '');
     }
-    
+
     public static function getAdminEmail() {
         return env('ADMIN_EMAIL', 'admin@school.edu');
     }
@@ -52,7 +52,7 @@ class AppConfig {
     }
     
     public static function getAllowedOrigins() {
-        $origins = env('ALLOWED_ORIGINS', 'https://student-record-managment-system.42web.io');
+        $origins = env('ALLOWED_ORIGINS', 'http://localhost');
         return explode(',', $origins);
     }
     
@@ -97,7 +97,7 @@ class AppConfig {
     }
     
     public static function getAppUrl() {
-        return env('APP_URL', 'https://student-record-managment-system.42web.io/student-record-system');
+        return env('APP_URL', 'http://localhost/student-record-system');
     }
     
     public static function isAppDebug() {

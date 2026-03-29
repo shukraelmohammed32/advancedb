@@ -503,9 +503,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Extra Links -->
             <div class="extra-links">
-                <a href="forgot_password.php">
-                    <i class="fas fa-key me-1"></i>
-                    Forgot Password?
+                <a href="login.php">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to main sign-in
                 </a>
             </div>
         </div>

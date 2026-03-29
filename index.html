@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Record System — Academic Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    /* =============================================
+       RESET & BASE — matches student-record-system
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:
+        radial-gradient(circle at 12% 12%, rgba(31, 95, 149, 0.16), transparent 35%),
+        radial-gradient(circle at 88% 20%, rgba(28, 143, 122, 0.15), transparent 35%),
+        linear-gradient(160deg, #ecf2f8 0%, #dfe8f2 100%);
+      background-attachment: fixed;
+      color: #1f2f3d;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* =============================================
+       COLOR TOKENS — student-record-system palette
+    ============================================= */
+    :root {
+      --navy:        #0f2d49;
+      --primary:     #123b63;
+      --primary-2:   #1f5f95;
+      --accent:      #1c8f7a;
+      --accent-2:    #1eaa88;
+      --surface:     #ffffff;
+      --surface-muted: #f4f7fb;
+      --border:      #d7e1ec;
+      --text:        #1f2f3d;
+      --text-muted:  #5f7082;
+      --bg-start:    #ecf2f8;
+      --bg-end:      #dfe8f2;
+      --shadow-soft:   0 10px 30px rgba(16, 40, 66, 0.08);
+      --shadow-strong: 0 16px 40px rgba(16, 40, 66, 0.16);
+      --radius-sm:  8px;
+      --radius-md:  14px;
+      --radius-lg:  20px;
+      --transition: .25s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* =============================================
+       UTILITIES
+    ============================================= */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .section-label {
+      display: inline-block;
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(28, 143, 122, 0.12);
+      padding: 4px 14px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(1.75rem, 3vw, 2.4rem);
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+    .section-sub {
+      font-size: .975rem;
+      color: var(--text-muted);
+      max-width: 560px;
+      margin-bottom: 40px;
+    }
+
+    /* Buttons — pill style matching style.css */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.6rem 1.5rem;
+      border-radius: 999px;
+      font-size: .9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary {
+      background: linear-gradient(120deg, #1a4f80 0%, #1f659d 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(18, 59, 99, 0.30);
+    }
+    .btn-primary:hover { box-shadow: 0 8px 22px rgba(18, 59, 99, 0.42); }
+    .btn-accent {
+      background: linear-gradient(120deg, #157a63 0%, #1ea889 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(28, 143, 122, 0.28);
+    }
+    .btn-accent:hover { box-shadow: 0 8px 22px rgba(28, 143, 122, 0.42); }
+    .btn-outline-white {
+      background: transparent;
+      color: #fff;
+      border: 2px solid rgba(255,255,255,.55);
+    }
+    .btn-outline-white:hover { background: rgba(255,255,255,.12); border-color: #fff; }
+    .btn-secondary {
+      background: linear-gradient(120deg, #4e6278 0%, #6a8099 100%);
+      color: #fff;
+    }
+    .btn-white {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: 0 4px 16px rgba(0,0,0,.10);
+    }
+    .btn-white:hover { background: #eef5ff; }
+
+    /* =============================================
+       TOP NAVIGATION — matches .navbar in style.css
+    ============================================= */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: linear-gradient(120deg, #0f2d49 0%, #123b63 60%, #1b537f 100%);
+      box-shadow: 0 8px 24px rgba(8, 24, 38, 0.32);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 68px;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(130deg, #c9e4ff 0%, #f3fbff 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0f2d49;
+      font-weight: 800;
+      font-size: .75rem;
+    }
+    .nav-logo .logo-text {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #f6fbff;
+      letter-spacing: .3px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      list-style: none;
+    }
+    .nav-links a {
+      padding: .45rem .95rem;
+      border-radius: 999px;
+      font-size: .9rem;
+      font-weight: 500;
+      color: #d9e9f8;
+      text-decoration: none;
+      transition: background var(--transition), color var(--transition);
+    }
+    .nav-links a:hover { background: rgba(255,255,255,.14); color: #fff; }
+    .nav-actions { display: flex; align-items: center; gap: 10px; }
+    .nav-actions .signin {
+      font-size: .9rem;
+      font-weight: 500;
+      color: #d9e9f8;
+      text-decoration: none;
+      padding: .45rem .95rem;
+      border-radius: 999px;
+      transition: background var(--transition);
+    }
+    .nav-actions .signin:hover { background: rgba(255,255,255,.14); color: #fff; }
+    .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: #d9e9f8; border-radius: 2px; margin: 5px 0;
+      transition: var(--transition);
+    }
+
+    /* =============================================
+       HERO SECTION
+    ============================================= */
+    .hero {
+      background: linear-gradient(120deg, #0f2d49 0%, #123b63 60%, #1b537f 100%);
+      position: relative;
+      overflow: hidden;
+      padding: 96px 0 80px;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 560px; height: 560px;
+      background: radial-gradient(circle, rgba(28,143,122,.2) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -120px; left: -60px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(31,95,149,.18) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 60px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.1);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: .8125rem;
+      font-weight: 600;
+      color: #93c5fd;
+      margin-bottom: 24px;
+    }
+    .hero-badge i { font-size: .75rem; color: #6ae6d0; }
+    .hero h1 {
+      font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.12;
+      margin-bottom: 20px;
+      letter-spacing: -.4px;
+    }
+    .hero h1 span { color: #6ae6d0; }
+    .hero p {
+      font-size: 1.0375rem;
+      color: rgba(255,255,255,.75);
+      max-width: 480px;
+      margin-bottom: 36px;
+      line-height: 1.7;
+    }
+    .hero-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,.12);
+    }
+    .hero-stat-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .hero-stat-lbl {
+      font-size: .8rem;
+      color: rgba(255,255,255,.6);
+      margin-top: 2px;
+    }
+    /* Hero visual panel */
+    .hero-visual {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hero-card-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+    }
+    .hero-img-container {
+      position: relative;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: linear-gradient(145deg, #1e3a5f 0%, #0f2d52 100%);
+      border: 1px solid rgba(255,255,255,.1);
+      box-shadow: var(--shadow-strong), 0 0 0 1px rgba(255,255,255,.05);
+      min-height: 340px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      gap: 20px;
+    }
+    /* Dashboard preview cards inside hero */
+    .hero-dash-preview {
+      width: 100%;
+    }
+    .hero-stat-preview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .hsp-card {
+      border-radius: 10px;
+      padding: 14px 12px;
+      text-align: center;
+      color: #fff;
+    }
+    .hsp-card.blue  { background: linear-gradient(145deg, #1d4f86, #2a74bd); }
+    .hsp-card.green { background: linear-gradient(145deg, #14725d, #1eaa88); }
+    .hsp-card.amber { background: linear-gradient(145deg, #a85c18, #d58d2f); }
+    .hsp-num {
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .hsp-lbl {
+      font-size: .68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      opacity: .85;
+      margin-top: 4px;
+    }
+    .hero-action-preview {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .hap-title {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: rgba(255,255,255,.6);
+      margin-bottom: 10px;
+    }
+    .hap-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .hap-btn {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: .78rem;
+      font-weight: 600;
+      border: none;
+      cursor: default;
+      color: #fff;
+    }
+    .hap-btn.p { background: linear-gradient(120deg,#1a4f80,#1f659d); }
+    .hap-btn.s { background: linear-gradient(120deg,#4e6278,#6a8099); }
+    .hap-btn.i { background: linear-gradient(120deg,#265f97,#2e7bbd); }
+    .hap-btn.d { background: linear-gradient(120deg,#157a63,#1ea889); }
+    /* Floating badges on hero */
+    .hero-float {
+      position: absolute;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      box-shadow: var(--shadow-strong);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .8125rem;
+      font-weight: 600;
+      color: var(--primary);
+      animation: floatBadge 3s ease-in-out infinite;
+    }
+    .hero-float:nth-child(2) { animation-delay: 1.5s; }
+    .hero-float-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .875rem;
+    }
+    .hero-float.top-left  { top: -18px; left: -24px; }
+    .hero-float.bottom-right { bottom: -18px; right: -24px; }
+    @keyframes floatBadge {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+
+    /* =============================================
+       TRUST BAR
+    ============================================= */
+    .trust-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 0;
+    }
+    .trust-inner {
+      display: flex;
+      align-items: center;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+    .trust-label {
+      font-size: .8125rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .trust-logos {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+    .trust-logo {
+      font-size: .9375rem;
+      font-weight: 700;
+      color: #a0b4c8;
+      letter-spacing: -.3px;
+      transition: color var(--transition);
+    }
+    .trust-logo:hover { color: var(--primary); }
+
+    /* =============================================
+       FEATURED PROGRAMS — renamed as Features
+    ============================================= */
+    .programs { padding: 96px 0; background: var(--surface-muted); }
+    .section-header { text-align: center; margin-bottom: 56px; }
+    .section-header .section-sub { margin: 0 auto; }
+    .programs-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .program-card {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+      transition: transform var(--transition), box-shadow var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+    .program-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-strong);
+    }
+    .program-thumb {
+      height: 160px;
+      position: relative;
+      overflow: hidden;
+    }
+    .program-thumb-bg {
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+    .bg-blue-grad   { background: linear-gradient(135deg,#1d4f86,#2a74bd); }
+    .bg-green-grad  { background: linear-gradient(135deg,#14725d,#1eaa88); }
+    .bg-orange-grad { background: linear-gradient(135deg,#a85c18,#d58d2f); }
+    .bg-purple-grad { background: linear-gradient(135deg,#1f5f95,#265f97); }
+    .bg-teal-grad   { background: linear-gradient(135deg,#1c8f7a,#1eaa88); }
+    .bg-indigo-grad { background: linear-gradient(135deg,#123b63,#1f5f95); }
+    .program-badge {
+      position: absolute;
+      top: 12px; left: 12px;
+      background: rgba(255,255,255,.93);
+      color: var(--primary-2);
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .program-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+    .program-tag {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .program-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .program-desc {
+      font-size: .875rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      flex: 1;
+      margin-bottom: 16px;
+    }
+    .program-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #edf2f8;
+      font-size: .8rem;
+      color: #a0b4c8;
+    }
+    .program-meta i { font-size: .75rem; }
+    .program-footer {
+      padding: 14px 20px;
+      background: var(--surface-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+    }
+    .program-price { font-size: .9375rem; font-weight: 700; color: var(--primary); }
+    .program-cta {
+      font-size: .8125rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: gap var(--transition), color var(--transition);
+    }
+    .program-cta:hover { color: #157a63; gap: 9px; }
+
+    /* =============================================
+       BENEFITS
+    ============================================= */
+    .benefits { padding: 96px 0; background: var(--surface); }
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 28px;
+      margin-top: 16px;
+    }
+    .benefit-item {
+      text-align: center;
+      padding: 32px 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--surface-muted);
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    }
+    .benefit-item:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-soft);
+      border-color: #b6d0ea;
+    }
+    .benefit-icon {
+      width: 60px; height: 60px;
+      margin: 0 auto 18px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.375rem;
+    }
+    .icon-blue   { background: #dbeafe; color: var(--primary-2); }
+    .icon-green  { background: rgba(28,143,122,.14); color: var(--accent); }
+    .icon-purple { background: #e8f2fb; color: #265f97; }
+    .icon-orange { background: rgba(168,92,24,.12); color: #a85c18; }
+    .benefit-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    .benefit-text {
+      font-size: .875rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* =============================================
+       CATEGORIES
+    ============================================= */
+    .categories { padding: 96px 0; background: var(--surface-muted); }
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .cat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 28px 22px;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition),
+                  border-color var(--transition), background var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .cat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-soft);
+      border-color: #b6d0ea;
+      background: #f0f6fc;
+    }
+    .cat-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+    .cat-title {
+      font-size: .9375rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .cat-count {
+      font-size: .8rem;
+      color: var(--text-muted);
+      margin-top: -8px;
+    }
+    .cat-arrow {
+      margin-top: auto;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: #e8f2fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .75rem;
+      color: var(--primary-2);
+      transition: background var(--transition), color var(--transition), transform var(--transition);
+    }
+    .cat-card:hover .cat-arrow {
+      background: var(--accent);
+      color: #fff;
+      transform: translateX(4px);
+    }
+
+    /* =============================================
+       TESTIMONIALS
+    ============================================= */
+    .testimonials { padding: 96px 0; background: var(--surface); }
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .testimonial-card {
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .testimonial-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-soft);
+    }
+    .testimonial-stars {
+      display: flex;
+      gap: 3px;
+      margin-bottom: 16px;
+      color: #d58d2f;
+      font-size: .875rem;
+    }
+    .testimonial-text {
+      font-size: .9375rem;
+      color: #374151;
+      line-height: 1.7;
+      margin-bottom: 22px;
+      font-style: italic;
+    }
+    .testimonial-text::before { content: '\201C'; font-size: 1.5rem; color: var(--accent); line-height: 0; vertical-align: -6px; margin-right: 4px; }
+    .testimonial-text::after  { content: '\201D'; font-size: 1.5rem; color: var(--accent); line-height: 0; vertical-align: -6px; margin-left: 2px; }
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .author-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      overflow: hidden;
+      background: var(--primary-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .author-name { font-size: .9rem; font-weight: 700; color: var(--primary); }
+    .author-role { font-size: .8rem; color: var(--text-muted); margin-top: 2px; }
+    .author-company {
+      margin-left: auto;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .testimonial-card.featured {
+      background: linear-gradient(135deg, #0f2d49 0%, #123b63 100%);
+      border-color: transparent;
+    }
+    .testimonial-card.featured .testimonial-text { color: rgba(255,255,255,.85); }
+    .testimonial-card.featured .testimonial-text::before,
+    .testimonial-card.featured .testimonial-text::after { color: #6ae6d0; }
+    .testimonial-card.featured .testimonial-stars { color: #d58d2f; }
+    .testimonial-card.featured .author-name { color: #fff; }
+    .testimonial-card.featured .author-role { color: rgba(255,255,255,.6); }
+    .testimonial-card.featured .author-company { color: rgba(255,255,255,.4); }
+
+    /* =============================================
+       CTA BANNER
+    ============================================= */
+    .cta-banner {
+      padding: 80px 0;
+      background: linear-gradient(120deg, #0f2d49 0%, #123b63 60%, #1b537f 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-banner::before {
+      content: '';
+      position: absolute;
+      top: -100px; right: -100px;
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(28,143,122,.15) 0%, transparent 65%);
+      border-radius: 50%;
+    }
+    .cta-inner {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .cta-inner h2 {
+      font-size: clamp(1.75rem, 3vw, 2.4rem);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+    .cta-inner p {
+      color: rgba(255,255,255,.78);
+      font-size: 1rem;
+      margin-bottom: 32px;
+    }
+    .cta-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+
+    /* =============================================
+       FOOTER — matches .footer in style.css
+    ============================================= */
+    footer {
+      background: linear-gradient(135deg, #0f2d49 0%, #123b63 55%, #1a547f 100%);
+      color: #dce7f3;
+      padding: 56px 0 0;
+      position: relative;
+    }
+    footer::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #9fd0ff 0%, #6cb6ff 45%, #6ae6d0 100%);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      gap: 48px;
+      padding-bottom: 48px;
+      border-bottom: 1px solid rgba(214,231,247,.15);
+    }
+    .footer-brand .logo-text { color: #fff; }
+    .footer-brand p {
+      font-size: .875rem;
+      line-height: 1.7;
+      margin: 16px 0 24px;
+      color: rgba(255,255,255,.52);
+    }
+    .footer-socials { display: flex; gap: 10px; }
+    .social-btn {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,.6);
+      font-size: .875rem;
+      text-decoration: none;
+      transition: background var(--transition), color var(--transition), transform var(--transition);
+    }
+    .social-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      transform: translateY(-3px);
+    }
+    .footer-col h4 {
+      font-size: .875rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 18px;
+      letter-spacing: .04em;
+    }
+    .footer-col ul { list-style: none; }
+    .footer-col ul li { margin-bottom: 10px; }
+    .footer-col ul li a {
+      font-size: .8375rem;
+      color: rgba(255,255,255,.52);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+    .footer-col ul li a:hover { color: #fff; }
+    .footer-bottom {
+      padding: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-bottom p { font-size: .8125rem; color: rgba(255,255,255,.35); }
+    .footer-bottom-links { display: flex; gap: 20px; }
+    .footer-bottom-links a {
+      font-size: .8125rem;
+      color: rgba(255,255,255,.35);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+    .footer-bottom-links a:hover { color: rgba(255,255,255,.7); }
+
+    /* =============================================
+       RESPONSIVE
+    ============================================= */
+    @media (max-width: 1024px) {
+      .programs-grid { grid-template-columns: repeat(2, 1fr); }
+      .benefits-grid { grid-template-columns: repeat(2, 1fr); }
+      .categories-grid { grid-template-columns: repeat(2, 1fr); }
+      .testimonials-grid { grid-template-columns: repeat(2, 1fr); }
+      .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .footer-brand { grid-column: 1 / -1; }
+    }
+    @media (max-width: 768px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-visual { display: none; }
+      .nav-links { display: none; }
+      .hamburger { display: block; }
+      .programs-grid,
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .benefits-grid,
+      .categories-grid { grid-template-columns: repeat(2, 1fr); }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .trust-inner { justify-content: center; }
+    }
+    @media (max-width: 480px) {
+      .benefits-grid,
+      .categories-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- =============================================
+     TOP NAVIGATION
+============================================= -->
+<header>
+  <nav class="container">
+    <a href="#" class="nav-logo">
+      <div class="logo-icon">SR</div>
+      <span class="logo-text">Student Record System</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#programs">Features</a></li>
+      <li><a href="#benefits">Benefits</a></li>
+      <li><a href="#categories">Modules</a></li>
+      <li><a href="#testimonials">Testimonials</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="student-record-system/auth/login_modern.php" class="signin">Sign In</a>
+      <a href="student-record-system/auth/login_modern.php" class="btn btn-accent">
+        <i class="fas fa-sign-in-alt"></i> Access Portal
+      </a>
+    </div>
+    <button class="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+</header>
+
+<!-- =============================================
+     HERO SECTION
+============================================= -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <!-- Left: Copy -->
+      <div class="hero-content">
+        <div class="hero-badge">
+          <i class="fas fa-shield-alt"></i>
+          Trusted academic management platform
+        </div>
+        <h1>Manage Student<br /><span>Records with Ease</span></h1>
+        <p>
+          A centralized, role-based platform for administrators, teachers, and
+          students. Track grades, manage classes, compile results, and generate
+          academic reports — all in one place.
+        </p>
+        <div class="hero-actions">
+          <a href="student-record-system/auth/login_modern.php" class="btn btn-accent">
+            <i class="fas fa-sign-in-alt"></i> Login to Portal
+          </a>
+          <a href="#programs" class="btn btn-outline-white">
+            Explore Features <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-val">Multi-Role</div>
+            <div class="hero-stat-lbl">Admin · Teacher · Student</div>
+          </div>
+          <div>
+            <div class="hero-stat-val">Secure</div>
+            <div class="hero-stat-lbl">Session &amp; CSRF Protected</div>
+          </div>
+          <div>
+            <div class="hero-stat-val">Reports</div>
+            <div class="hero-stat-lbl">Instant Academic Reports</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Dashboard Preview Visual -->
+      <div class="hero-visual">
+        <div class="hero-card-wrap">
+          <!-- Floating badge top-left -->
+          <div class="hero-float top-left">
+            <div class="hero-float-icon icon-green"><i class="fas fa-check-circle"></i></div>
+            <div>
+              <div style="font-size:.75rem;color:var(--text-muted);font-weight:500;">Result Compiled</div>
+              <div>Grade 10 — Section A</div>
+            </div>
+          </div>
+
+          <!-- Main hero visual: dashboard preview -->
+          <div class="hero-img-container">
+            <div class="hero-dash-preview">
+              <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.55);margin-bottom:10px;">
+                Dashboard Overview
+              </div>
+              <div class="hero-stat-preview">
+                <div class="hsp-card blue">
+                  <div class="hsp-num">248</div>
+                  <div class="hsp-lbl">Students</div>
+                </div>
+                <div class="hsp-card green">
+                  <div class="hsp-num">18</div>
+                  <div class="hsp-lbl">Teachers</div>
+                </div>
+                <div class="hsp-card amber">
+                  <div class="hsp-num">12</div>
+                  <div class="hsp-lbl">Subjects</div>
+                </div>
+              </div>
+              <div class="hero-action-preview">
+                <div class="hap-title">Quick Actions</div>
+                <div class="hap-btns">
+                  <span class="hap-btn p">Manage Students</span>
+                  <span class="hap-btn s">Manage Subjects</span>
+                  <span class="hap-btn i">Manage Teachers</span>
+                  <span class="hap-btn d">Review Summary</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating badge bottom-right -->
+          <div class="hero-float bottom-right">
+            <div class="hero-float-icon" style="background:rgba(28,143,122,.15);color:#1c8f7a;"><i class="fas fa-file-alt"></i></div>
+            <div>
+              <div style="font-size:.75rem;color:var(--text-muted);font-weight:500;">Report Generated</div>
+              <div>Academic Year 2024–2025</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================
+     TRUST BAR
+============================================= -->
+<div class="trust-bar">
+  <div class="container">
+    <div class="trust-inner">
+      <span class="trust-label">Used across campuses at</span>
+      <div class="trust-logos">
+        <span class="trust-logo">North Campus</span>
+        <span class="trust-logo">South Campus</span>
+        <span class="trust-logo">East Campus</span>
+        <span class="trust-logo">West Campus</span>
+        <span class="trust-logo">Main Branch</span>
+        <span class="trust-logo">Extension Sites</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================
+     FEATURED PROGRAMS — System Features
+============================================= -->
+<section class="programs" id="programs">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">System Modules</div>
+      <h2 class="section-title">Everything Your School Needs</h2>
+      <p class="section-sub">
+        A complete suite of academic management tools — built for administrators,
+        homeroom teachers, subject teachers, and students alike.
+      </p>
+    </div>
+    <div class="programs-grid">
+
+      <!-- Card 1 -->
+      <div class="program-card">
+        <div class="program-thumb">
+          <div class="program-thumb-bg bg-blue-grad">🎓</div>
+          <span class="program-badge">MODULE</span>
+        </div>
+        <div class="program-body">
+          <div class="program-tag">Student Management</div>
+          <div class="program-title">Student Directory &amp; Enrollment</div>
+          <div class="program-desc">Register, search, and manage all student records. Assign students to sections, track enrollment status, and maintain full academic profiles.</div>
+          <div class="program-meta">
+            <span><i class="fas fa-users"></i> All Roles</span>
+            <span><i class="fas fa-lock"></i> Role-Based</span>
+            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
+          </div>
+        </div>
+        <div class="program-footer">
+          <span class="program-price">Students</span>
+          <a href="student-record-system/pages/students.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="program-card">
+        <div class="program-thumb">
+          <div class="program-thumb-bg bg-green-grad">📚</div>
+          <span class="program-badge">MODULE</span>
+        </div>
+        <div class="program-body">
+          <div class="program-tag">Subjects &amp; Curriculum</div>
+          <div class="program-title">Subject &amp; Curriculum Management</div>
+          <div class="program-desc">Add and manage subjects, assign them to teachers, and organize curriculum data used across marks and academic reports.</div>
+          <div class="program-meta">
+            <span><i class="fas fa-chalkboard-teacher"></i> Teachers</span>
+            <span><i class="fas fa-lock"></i> Admin</span>
+            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
+          </div>
+        </div>
+        <div class="program-footer">
+          <span class="program-price">Subjects</span>
+          <a href="student-record-system/pages/subjects.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="program-card">
+        <div class="program-thumb">
+          <div class="program-thumb-bg bg-orange-grad">✏️</div>
+          <span class="program-badge">MODULE</span>
+        </div>
+        <div class="program-body">
+          <div class="program-tag">Marks &amp; Grading</div>
+          <div class="program-title">Marks Entry &amp; Grade Computation</div>
+          <div class="program-desc">Teachers submit marks per subject. The system computes weighted averages, passes/fails, and feeds results directly into academic reports.</div>
+          <div class="program-meta">
+            <span><i class="fas fa-pen"></i> Teachers</span>
+            <span><i class="fas fa-calculator"></i> Auto Compute</span>
+            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
+          </div>
+        </div>
+        <div class="program-footer">
+          <span class="program-price">Marks</span>
+          <a href="student-record-system/pages/marks.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="program-card">
+        <div class="program-thumb">
+          <div class="program-thumb-bg bg-purple-grad">👨‍🏫</div>
+          <span class="program-badge">MODULE</span>
+        </div>
+        <div class="program-body">
+          <div class="program-tag">Faculty Management</div>
+          <div class="program-title">Teacher Profiles &amp; Assignments</div>
+          <div class="program-desc">Manage teacher accounts, assign homeroom or subject roles, and track which classes and subjects each faculty member handles.</div>
+          <div class="program-meta">
+            <span><i class="fas fa-user-tie"></i> Admin</span>
+            <span><i class="fas fa-lock"></i> Restricted</span>
+            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
+          </div>
+        </div>
+        <div class="program-footer">
+          <span class="program-price">Teachers</span>
+          <a href="student-record-system/pages/teachers.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="program-card">
+        <div class="program-thumb">
+          <div class="program-thumb-bg bg-teal-grad">📊</div>
+          <span class="program-badge">MODULE</span>
+        </div>
+        <div class="program-body">
+          <div class="program-tag">Results &amp; Summary</div>
+          <div class="program-title">Class Summary &amp; Ranking</div>
+          <div class="program-desc">Compile academic results for an entire class. View ranked performance, pass/fail breakdown, and generate printable summary sheets.</div>
+          <div class="program-meta">
+            <span><i class="fas fa-list-ol"></i> Rankings</span>
+            <span><i class="fas fa-print"></i> Printable</span>
+            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
+          </div>
+        </div>
+        <div class="program-footer">
+          <span class="program-price">Summary</span>
+          <a href="student-record-system/pages/summary.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="program-card">
+        <div class="program-thumb">
+          <div class="program-thumb-bg bg-indigo-grad">📄</div>
+          <span class="program-badge">MODULE</span>
+        </div>
+        <div class="program-body">
+          <div class="program-tag">Academic Reports</div>
+          <div class="program-title">Report Cards &amp; Academic Reports</div>
+          <div class="program-desc">Generate individual report cards per student. Students can view their own results; teachers and admins can download or print official reports.</div>
+          <div class="program-meta">
+            <span><i class="fas fa-file-pdf"></i> Exportable</span>
+            <span><i class="fas fa-eye"></i> Student View</span>
+            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
+          </div>
+        </div>
+        <div class="program-footer">
+          <span class="program-price">Reports</span>
+          <a href="student-record-system/pages/report.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="text-align:center;margin-top:44px;">
+      <a href="student-record-system/auth/login_modern.php" class="btn btn-secondary">
+        Login to Access All Modules <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================
+     BENEFITS
+============================================= -->
+<section class="benefits" id="benefits">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Why Use This System</div>
+      <h2 class="section-title">Built for Schools, Designed for People</h2>
+      <p class="section-sub">
+        From data entry to final report generation, every feature is crafted
+        with teachers, students, and administrators in mind.
+      </p>
+    </div>
+    <div class="benefits-grid">
+      <div class="benefit-item">
+        <div class="benefit-icon icon-blue">
+          <i class="fas fa-user-shield"></i>
+        </div>
+        <div class="benefit-title">Role-Based Access</div>
+        <div class="benefit-text">
+          Admins, homeroom teachers, subject teachers, and students each see only
+          what they are authorized to access.
+        </div>
+      </div>
+      <div class="benefit-item">
+        <div class="benefit-icon icon-green">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="benefit-title">Real-Time Results</div>
+        <div class="benefit-text">
+          Marks are computed instantly. Rankings, averages, and pass/fail statuses
+          update as soon as data is entered.
+        </div>
+      </div>
+      <div class="benefit-item">
+        <div class="benefit-icon icon-purple">
+          <i class="fas fa-network-wired"></i>
+        </div>
+        <div class="benefit-title">Multi-Campus Ready</div>
+        <div class="benefit-text">
+          Distributed coordinator support lets multiple campus branches run
+          independently while sharing a unified overview.
+        </div>
+      </div>
+      <div class="benefit-item">
+        <div class="benefit-icon icon-orange">
+          <i class="fas fa-language"></i>
+        </div>
+        <div class="benefit-title">Localization Support</div>
+        <div class="benefit-text">
+          Full multi-language interface with RTL support. Adapt the system to
+          any language and regional academic conventions.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================
+     CATEGORIES — System Modules
+============================================= -->
+<section class="categories" id="categories">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Quick Access</div>
+      <h2 class="section-title">Navigate by Module</h2>
+      <p class="section-sub">
+        Jump directly to the section you need — whether you're entering marks,
+        reviewing a roster, or generating academic reports.
+      </p>
+    </div>
+    <div class="categories-grid">
+      <div class="cat-card" onclick="location.href='student-record-system/pages/students.php'">
+        <div class="cat-icon icon-blue"><i class="fas fa-users"></i></div>
+        <div>
+          <div class="cat-title">Students</div>
+          <div class="cat-count">Enrollment &amp; profiles</div>
+        </div>
+        <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="cat-card" onclick="location.href='student-record-system/pages/teachers.php'">
+        <div class="cat-icon icon-green"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div>
+          <div class="cat-title">Teachers</div>
+          <div class="cat-count">Faculty &amp; assignments</div>
+        </div>
+        <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="cat-card" onclick="location.href='student-record-system/pages/subjects.php'">
+        <div class="cat-icon icon-purple"><i class="fas fa-book"></i></div>
+        <div>
+          <div class="cat-title">Subjects</div>
+          <div class="cat-count">Curriculum &amp; courses</div>
+        </div>
+        <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="cat-card" onclick="location.href='student-record-system/pages/marks.php'">
+        <div class="cat-icon icon-orange"><i class="fas fa-pencil-alt"></i></div>
+        <div>
+          <div class="cat-title">Marks Entry</div>
+          <div class="cat-count">Grades &amp; scores</div>
+        </div>
+        <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="cat-card" onclick="location.href='student-record-system/pages/summary.php'">
+        <div class="cat-icon" style="background:rgba(28,143,122,.14);color:#1c8f7a;"><i class="fas fa-list-ol"></i></div>
+        <div>
+          <div class="cat-title">Class Summary</div>
+          <div class="cat-count">Rankings &amp; results</div>
+        </div>
+        <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="cat-card" onclick="location.href='student-record-system/pages/report.php'">
+        <div class="cat-icon" style="background:#fef3c7;color:#a85c18;"><i class="fas fa-file-alt"></i></div>
+        <div>
+          <div class="cat-title">Reports</div>
+          <div class="cat-count">Report cards &amp; exports</div>
+        </div>
+        <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="cat-card" onclick="location.href='student-record-system/pages/profile.php'">
+        <div class="cat-icon" style="background:#e8f2fb;color:#1f5f95;"><i class="fas fa-user-circle"></i></div>
+        <div>
+          <div class="cat-title">My Profile</div>
+          <div class="cat-count">Student self-service</div>
+        </div>
+        <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="cat-card" onclick="location.href='student-record-system/auth/login_modern.php'">
+        <div class="cat-icon" style="background:rgba(15,45,73,.1);color:#0f2d49;"><i class="fas fa-sign-in-alt"></i></div>
+        <div>
+          <div class="cat-title">Portal Login</div>
+          <div class="cat-count">Secure authentication</div>
+        </div>
+        <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================
+     TESTIMONIALS
+============================================= -->
+<section class="testimonials" id="testimonials">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">User Feedback</div>
+      <h2 class="section-title">What Our Users Say</h2>
+      <p class="section-sub">
+        Hear from administrators, teachers, and students who use the
+        system every day to manage academic records.
+      </p>
+    </div>
+    <div class="testimonials-grid">
+
+      <!-- Featured card -->
+      <div class="testimonial-card featured">
+        <div class="testimonial-stars">
+          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+          <i class="fas fa-star"></i>
+        </div>
+        <p class="testimonial-text">
+          This system transformed how we manage our school. Report generation
+          used to take us days — now it takes minutes. The role-based access
+          keeps everything secure and organized.
+        </p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:linear-gradient(145deg,#1d4f86,#2a74bd);">MT</div>
+          <div>
+            <div class="author-name">Mr. Marcos Tuazon</div>
+            <div class="author-role">School Administrator</div>
+          </div>
+          <div class="author-company">Main Campus</div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="testimonial-card">
+        <div class="testimonial-stars">
+          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+          <i class="fas fa-star"></i>
+        </div>
+        <p class="testimonial-text">
+          As a homeroom teacher, I can compile results for my entire class in
+          one click. The summary view and ranking system saves so much time
+          at the end of every quarter.
+        </p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:linear-gradient(145deg,#14725d,#1eaa88);">SL</div>
+          <div>
+            <div class="author-name">Ms. Sofia Lim</div>
+            <div class="author-role">Homeroom Teacher — Grade 9</div>
+          </div>
+          <div class="author-company">North Campus</div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="testimonial-card">
+        <div class="testimonial-stars">
+          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+          <i class="fas fa-star"></i><i class="fas fa-star"></i>
+          <i class="far fa-star"></i>
+        </div>
+        <p class="testimonial-text">
+          I can check my grades and download my report card any time. I no
+          longer have to wait until report card day — everything is online
+          and always up to date.
+        </p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:linear-gradient(145deg,#a85c18,#d58d2f);">JA</div>
+          <div>
+            <div class="author-name">James Adewale</div>
+            <div class="author-role">Student — Grade 11</div>
+          </div>
+          <div class="author-company">East Campus</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- =============================================
+     CTA BANNER
+============================================= -->
+<section class="cta-banner">
+  <div class="container">
+    <div class="cta-inner">
+      <h2>Ready to Access Your Academic Portal?</h2>
+      <p>
+        Log in with your administrator, teacher, or student credentials to
+        manage records, enter marks, and generate reports.
+      </p>
+      <div class="cta-actions">
+        <a href="student-record-system/auth/login_modern.php" class="btn btn-white">
+          <i class="fas fa-sign-in-alt"></i> Login Now
+        </a>
+        <a href="#programs" class="btn btn-outline-white">
+          View All Modules
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================
+     FOOTER
+============================================= -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <!-- Brand -->
+      <div class="footer-brand">
+        <a href="#" class="nav-logo">
+          <div class="logo-icon" style="background:linear-gradient(130deg,#c9e4ff,#f3fbff);color:#0f2d49;">SR</div>
+          <span class="logo-text">Student Record System</span>
+        </a>
+        <p>
+          A secure, multi-role academic management platform designed to
+          streamline student records, grading, and reporting for schools of all sizes.
+        </p>
+        <div class="footer-socials">
+          <a href="#" class="social-btn"><i class="fab fa-twitter"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-linkedin-in"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-youtube"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-github"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-facebook-f"></i></a>
+        </div>
+      </div>
+
+      <!-- Modules -->
+      <div class="footer-col">
+        <h4>Modules</h4>
+        <ul>
+          <li><a href="student-record-system/pages/students.php">Students</a></li>
+          <li><a href="student-record-system/pages/teachers.php">Teachers</a></li>
+          <li><a href="student-record-system/pages/subjects.php">Subjects</a></li>
+          <li><a href="student-record-system/pages/marks.php">Marks Entry</a></li>
+          <li><a href="student-record-system/pages/summary.php">Class Summary</a></li>
+        </ul>
+      </div>
+
+      <!-- Reports -->
+      <div class="footer-col">
+        <h4>Reports</h4>
+        <ul>
+          <li><a href="student-record-system/pages/report.php">Report Cards</a></li>
+          <li><a href="student-record-system/pages/summary.php">Academic Summary</a></li>
+          <li><a href="student-record-system/pages/profile.php">My Profile</a></li>
+          <li><a href="student-record-system/pages/branch_details.php">Branch Details</a></li>
+        </ul>
+      </div>
+
+      <!-- System -->
+      <div class="footer-col">
+        <h4>System</h4>
+        <ul>
+          <li><a href="student-record-system/index.php">Dashboard</a></li>
+          <li><a href="student-record-system/auth/login_modern.php">Login</a></li>
+          <li><a href="student-record-system/auth/logout.php">Logout</a></li>
+          <li><a href="student-record-system/maintenance.php">Maintenance</a></li>
+        </ul>
+      </div>
+
+      <!-- Support -->
+      <div class="footer-col">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">System Status</a></li>
+          <li><a href="#">Accessibility</a></li>
+          <li><a href="#">admin@school.edu</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 Student Record System. All rights reserved.</p>
+      <div class="footer-bottom-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Cookie Settings</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Minimal JS for mobile menu toggle -->
+<script>
+  const hamburger = document.querySelector('.hamburger');
+  const navLinks  = document.querySelector('.nav-links');
+  hamburger.addEventListener('click', () => {
+    const open = navLinks.style.display === 'flex';
+    navLinks.style.cssText = open
+      ? ''
+      : 'display:flex;flex-direction:column;position:absolute;top:68px;left:0;right:0;background:#123b63;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.1);box-shadow:0 8px 24px rgba(8,24,38,.32);gap:2px;z-index:999;';
+  });
+</script>
+
+</body>
+</html>

@@ -66,8 +66,21 @@ if (isset($_GET['delete'])) {
     }
 
     $subject_id = (int)$_GET['delete'];
-    $conn->query("DELETE FROM subjects WHERE subject_id=$subject_id");
-    header('Location: subjects.php?success=' . urlencode('Subject deleted successfully'));
+
+    $conn->begin_transaction();
+
+    // Remove marks and teacher assignments for this subject before deleting it
+    $conn->query("DELETE FROM marks WHERE subject_id = $subject_id");
+    $conn->query("DELETE FROM teacher_subjects WHERE subject_id = $subject_id");
+
+    if (!$conn->query("DELETE FROM subjects WHERE subject_id = $subject_id")) {
+        $conn->rollback();
+        header('Location: subjects.php?error=' . urlencode('Failed to delete subject. Please try again.'));
+        exit();
+    }
+
+    $conn->commit();
+    header('Location: subjects.php?success=' . urlencode('Subject and related marks deleted successfully'));
     exit();
 }
 

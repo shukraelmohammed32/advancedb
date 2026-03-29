@@ -2,6 +2,7 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
+require_once '../includes/account_security.php';
 
 requireLogin();
 if (!canViewStudentDirectory()) {
@@ -21,6 +22,12 @@ $show_site_details = $can_access_distributed && $distributed_ready;
 $site_options = $show_site_details ? $coordinator->getSites() : [];
 $default_site_id = $coordinator->getDefaultSiteId();
 $allowed_grade_names = ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+$student_profile_table_exists = false;
+
+$student_profile_table_check = $conn->query("SHOW TABLES LIKE 'student_profiles'");
+if ($student_profile_table_check && $student_profile_table_check->num_rows > 0) {
+    $student_profile_table_exists = true;
+}
 
 function normalizeGradeLabel($grade) {
     $grade = trim((string)$grade);
@@ -57,6 +64,15 @@ function splitPersonName($full_name) {
         'first_name' => $first_name,
         'last_name' => $last_name,
     ];
+}
+
+function sanitizeStudentRecoveryText($value, $max_length) {
+    $value = trim((string)$value);
+    if (strlen($value) > $max_length) {
+        $value = substr($value, 0, $max_length);
+    }
+
+    return $value;
 }
 
 function gradesMatch($left_grade, $right_grade) {
@@ -302,6 +318,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $academic_year = trim((string)($_POST['academic_year'] ?? ''));
     $semester = trim((string)($_POST['semester'] ?? ''));
     $selected_site_id = $distributed_ready ? $coordinator->normalizeSiteId((int)($_POST['site_id'] ?? $default_site_id)) : $default_site_id;
+    $recovery_date_of_birth = trim((string)($_POST['recovery_date_of_birth'] ?? ''));
+    $recovery_guardian_name = sanitizeStudentRecoveryText($_POST['recovery_guardian_name'] ?? '', 100);
+    $recovery_guardian_phone = sanitizeStudentRecoveryText($_POST['recovery_guardian_phone'] ?? '', 30);
     $login_password = (string)($_POST['login_password'] ?? '');
     $login_password_confirm = (string)($_POST['login_password_confirm'] ?? '');
 
@@ -348,6 +367,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($login_password !== '' && $login_password !== $login_password_confirm) {
         header('Location: students.php?error=' . urlencode('Student login password and confirm password do not match'));
+        exit();
+    }
+
+    if (!$student_profile_table_exists && ($recovery_date_of_birth !== '' || $recovery_guardian_name !== '' || $recovery_guardian_phone !== '')) {
+        header('Location: students.php?error=' . urlencode('Student recovery details require the student_profiles table from database_fixed.sql'));
+        exit();
+    }
+
+    if (!accountSecurityValidPastDate($recovery_date_of_birth)) {
+        header('Location: students.php?error=' . urlencode('Recovery date of birth must be a valid past date'));
+        exit();
+    }
+
+    $recovery_phone_digits = accountSecurityNormalizePhone($recovery_guardian_phone);
+    if (($recovery_date_of_birth === '') xor ($recovery_phone_digits === '')) {
+        header('Location: students.php?error=' . urlencode('Provide both date of birth and guardian phone to enable forgot password verification, or leave both blank'));
         exit();
     }
 
@@ -414,6 +449,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 
+    if ($student_profile_table_exists) {
+        $recovery_date_of_birth_value = $recovery_date_of_birth !== '' ? $recovery_date_of_birth : null;
+        $recovery_guardian_name_value = $recovery_guardian_name !== '' ? $recovery_guardian_name : null;
+        $recovery_guardian_phone_value = $recovery_guardian_phone !== '' ? $recovery_guardian_phone : null;
+
+        $recovery_stmt = $conn->prepare(
+            'INSERT INTO student_profiles (student_id, date_of_birth, guardian_name, guardian_phone)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+                date_of_birth = VALUES(date_of_birth),
+                guardian_name = VALUES(guardian_name),
+                guardian_phone = VALUES(guardian_phone)'
+        );
+
+        if (!$recovery_stmt) {
+            $conn->rollback();
+            header('Location: students.php?error=' . urlencode('Student saved but recovery verification details could not be stored'));
+            exit();
+        }
+
+        $recovery_stmt->bind_param(
+            'isss',
+            $student_id,
+            $recovery_date_of_birth_value,
+            $recovery_guardian_name_value,
+            $recovery_guardian_phone_value
+        );
+
+        if (!$recovery_stmt->execute()) {
+            $recovery_stmt->close();
+            $conn->rollback();
+            header('Location: students.php?error=' . urlencode('Student saved but recovery verification details could not be stored'));
+            exit();
+        }
+
+        $recovery_stmt->close();
+    }
+
     $conn->commit();
     $sync_ok = $coordinator->syncStudent($student_id);
     $site_label = $coordinator->getSiteName($selected_site_id);
@@ -465,6 +538,10 @@ $student_site_select = $show_site_details
     ? "s.site_id, COALESCE(ds.site_name, 'Unassigned Site') AS site_name, COALESCE(ds.site_code, 'N/A') AS site_code,"
     : "$default_site_id AS site_id, 'Central Coordinator' AS site_name, 'CENTRAL' AS site_code,";
 $student_site_join = $distributed_ready ? 'LEFT JOIN distributed_sites ds ON ds.site_id = s.site_id' : '';
+$student_profile_select = $student_profile_table_exists
+    ? "sp.date_of_birth, sp.guardian_name, sp.guardian_phone,"
+    : "NULL AS date_of_birth, NULL AS guardian_name, NULL AS guardian_phone,";
+$student_profile_join = $student_profile_table_exists ? 'LEFT JOIN student_profiles sp ON sp.student_id = s.student_id' : '';
 
 // Get student data for editing
 $edit_student = null;
@@ -473,10 +550,12 @@ if ($is_admin && isset($_GET['edit'])) {
     $result = $conn->query("SELECT
                                 s.*,
                                 $student_site_select
+                                $student_profile_select
                                 (SELECT u.user_id FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_user_id,
                                 (SELECT u.username FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_username,
                                 (SELECT u.email FROM users u WHERE u.student_id = s.student_id AND u.role = 'student' ORDER BY u.user_id ASC LIMIT 1) AS login_email
                             FROM students s
+                            $student_profile_join
                             $student_site_join
                             WHERE s.student_id = $student_id
                             LIMIT 1");
@@ -699,6 +778,38 @@ $csrf_token = urlencode(getCsrfToken());
                                     <option value="Second" <?php echo $edit_student && $edit_student['semester'] === 'Second' ? 'selected' : ''; ?>>Second</option>
                                 </select>
                             </div>
+
+                            <hr>
+                            <h6 class="mb-3">Recovery Verification</h6>
+
+                            <?php if ($student_profile_table_exists): ?>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="recovery_date_of_birth" class="form-label">Date of Birth</label>
+                                        <input type="date" class="form-control" id="recovery_date_of_birth" name="recovery_date_of_birth"
+                                               value="<?php echo $edit_student ? htmlspecialchars((string)($edit_student['date_of_birth'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
+                                               max="<?php echo date('Y-m-d'); ?>">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="recovery_guardian_phone" class="form-label">Guardian Phone</label>
+                                        <input type="text" class="form-control" id="recovery_guardian_phone" name="recovery_guardian_phone"
+                                               value="<?php echo $edit_student ? htmlspecialchars((string)($edit_student['guardian_phone'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
+                                               maxlength="30" placeholder="Used for forgot password verification">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="recovery_guardian_name" class="form-label">Guardian Name</label>
+                                    <input type="text" class="form-control" id="recovery_guardian_name" name="recovery_guardian_name"
+                                           value="<?php echo $edit_student ? htmlspecialchars((string)($edit_student['guardian_name'] ?? ''), ENT_QUOTES, 'UTF-8') : ''; ?>"
+                                           maxlength="100">
+                                    <div class="form-text">Date of birth and guardian phone are used to verify student forgot password requests before sign in.</div>
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-warning py-2" role="alert">
+                                    Student recovery verification is unavailable until the student_profiles table is installed.
+                                </div>
+                            <?php endif; ?>
 
                             <hr>
                             <h6 class="mb-3">Student Login Security</h6>

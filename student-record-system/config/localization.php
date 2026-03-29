@@ -145,10 +145,6 @@ if (!function_exists('translationCatalog')) {
                 'om' => 'Mirgi hundi kan eegame dha.',
                 'am' => 'መብቱ ሁሉ የተጠበቀ ነው።',
             ],
-            'Dashboard' => [
-                'om' => 'Daashboordii',
-                'am' => 'ዳሽቦርድ',
-            ],
             'Total Students' => [
                 'om' => 'Walumaagalatti Barattoota',
                 'am' => 'ጠቅላላ ተማሪዎች',

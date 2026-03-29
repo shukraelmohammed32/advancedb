@@ -2,6 +2,7 @@
 require_once '../config/database.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
+require_once '../includes/account_security.php';
 
 requireRole('student');
 
@@ -76,6 +77,33 @@ function deleteProfilePhotoFile($relative_path) {
     }
 
     @unlink($file_real_path);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
+    requireValidCsrfToken();
+
+    $current_password = (string)($_POST['current_password'] ?? '');
+    $new_password = (string)($_POST['new_password'] ?? '');
+    $new_password_confirm = (string)($_POST['new_password_confirm'] ?? '');
+    $min_password_length = accountSecurityMinPasswordLength();
+
+    if ($user_id <= 0) {
+        $error_message = 'Your login account could not be verified. Please sign in again.';
+    } elseif (trim($current_password) === '') {
+        $error_message = 'Enter your current password first.';
+    } elseif (strlen($new_password) < $min_password_length) {
+        $error_message = 'Your new password must be at least ' . $min_password_length . ' characters.';
+    } elseif ($new_password !== $new_password_confirm) {
+        $error_message = 'New password and confirm password do not match.';
+    } elseif ($current_password === $new_password) {
+        $error_message = 'Choose a new password that is different from your current password.';
+    } elseif (!accountSecurityVerifyCurrentPassword($conn, $user_id, $current_password)) {
+        $error_message = 'Your current password is incorrect.';
+    } elseif (!accountSecurityUpdateUserPassword($conn, $user_id, $new_password)) {
+        $error_message = 'Unable to update your password right now. Please try again.';
+    } else {
+        $success_message = 'Password changed successfully. Use your new password the next time you sign in.';
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
@@ -491,6 +519,7 @@ if (!$profile_table_exists && $error_message === '') {
                                     <div class="col-md-6 mb-3">
                                         <label for="guardian_phone" class="form-label">Guardian Phone</label>
                                         <input type="text" class="form-control" id="guardian_phone" name="guardian_phone" maxlength="30" value="<?php echo htmlspecialchars((string)($profile['guardian_phone'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+                                        <div class="form-text">This number is used to verify student forgot password requests.</div>
                                     </div>
                                 </div>
 
@@ -500,6 +529,38 @@ if (!$profile_table_exists && $error_message === '') {
                                 </div>
 
                                 <button type="submit" class="btn btn-primary" name="save_profile">Save Profile</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="card-header">Change Password</div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">Use your current password to set a new one. Minimum <?php echo accountSecurityMinPasswordLength(); ?> characters.</p>
+                            <form method="POST">
+                                <?php csrfInput(); ?>
+
+                                <div class="mb-3">
+                                    <label for="current_password" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="current_password" name="current_password" autocomplete="current-password" required>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="new_password" class="form-label">New Password</label>
+                                        <input type="password" class="form-control" id="new_password" name="new_password" autocomplete="new-password" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="new_password_confirm" class="form-label">Confirm New Password</label>
+                                        <input type="password" class="form-control" id="new_password_confirm" name="new_password_confirm" autocomplete="new-password" required>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info py-2" role="alert">
+                                    Forgot password verification uses the date of birth and guardian phone saved in this profile. Keep them up to date if you want self-service recovery before sign in.
+                                </div>
+
+                                <button type="submit" class="btn btn-outline-primary" name="change_password">Update Password</button>
                             </form>
                         </div>
                     </div>

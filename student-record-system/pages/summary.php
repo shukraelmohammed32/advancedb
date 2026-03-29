@@ -114,6 +114,13 @@ $summary_intro = isHomeroomTeacher()
         ? 'This page gives Super Admin a single place to review school-wide completion, subject trends, and branch-level summary health before moving into reports or branch details.'
         : 'This page gives administrators a single place to review completion, averages, pass rate, and subject trends before opening reports.');
 
+// Homeroom teachers must only see students in their assigned grade
+$summaryGradeFilter = '';
+if (isHomeroomTeacher() && !empty($_SESSION['assigned_grade'])) {
+    $summaryGrade = $conn->real_escape_string((string)$_SESSION['assigned_grade']);
+    $summaryGradeFilter = "WHERE s.grade = '$summaryGrade'";
+}
+
 $studentSummaryResult = $conn->query("
     SELECT
         s.student_id,
@@ -125,6 +132,7 @@ $studentSummaryResult = $conn->query("
         COALESCE(ROUND(AVG(m.score), 1), 0) AS average_score
     FROM students s
     LEFT JOIN marks m ON s.student_id = m.student_id
+    {$summaryGradeFilter}
     GROUP BY s.student_id, s.name, s.grade
 ");
 

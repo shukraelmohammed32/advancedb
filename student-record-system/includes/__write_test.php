@@ -1,4 +1,2 @@
 <?php
-
-a=1;
-?>
+// Write-access test placeholder — intentionally empty.
