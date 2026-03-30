@@ -3,6 +3,7 @@ require_once '../config/session.php';
 startAppSession();
 require_once '../config/localization.php';
 require_once '../config/database.php';
+require_once '../config/landing_redirect.php';
 
 if ((getenv('APP_ENV') ?: 'local') !== 'production') {
     ini_set('display_errors', '1');
@@ -214,6 +215,19 @@ $siteCode = getenv('SITE_CODE') ?: ($isBranchPortal ? 'BRANCH' : 'MAIN');
 $loginPortal = defaultLoginPortal($isBranchPortal);
 $roleProfiles = loginRoleProfiles($isBranchPortal, $siteName);
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $landingQuery = [];
+
+    foreach (['timeout', 'logged_out', 'auth_required'] as $key) {
+        $value = $_GET[$key] ?? '';
+        if ($value !== '') {
+            $landingQuery[$key] = (string)$value;
+        }
+    }
+
+    redirectToPublicLanding($landingQuery);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $db = new Database();
     $conn = $db->getConnection();
@@ -304,6 +318,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
         }
     }
+}
+
+if ($error !== '') {
+    $landingQuery = ['login_error' => $error];
+
+    if ($loginIdentity !== '') {
+        $landingQuery['login_identity'] = $loginIdentity;
+    }
+
+    if ($loginPortal !== '') {
+        $landingQuery['login_role'] = $loginPortal;
+    }
+
+    redirectToPublicLanding($landingQuery);
 }
 
 $currentRoleProfile = $roleProfiles[$loginPortal] ?? $roleProfiles[defaultLoginPortal($isBranchPortal)];

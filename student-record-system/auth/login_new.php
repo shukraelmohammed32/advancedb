@@ -1,7 +1,15 @@
 <?php
-require_once '../config/session.php';
-startAppSession();
-require_once '../config/database.php';
+require_once '../config/landing_redirect.php';
+
+$legacyLoginQuery = [];
+foreach (['timeout', 'logged_out', 'auth_required', 'login_error', 'login_identity', 'login_role'] as $key) {
+    $value = $_GET[$key] ?? '';
+    if ($value !== '') {
+        $legacyLoginQuery[$key] = (string)$value;
+    }
+}
+
+redirectToPublicLanding($legacyLoginQuery);
 
 $error = '';
 $login_input = '';

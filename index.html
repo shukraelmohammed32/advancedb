@@ -1005,6 +1005,11 @@
       border: 1px solid rgba(31,95,149,.25);
       color: #1f5f95;
     }
+    .login-status.is-error {
+      background: rgba(193,57,57,.1);
+      border: 1px solid rgba(193,57,57,.25);
+      color: #a03232;
+    }
 
     /* =============================================
        RESPONSIVE
@@ -1680,6 +1685,8 @@
   const hamburger = document.querySelector('.hamburger');
   const navLinks  = document.querySelector('.nav-links');
   const loginStatus = document.getElementById('loginStatus');
+  const loginIdentityField = document.getElementById('lf-email');
+  const loginRoleField = document.getElementById('lf-role');
   hamburger.addEventListener('click', () => {
     const open = navLinks.style.display === 'flex';
     navLinks.style.cssText = open
@@ -1707,11 +1714,44 @@
 
   if (loginStatus) {
     const params = new URLSearchParams(window.location.search);
+    const loginError = params.get('login_error');
+    const loginIdentity = params.get('login_identity');
+    const loginRole = params.get('login_role');
     let message = '';
     let icon = 'fa-circle-info';
     let variant = 'is-info';
 
-    if (params.get('logged_out') === '1') {
+    const renderLoginStatus = (statusMessage, statusIcon, statusVariant) => {
+      loginStatus.hidden = false;
+      loginStatus.className = `login-status ${statusVariant}`;
+      loginStatus.replaceChildren();
+
+      const iconNode = document.createElement('i');
+      iconNode.className = `fas ${statusIcon}`;
+      iconNode.setAttribute('aria-hidden', 'true');
+
+      const messageNode = document.createElement('div');
+      messageNode.textContent = statusMessage;
+
+      loginStatus.append(iconNode, messageNode);
+    };
+
+    if (loginIdentity && loginIdentityField) {
+      loginIdentityField.value = loginIdentity;
+    }
+
+    if (loginRole && loginRoleField) {
+      const hasMatchingRole = Array.from(loginRoleField.options).some(option => option.value === loginRole);
+      if (hasMatchingRole) {
+        loginRoleField.value = loginRole;
+      }
+    }
+
+    if (loginError) {
+      message = loginError;
+      icon = 'fa-triangle-exclamation';
+      variant = 'is-error';
+    } else if (params.get('logged_out') === '1') {
       message = 'You have been signed out successfully. Sign in again any time below.';
       icon = 'fa-circle-check';
       variant = 'is-success';
@@ -1726,9 +1766,7 @@
     }
 
     if (message !== '') {
-      loginStatus.hidden = false;
-      loginStatus.classList.add(variant);
-      loginStatus.innerHTML = `<i class="fas ${icon}" aria-hidden="true"></i><div>${message}</div>`;
+      renderLoginStatus(message, icon, variant);
     }
   }
 </script>
