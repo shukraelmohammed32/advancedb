@@ -979,6 +979,32 @@
       align-items: center;
       gap: 8px;
     }
+    .login-status {
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: .84rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .login-status[hidden] { display: none; }
+    .login-status i { margin-top: 2px; }
+    .login-status.is-success {
+      background: rgba(21,138,85,.1);
+      border: 1px solid rgba(21,138,85,.25);
+      color: #127548;
+    }
+    .login-status.is-warning {
+      background: rgba(168,92,24,.1);
+      border: 1px solid rgba(168,92,24,.25);
+      color: #98621a;
+    }
+    .login-status.is-info {
+      background: rgba(31,95,149,.1);
+      border: 1px solid rgba(31,95,149,.25);
+      color: #1f5f95;
+    }
 
     /* =============================================
        RESPONSIVE
@@ -1090,6 +1116,8 @@
             <div class="login-card-title">Sign In to Your Portal</div>
             <div class="login-card-sub">Enter your credentials to access the system</div>
           </div>
+
+          <div id="loginStatus" class="login-status" hidden></div>
 
           <form method="POST" action="student-record-system/auth/login.php">
             <div class="login-field">
@@ -1310,7 +1338,7 @@
     </div>
 
     <div style="text-align:center;margin-top:44px;">
-      <a href="student-record-system/auth/login_modern.php" class="btn btn-secondary">
+      <a href="#hero-login" class="btn btn-secondary">
         Login to Access All Modules <i class="fas fa-arrow-right"></i>
       </a>
     </div>
@@ -1445,7 +1473,7 @@
         </div>
         <div class="cat-arrow"><i class="fas fa-arrow-right"></i></div>
       </div>
-      <div class="cat-card" onclick="location.href='student-record-system/auth/login_modern.php'">
+      <div class="cat-card" onclick="location.href='#hero-login'">
         <div class="cat-icon" style="background:rgba(15,45,73,.1);color:#0f2d49;"><i class="fas fa-sign-in-alt"></i></div>
         <div>
           <div class="cat-title">Portal Login</div>
@@ -1618,7 +1646,7 @@
         <h4>System</h4>
         <ul>
           <li><a href="student-record-system/index.php">Dashboard</a></li>
-          <li><a href="student-record-system/auth/login_modern.php">Login</a></li>
+          <li><a href="#hero-login">Login</a></li>
           <li><a href="student-record-system/auth/logout.php">Logout</a></li>
           <li><a href="student-record-system/maintenance.php">Maintenance</a></li>
         </ul>
@@ -1651,6 +1679,7 @@
   // Mobile menu toggle
   const hamburger = document.querySelector('.hamburger');
   const navLinks  = document.querySelector('.nav-links');
+  const loginStatus = document.getElementById('loginStatus');
   hamburger.addEventListener('click', () => {
     const open = navLinks.style.display === 'flex';
     navLinks.style.cssText = open
@@ -1675,6 +1704,33 @@
       }
     });
   });
+
+  if (loginStatus) {
+    const params = new URLSearchParams(window.location.search);
+    let message = '';
+    let icon = 'fa-circle-info';
+    let variant = 'is-info';
+
+    if (params.get('logged_out') === '1') {
+      message = 'You have been signed out successfully. Sign in again any time below.';
+      icon = 'fa-circle-check';
+      variant = 'is-success';
+    } else if (params.get('timeout') === '1') {
+      message = 'Your session expired for security reasons. Please sign in again to continue.';
+      icon = 'fa-clock';
+      variant = 'is-warning';
+    } else if (params.get('auth_required') === '1') {
+      message = 'Please sign in to continue to the page you requested.';
+      icon = 'fa-lock';
+      variant = 'is-info';
+    }
+
+    if (message !== '') {
+      loginStatus.hidden = false;
+      loginStatus.classList.add(variant);
+      loginStatus.innerHTML = `<i class="fas ${icon}" aria-hidden="true"></i><div>${message}</div>`;
+    }
+  }
 </script>
 
 </body>

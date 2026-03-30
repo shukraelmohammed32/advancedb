@@ -23,13 +23,13 @@ date_default_timezone_set('UTC');
 require_once __DIR__ . '/session.php';
 startAppSession();
 require_once __DIR__ . '/localization.php';
+require_once __DIR__ . '/landing_redirect.php';
 
 // Set session lifetime
 if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > AppConfig::getSessionLifetime() * 60)) {
     session_unset();
     session_destroy();
-    header('Location: auth/login.php?timeout=1');
-    exit;
+    redirectToPublicLanding(['timeout' => 1]);
 }
 $_SESSION['last_activity'] = time();
 

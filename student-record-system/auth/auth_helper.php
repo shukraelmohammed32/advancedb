@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/session.php';
 startAppSession();
 require_once __DIR__ . '/../config/localization.php';
+require_once __DIR__ . '/../config/landing_redirect.php';
 
 function isLoggedIn() {
     return isset($_SESSION['user_id']);
@@ -9,12 +10,7 @@ function isLoggedIn() {
 
 function requireLogin() {
     if (!isLoggedIn()) {
-        $script_name = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
-        $login_path = (strpos($script_name, '/pages/') !== false || strpos($script_name, '/actions/') !== false || strpos($script_name, '/auth/') !== false)
-            ? '../auth/login.php'
-            : 'auth/login.php';
-        header('Location: ' . $login_path);
-        exit();
+        redirectToPublicLanding(['auth_required' => 1]);
     }
 }
 

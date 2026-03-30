@@ -1,6 +1,7 @@
 <?php
 require_once '../config/session.php';
 startAppSession();
+require_once '../config/landing_redirect.php';
 
 $_SESSION = [];
 
@@ -10,6 +11,5 @@ if (ini_get('session.use_cookies')) {
 }
 
 session_destroy();
-header('Location: login.php');
-exit();
+redirectToPublicLanding(['logged_out' => 1]);
 ?>
