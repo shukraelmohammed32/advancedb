@@ -1,5 +1,7 @@
 <?php
 require_once '../config/database.php';
+require_once '../config/app_config.php';
+require_once '../services/ReportService.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
 
@@ -185,82 +187,7 @@ if ($should_generate_report) {
         $selected_student = $student_result ? $student_result->fetch_assoc() : null;
 
         if ($selected_student) {
-            $marks_query = "SELECT
-                            s.subject_name,
-                            m.score,
-                            COALESCE(t.teacher_name, '') AS teacher_name,
-                            CASE
-                                WHEN m.score >= 50 THEN 'PASS'
-                                ELSE 'FAIL'
-                            END as status
-                        FROM subjects s
-                        LEFT JOIN marks m ON s.subject_id = m.subject_id AND m.student_id = $student_id
-                        LEFT JOIN teachers t ON t.teacher_id = m.teacher_id
-                        ORDER BY s.subject_name";
-
-            $marks_result = $conn->query($marks_query);
-            $marks = [];
-            $total_score = 0;
-            $subject_count = 0;
-
-            if ($marks_result) {
-                while ($mark = $marks_result->fetch_assoc()) {
-                    $marks[$mark['subject_name']] = $mark;
-
-                    if ($mark['score'] !== null) {
-                        $total_score += (int)$mark['score'];
-                        $subject_count++;
-                    }
-                }
-            }
-
-            $subject_count_result = $conn->query('SELECT COUNT(*) as count FROM subjects');
-            $total_subjects = $subject_count_result ? (int)$subject_count_result->fetch_assoc()['count'] : 0;
-            $has_all_marks = $total_subjects > 0 && $subject_count >= $total_subjects;
-            $average = $has_all_marks ? round($total_score / $total_subjects, 2) : null;
-
-            if ($total_subjects <= 0) {
-                $overall_status = 'NO SUBJECTS';
-            } elseif ($subject_count === 0) {
-                $overall_status = 'NO MARKS';
-            } elseif (!$has_all_marks) {
-                $overall_status = 'INCOMPLETE';
-            } elseif ($average >= 50) {
-                $overall_status = 'PASS';
-            } else {
-                $overall_status = 'FAIL';
-            }
-
-            $student_grade = $conn->real_escape_string($selected_student['grade']);
-            $rank_query = "SELECT student_rank
-                           FROM (
-                               SELECT
-                                   s.student_id,
-                                   s.grade,
-                                   RANK() OVER (PARTITION BY s.grade ORDER BY COALESCE(SUM(m.score), 0) DESC) AS student_rank
-                               FROM students s
-                               LEFT JOIN marks m ON s.student_id = m.student_id
-                               WHERE s.grade = '$student_grade'
-                               GROUP BY s.student_id, s.grade
-                           ) ranked
-                           WHERE student_id = $student_id";
-
-            $rank_result = $conn->query($rank_query);
-            $rank_row = $rank_result ? $rank_result->fetch_assoc() : null;
-            $rank = $rank_row ? $rank_row['student_rank'] : 'N/A';
-
-            $report_data = [
-                'student' => $selected_student,
-                'marks' => $marks,
-                'total' => $total_score,
-                'average' => $average,
-                'rank' => $rank,
-                'rank_label' => 'Rank in ' . normalizeGradeLabel($selected_student['grade']),
-                'status' => $overall_status,
-                'recorded_subjects' => $subject_count,
-                'total_subjects' => $total_subjects,
-                'has_all_marks' => $has_all_marks
-            ];
+            $report_data = ReportService::generateReport($conn, $selected_student, $student_id);
         } else {
             $error_message = 'Student not found.';
         }
@@ -550,7 +477,8 @@ if ($subjects) {
                                                     $score = $report_data['marks'][$subject]['score'];
 
                                                     if ($score !== null) {
-                                                        if ((int)$score >= 50) {
+                                                        $passing = (int)($report_data['passing_score'] ?? AppConfig::getPassingScore());
+                                                        if ((int)$score >= $passing) {
                                                             echo '<span class="badge bg-success">' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '</span>';
                                                         } else {
                                                             echo '<span class="badge bg-danger">' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '</span>';
@@ -574,7 +502,7 @@ if ($subjects) {
                             <div class="row">
                                 <div class="col-md-3">
                                     <strong>Total Score:</strong><br>
-                                    <h3><?php echo (int)$report_data['total']; ?></h3>
+                                    <h3><?php echo (int)$report_data['total']; ?><?php if (!empty($report_data['max_total'])): ?> <small class="text-muted">/ <?php echo (int)$report_data['max_total']; ?></small><?php endif; ?></h3>
                                 </div>
                                 <div class="col-md-3">
                                     <strong>Average:</strong><br>

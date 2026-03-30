@@ -1,5 +1,6 @@
 <?php
 require_once '../config/database.php';
+require_once '../config/app_config.php';
 require_once '../auth/auth_helper.php';
 require_once '../includes/distributed_coordinator.php';
 
@@ -77,7 +78,8 @@ function buildStudentSummaryRecord($student, $defaultTotalSubjects) {
         $overallStatus = 'INCOMPLETE';
     } else {
         $averageScore = $averageScore !== null ? round($averageScore, 1) : 0.0;
-        $overallStatus = $averageScore >= 50 ? 'PASS' : 'FAIL';
+        // PASS only when every subject has a mark and each mark meets the passing threshold.
+        $overallStatus = ($passedSubjects === $targetSubjects) ? 'PASS' : 'FAIL';
     }
 
     $student['recorded_subjects'] = $recordedSubjects;
@@ -102,6 +104,7 @@ $totalStudents = (int)$conn->query("SELECT COUNT(*) as count FROM students")->fe
 $totalTeachers = (int)$conn->query("SELECT COUNT(*) as count FROM teachers")->fetch_assoc()['count'];
 $totalSubjects = (int)$conn->query("SELECT COUNT(*) as count FROM subjects")->fetch_assoc()['count'];
 $totalMarks = (int)$conn->query("SELECT COUNT(*) as count FROM marks")->fetch_assoc()['count'];
+$passingScoreForSummary = (int)AppConfig::getPassingScore();
 
 $summary_title = isHomeroomTeacher()
     ? 'Compile final results for your homeroom without jumping between multiple pages.'
@@ -128,7 +131,7 @@ $studentSummaryResult = $conn->query("
         s.grade,
         COUNT(m.mark_id) AS recorded_subjects,
         {$totalSubjects} AS total_subjects,
-        SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_subjects,
+        SUM(CASE WHEN m.score >= {$passingScoreForSummary} THEN 1 ELSE 0 END) AS passed_subjects,
         COALESCE(ROUND(AVG(m.score), 1), 0) AS average_score
     FROM students s
     LEFT JOIN marks m ON s.student_id = m.student_id
@@ -196,17 +199,17 @@ if ($subjectPerformance === false) {
             COALESCE(ROUND(AVG(m.score), 1), 0) AS average_score,
             COALESCE(MAX(m.score), 0) AS highest_score,
             COALESCE(MIN(m.score), 0) AS lowest_score,
-            SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) AS passed_count,
-            SUM(CASE WHEN m.score < 50 THEN 1 ELSE 0 END) AS failed_count,
+            SUM(CASE WHEN m.score >= {$passingScoreForSummary} THEN 1 ELSE 0 END) AS passed_count,
+            SUM(CASE WHEN m.score < {$passingScoreForSummary} THEN 1 ELSE 0 END) AS failed_count,
             COALESCE(
-                ROUND((SUM(CASE WHEN m.score >= 50 THEN 1 ELSE 0 END) / NULLIF(COUNT(m.mark_id), 0)) * 100, 1),
+                ROUND((SUM(CASE WHEN m.score >= {$passingScoreForSummary} THEN 1 ELSE 0 END) / NULLIF(COUNT(m.mark_id), 0)) * 100, 1),
                 0
             ) AS pass_rate,
             CASE
                 WHEN COUNT(m.mark_id) = 0 THEN 'NO DATA'
                 WHEN AVG(m.score) >= 80 THEN 'EXCELLENT'
                 WHEN AVG(m.score) >= 60 THEN 'GOOD'
-                WHEN AVG(m.score) >= 50 THEN 'FAIR'
+                WHEN AVG(m.score) >= {$passingScoreForSummary} THEN 'FAIR'
                 ELSE 'NEEDS IMPROVEMENT'
             END AS performance_band
         FROM subjects sub

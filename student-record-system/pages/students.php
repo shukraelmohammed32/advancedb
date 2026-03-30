@@ -543,6 +543,13 @@ $student_profile_select = $student_profile_table_exists
     : "NULL AS date_of_birth, NULL AS guardian_name, NULL AS guardian_phone,";
 $student_profile_join = $student_profile_table_exists ? 'LEFT JOIN student_profiles sp ON sp.student_id = s.student_id' : '';
 
+$search_q = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
+$search_sql = '';
+if ($search_q !== '') {
+    $safe_q = $conn->real_escape_string($search_q);
+    $search_sql = " AND s.name LIKE '%{$safe_q}%' ";
+}
+
 // Get student data for editing
 $edit_student = null;
 if ($is_admin && isset($_GET['edit'])) {
@@ -573,6 +580,8 @@ $students = $conn->query("SELECT
                             EXISTS(SELECT 1 FROM users u WHERE u.student_id = s.student_id AND u.role = 'student') AS has_login
                          FROM students s
                          $student_site_join
+                         WHERE 1=1
+                         $search_sql
                          ORDER BY s.grade_id ASC, s.grade ASC, s.name ASC");
 $students_by_grade = [];
 if ($students) {
