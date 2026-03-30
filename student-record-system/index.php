@@ -442,49 +442,8 @@ include __DIR__ . '/includes/dashboard_shell_start.php';
             });
         }
     })();
-
-    (function () {
-        const root = document.documentElement;
-        const key = 'srs-dashboard-theme';
-        const saved = localStorage.getItem(key);
-        if (saved === 'dark') root.setAttribute('data-dashboard-theme', 'dark');
-
-        document.getElementById('themeToggle')?.addEventListener('click', function () {
-            const next = root.getAttribute('data-dashboard-theme') === 'dark' ? 'light' : 'dark';
-            root.setAttribute('data-dashboard-theme', next);
-            localStorage.setItem(key, next);
-            const icon = this.querySelector('i');
-            if (icon) icon.className = next === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
-        });
-        const tbtn = document.getElementById('themeToggle');
-        if (tbtn && root.getAttribute('data-dashboard-theme') === 'dark') {
-            const icon = tbtn.querySelector('i');
-            if (icon) icon.className = 'bi bi-sun';
-        }
-
-        const sidebar = document.getElementById('appSidebar');
-        const backdrop = document.getElementById('sidebarBackdrop');
-        const collapseBtn = document.getElementById('sidebarCollapse');
-        const openBtn = document.getElementById('sidebarOpen');
-
-        function closeMobile() {
-            sidebar?.classList.remove('is-open');
-            backdrop?.setAttribute('hidden', '');
-        }
-        openBtn?.addEventListener('click', function () {
-            sidebar?.classList.add('is-open');
-            backdrop?.removeAttribute('hidden');
-        });
-        backdrop?.addEventListener('click', closeMobile);
-        window.addEventListener('resize', function () { if (window.innerWidth >= 992) closeMobile(); });
-
-        const collapsedKey = 'srs-sidebar-collapsed';
-        if (localStorage.getItem(collapsedKey) === '1' && sidebar) sidebar.classList.add('is-collapsed');
-        collapseBtn?.addEventListener('click', function () {
-            sidebar?.classList.toggle('is-collapsed');
-            localStorage.setItem(collapsedKey, sidebar?.classList.contains('is-collapsed') ? '1' : '0');
-        });
-    })();
     </script>
-</body>
-</html>
+    <?php
+    $GLOBALS['dashboard_extra_body_html'] = ob_get_clean();
+    include __DIR__ . '/includes/dashboard_shell_end.php';
+    ?>

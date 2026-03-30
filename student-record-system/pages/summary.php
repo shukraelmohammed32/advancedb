@@ -220,14 +220,18 @@ if ($subjectPerformance === false) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars(currentLanguageTag(), ENT_QUOTES, 'UTF-8'); ?>">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Performance Summary</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../assets/style.css" rel="stylesheet">
+<?php
+$GLOBALS['dashboard_from_pages'] = true;
+$GLOBALS['dashboard_nav_active'] = 'summary';
+$GLOBALS['dashboard_page_title'] = t('Performance Summary') . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_heading'] = '';
+$GLOBALS['dashboard_subtitle'] = '';
+$GLOBALS['dashboard_body_class'] = 'dashboard-body summary-page';
+$GLOBALS['dashboard_extra_head'] = '<link rel="stylesheet" href="../assets/summary-page.css">';
+include __DIR__ . '/../includes/dashboard_shell_start.php';
+?>
+
+REMOVED_STYLE_BLOCK_START
     <style>
         body.summary-page {
             color: #1f292c;
