@@ -77,23 +77,41 @@ class Database {
     }
 
     private function createConnection($databaseName) {
-        try {
-            $socket = $this->socket !== '' ? $this->socket : null;
-            $connection = new mysqli(
-                $this->host,
-                $this->username,
-                $this->password,
-                $databaseName,
-                $this->port > 0 ? $this->port : 3306,
-                $socket
-            );
-        } catch (mysqli_sql_exception $exception) {
-            error_log('Database connection failed for "' . $databaseName . '": ' . $exception->getMessage());
-            return null;
+        $socket = $this->socket !== '' ? $this->socket : null;
+        $hostsToTry = [$this->host];
+
+        if (strtolower($this->host) === 'localhost') {
+            $hostsToTry[] = '127.0.0.1';
         }
 
-        if (!($connection instanceof mysqli) || $connection->connect_error) {
-            error_log('Database connection failed for "' . $databaseName . '": ' . ($connection->connect_error ?? 'Unknown error'));
+        $connection = null;
+        $lastError = 'Unknown error';
+
+        foreach ($hostsToTry as $candidateHost) {
+            try {
+                $candidate = new mysqli(
+                    $candidateHost,
+                    $this->username,
+                    $this->password,
+                    $databaseName,
+                    $this->port > 0 ? $this->port : 3306,
+                    $socket
+                );
+            } catch (mysqli_sql_exception $exception) {
+                $lastError = $exception->getMessage();
+                continue;
+            }
+
+            if ($candidate instanceof mysqli && !$candidate->connect_error) {
+                $connection = $candidate;
+                break;
+            }
+
+            $lastError = $candidate->connect_error ?: $lastError;
+        }
+
+        if (!($connection instanceof mysqli)) {
+            error_log('Database connection failed for "' . $databaseName . '": ' . $lastError);
             return null;
         }
 

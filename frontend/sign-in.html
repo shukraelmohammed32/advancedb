@@ -751,6 +751,16 @@
   var fieldEmail = document.getElementById('field-email');
   var fieldPassword = document.getElementById('field-password');
 
+  function resolveLoginAction() {
+    var path = (window.location && window.location.pathname) ? window.location.pathname : '';
+    var prefix = path.indexOf('/frontend/') !== -1 ? '../' : '';
+    return prefix + 'student-record-system/auth/login.php';
+  }
+
+  if (form) {
+    form.setAttribute('action', resolveLoginAction());
+  }
+
   function clearFieldErrors() {
     [fieldEmail, fieldPassword].forEach(function (f) { f.classList.remove('has-error'); });
     [helpEmail, helpPassword].forEach(function (h) { h.textContent = ''; h.classList.remove('is-visible'); });

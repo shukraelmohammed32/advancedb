@@ -1063,6 +1063,27 @@
 
 <script>
   (function () {
+    function resolveBackendHref(value) {
+      if (typeof value !== 'string') return value;
+      if (value.indexOf('student-record-system/') !== 0) return value;
+      var path = (window.location && window.location.pathname) ? window.location.pathname : '';
+      var prefix = path.indexOf('/frontend/') !== -1 ? '../' : '';
+      return prefix + value;
+    }
+
+    document.querySelectorAll('a[href^="student-record-system/"]').forEach(function (a) {
+      a.setAttribute('href', resolveBackendHref(a.getAttribute('href')));
+    });
+
+    document.querySelectorAll('[onclick*="student-record-system/"]').forEach(function (el) {
+      var raw = el.getAttribute('onclick');
+      if (!raw) return;
+      var patched = raw.replace(/(['"])student-record-system\//g, function (_, quote) {
+        return quote + resolveBackendHref('student-record-system/');
+      });
+      el.setAttribute('onclick', patched);
+    });
+
     var p = new URLSearchParams(window.location.search);
     if (p.has('login_error') || p.get('logged_out') === '1' || p.get('timeout') === '1' || p.get('auth_required') === '1') {
       window.location.replace('sign-in.html' + window.location.search);
