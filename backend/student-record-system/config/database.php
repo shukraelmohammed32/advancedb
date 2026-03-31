@@ -60,6 +60,8 @@ if (!function_exists('dbStatementHasRows')) {
 
 class Database {
     private $host;
+    private $port;
+    private $socket;
     private $username;
     private $password;
     private $database;
@@ -67,16 +69,32 @@ class Database {
 
     public function __construct($database = null) {
         $this->host = env('DB_HOST', 'localhost');
+        $this->port = (int)env('DB_PORT', 3306);
+        $this->socket = (string)env('DB_SOCKET', '');
         $this->username = env('DB_USERNAME', 'root');
         $this->password = (string)env('DB_PASSWORD', '');
         $this->database = $database ?: env('DB_DATABASE', 'student_record_system');
     }
 
     private function createConnection($databaseName) {
-        $connection = new mysqli($this->host, $this->username, $this->password, $databaseName);
+        try {
+            $socket = $this->socket !== '' ? $this->socket : null;
+            $connection = new mysqli(
+                $this->host,
+                $this->username,
+                $this->password,
+                $databaseName,
+                $this->port > 0 ? $this->port : 3306,
+                $socket
+            );
+        } catch (mysqli_sql_exception $exception) {
+            error_log('Database connection failed for "' . $databaseName . '": ' . $exception->getMessage());
+            return null;
+        }
 
-        if ($connection->connect_error) {
-            die('Connection failed: ' . $connection->connect_error);
+        if (!($connection instanceof mysqli) || $connection->connect_error) {
+            error_log('Database connection failed for "' . $databaseName . '": ' . ($connection->connect_error ?? 'Unknown error'));
+            return null;
         }
 
         $connection->set_charset('utf8mb4');
@@ -86,7 +104,7 @@ class Database {
     public function getConnection($databaseName = null) {
         $databaseName = $databaseName ?: $this->database;
 
-        if (!isset($this->connections[$databaseName])) {
+        if (!array_key_exists($databaseName, $this->connections)) {
             $this->connections[$databaseName] = $this->createConnection($databaseName);
         }
 
@@ -115,19 +133,23 @@ class Database {
     }
 
     public function query($sql) {
-        return $this->getCentralConnection()->query($sql);
+        $connection = $this->getCentralConnection();
+        return $connection instanceof mysqli ? $connection->query($sql) : false;
     }
 
     public function prepare($sql) {
-        return $this->getCentralConnection()->prepare($sql);
+        $connection = $this->getCentralConnection();
+        return $connection instanceof mysqli ? $connection->prepare($sql) : false;
     }
 
     public function escape($string) {
-        return $this->getCentralConnection()->real_escape_string($string);
+        $connection = $this->getCentralConnection();
+        return $connection instanceof mysqli ? $connection->real_escape_string($string) : '';
     }
 
     public function getLastInsertId() {
-        return $this->getCentralConnection()->insert_id;
+        $connection = $this->getCentralConnection();
+        return $connection instanceof mysqli ? $connection->insert_id : 0;
     }
 
     public function __destruct() {

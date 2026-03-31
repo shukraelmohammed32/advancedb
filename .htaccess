@@ -29,6 +29,10 @@ Options -Indexes
     # Static files moved under /frontend/assets
     RewriteRule ^assets/(.*)$ frontend/assets/$1 [L]
 
+    # Handle relative redirect targets that may include student-record-system/sign-in.html
+    RewriteRule ^student-record-system/sign-in\.html$ frontend/sign-in.html [L]
+    RewriteRule ^frontend/student-record-system/sign-in\.html$ frontend/sign-in.html [L]
+
     # Keep legacy app URLs working after moving backend code
     RewriteRule ^student-record-system/?$ backend/student-record-system/index.php [L]
     RewriteRule ^student-record-system/(.*)$ backend/student-record-system/$1 [L]
