@@ -59,7 +59,7 @@ function normalizeEmailLocalPart($value) {
 }
 
 function teacherLoginEmailDomain() {
-    $domain = strtolower(trim((string)(getenv('TEACHER_LOGIN_DOMAIN') ?: 'school.local')));
+    $domain = strtolower(trim((string)env('TEACHER_LOGIN_DOMAIN', 'school.local')));
     if (!preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/', $domain)) {
         return 'school.local';
     }

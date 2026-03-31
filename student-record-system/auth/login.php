@@ -5,7 +5,7 @@ require_once '../config/localization.php';
 require_once '../config/database.php';
 require_once '../config/landing_redirect.php';
 
-if ((getenv('APP_ENV') ?: 'local') !== 'production') {
+if (env('APP_ENV', 'local') !== 'production') {
     ini_set('display_errors', '1');
     error_reporting(E_ALL);
 }
@@ -176,7 +176,7 @@ function ensureDefaultAdminEmail($conn) {
         return;
     }
 
-    $adminEmail = trim((string)(getenv('ADMIN_EMAIL') ?: 'admin@school.edu'));
+    $adminEmail = trim((string)env('ADMIN_EMAIL', 'admin@school.edu'));
     if ($adminEmail === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
         return;
     }
@@ -208,10 +208,10 @@ function ensureDefaultAdminEmail($conn) {
 $error = '';
 $loginIdentity = '';
 
-$databaseName = getenv('DB_DATABASE') ?: 'student_record_system';
+$databaseName = env('DB_DATABASE', 'student_record_system');
 $isBranchPortal = isBranchPortalDatabase($databaseName);
-$siteName = getenv('SITE_NAME') ?: ($isBranchPortal ? 'Branch Campus' : 'Main Campus');
-$siteCode = getenv('SITE_CODE') ?: ($isBranchPortal ? 'BRANCH' : 'MAIN');
+$siteName = env('SITE_NAME', $isBranchPortal ? 'Branch Campus' : 'Main Campus');
+$siteCode = env('SITE_CODE', $isBranchPortal ? 'BRANCH' : 'MAIN');
 $loginPortal = defaultLoginPortal($isBranchPortal);
 $roleProfiles = loginRoleProfiles($isBranchPortal, $siteName);
 
@@ -334,221 +334,4 @@ if ($error !== '') {
     redirectToPublicLanding($landingQuery);
 }
 
-$currentRoleProfile = $roleProfiles[$loginPortal] ?? $roleProfiles[defaultLoginPortal($isBranchPortal)];
-$roleProfilesJson = json_encode($roleProfiles, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES);
-$campusLabel = $isBranchPortal ? $siteName . ' Branch' : 'Central Academic Portal';
-?>
-<!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars(currentLanguageTag(), ENT_QUOTES, 'UTF-8'); ?>">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars(t('Student Record System') . ' - ' . t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="../assets/css/login.css" rel="stylesheet">
-</head>
-<body class="auth-login-page">
-    <main class="login-shell">
-        <section class="login-card<?php echo $error !== '' ? ' has-error' : ''; ?>">
-            <div class="login-hero">
-                <div class="hero-topline">
-                    <span class="hero-pill"><i class="bi bi-building"></i> <?php echo htmlspecialchars($campusLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                    <span class="hero-pill hero-pill-soft"><i class="bi bi-shield-check"></i> <?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
-                </div>
-
-                <div class="brand-lockup">
-                    <img src="../assets/school-logo.svg" alt="School logo" class="school-logo">
-                    <div class="brand-copy">
-                        <span class="brand-kicker"><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
-                        <h1><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?></h1>
-                        <p><?php echo htmlspecialchars(t('Professional access for administrators, teachers, and students from one academic portal.'), ENT_QUOTES, 'UTF-8'); ?></p>
-                    </div>
-                </div>
-
-                <div class="hero-focus">
-                    <div class="role-badge" id="roleBadge"><?php echo htmlspecialchars($currentRoleProfile['badge'], ENT_QUOTES, 'UTF-8'); ?></div>
-                    <h2 id="roleHeadline"><?php echo htmlspecialchars($currentRoleProfile['headline'], ENT_QUOTES, 'UTF-8'); ?></h2>
-                    <p id="roleDescription"><?php echo htmlspecialchars($currentRoleProfile['description'], ENT_QUOTES, 'UTF-8'); ?></p>
-                </div>
-
-                <div class="hero-highlights">
-                    <article class="highlight-card">
-                        <span class="highlight-icon"><i class="bi bi-diagram-3-fill"></i></span>
-                        <div>
-                            <h3>Role-aware access</h3>
-                            <p>Separate sign-in paths for Super Admin, Branch Admin, Teacher, and Student users.</p>
-                        </div>
-                    </article>
-                    <article class="highlight-card">
-                        <span class="highlight-icon"><i class="bi bi-journal-richtext"></i></span>
-                        <div>
-                            <h3>Academic record tools</h3>
-                            <p>Support marks entry, reports, student profiles, and branch-level management.</p>
-                        </div>
-                    </article>
-                    <article class="highlight-card">
-                        <span class="highlight-icon"><i class="bi bi-phone-fill"></i></span>
-                        <div>
-                            <h3>Responsive by design</h3>
-                            <p>Built to work smoothly across desktop screens, tablets, and mobile devices.</p>
-                        </div>
-                    </article>
-                </div>
-            </div>
-
-            <div class="login-panel">
-                <div class="panel-header">
-                    <span class="panel-kicker"><i class="bi bi-person-badge-fill"></i> <?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
-                    <h2><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></h2>
-                    <p><?php echo htmlspecialchars(t('Enter your email and password to continue.'), ENT_QUOTES, 'UTF-8'); ?></p>
-                </div>
-
-                <?php if ($error !== ''): ?>
-                    <div class="alert alert-danger login-alert" id="loginError" role="alert" aria-live="assertive">
-                        <i class="bi bi-exclamation-octagon-fill"></i>
-                        <div>
-                            <strong><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></strong>
-                            <span><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></span>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <form action="login.php" method="POST" class="login-form" id="loginForm" novalidate>
-                    <div class="field-group">
-                        <label for="email" class="form-label"><?php echo htmlspecialchars(t('Email'), ENT_QUOTES, 'UTF-8'); ?></label>
-                        <div class="field-shell">
-                            <span class="field-icon"><i class="bi bi-person-circle"></i></span>
-                            <input
-                                type="email"
-                                class="form-control<?php echo $error !== '' ? ' is-invalid' : ''; ?>"
-                                id="email"
-                                name="email"
-                                placeholder="<?php echo htmlspecialchars(t('Email'), ENT_QUOTES, 'UTF-8'); ?>"
-                                value="<?php echo htmlspecialchars($loginIdentity, ENT_QUOTES, 'UTF-8'); ?>"
-                                autocomplete="email"
-                                required
-                            >
-                        </div>
-                    </div>
-
-                    <div class="field-group">
-                        <label for="password" class="form-label"><?php echo htmlspecialchars(t('Password'), ENT_QUOTES, 'UTF-8'); ?></label>
-                        <div class="field-shell">
-                            <span class="field-icon"><i class="bi bi-lock-fill"></i></span>
-                            <input
-                                type="password"
-                                class="form-control<?php echo $error !== '' ? ' is-invalid' : ''; ?>"
-                                id="password"
-                                name="password"
-                                placeholder="<?php echo htmlspecialchars(t('Password'), ENT_QUOTES, 'UTF-8'); ?>"
-                                autocomplete="current-password"
-                                required
-                            >
-                            <button type="button" class="password-toggle" id="passwordToggle" aria-label="Show password">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="field-group">
-                        <div class="field-header">
-                            <label for="role" class="form-label"><?php echo htmlspecialchars(t('Role'), ENT_QUOTES, 'UTF-8'); ?></label>
-                            <span class="field-meta">Choose your portal access level</span>
-                        </div>
-                        <div class="field-shell select-shell">
-                            <span class="field-icon" id="roleIconShell"><i class="<?php echo htmlspecialchars($currentRoleProfile['icon'], ENT_QUOTES, 'UTF-8'); ?>" id="roleIcon"></i></span>
-                            <select class="form-select<?php echo $error !== '' ? ' is-invalid' : ''; ?>" id="role" name="role" required>
-                                <option value="main_admin"<?php echo $loginPortal === 'main_admin' ? ' selected' : ''; ?>><?php echo htmlspecialchars(t('Super Admin'), ENT_QUOTES, 'UTF-8'); ?></option>
-                                <option value="branch_admin"<?php echo $loginPortal === 'branch_admin' ? ' selected' : ''; ?>><?php echo htmlspecialchars(t('Branch Admin'), ENT_QUOTES, 'UTF-8'); ?></option>
-                                <option value="teacher"<?php echo $loginPortal === 'teacher' ? ' selected' : ''; ?>><?php echo htmlspecialchars(t('Teacher'), ENT_QUOTES, 'UTF-8'); ?></option>
-                                <option value="student"<?php echo $loginPortal === 'student' ? ' selected' : ''; ?>><?php echo htmlspecialchars(t('Student'), ENT_QUOTES, 'UTF-8'); ?></option>
-                            </select>
-                            <span class="select-caret"><i class="bi bi-chevron-down"></i></span>
-                        </div>
-                    </div>
-
-                    <div class="role-note-card">
-                        <span class="role-note-icon"><i class="<?php echo htmlspecialchars($currentRoleProfile['icon'], ENT_QUOTES, 'UTF-8'); ?>" id="roleNoteIcon"></i></span>
-                        <div>
-                            <strong id="roleLabel"><?php echo htmlspecialchars($currentRoleProfile['label'], ENT_QUOTES, 'UTF-8'); ?></strong>
-                            <p id="roleSupport"><?php echo htmlspecialchars($currentRoleProfile['support'], ENT_QUOTES, 'UTF-8'); ?></p>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-login" id="loginButton">
-                        <span class="btn-copy"><?php echo htmlspecialchars(t('Sign In'), ENT_QUOTES, 'UTF-8'); ?></span>
-                        <i class="bi bi-arrow-right-circle-fill"></i>
-                    </button>
-
-                    <div class="login-links">
-                        <a href="#" class="forgot-link" data-bs-toggle="modal" data-bs-target="#aboutSystemModal">
-                            <i class="bi bi-info-circle"></i>
-                            <?php echo htmlspecialchars(t('About'), ENT_QUOTES, 'UTF-8'); ?>
-                        </a>
-                        <a href="#" class="forgot-link" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
-                            <i class="bi bi-question-circle"></i>
-                            Forgot password?
-                        </a>
-                        <span class="login-footnote"><i class="bi bi-lock"></i> Protected academic access</span>
-                    </div>
-                </form>
-            </div>
-        </section>
-    </main>
-
-    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content forgot-modal">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title" id="forgotPasswordModalLabel">Password assistance</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="forgot-icon"><i class="bi bi-envelope-paper-fill"></i></div>
-                    <p>If you cannot remember your password, contact your school administrator or ICT office to reset your account securely.</p>
-                    <div class="forgot-contact">
-                        <span><i class="bi bi-building-fill"></i> <?php echo htmlspecialchars($campusLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-                        <span><i class="bi bi-person-workspace"></i> Academic support desk</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="aboutSystemModal" tabindex="-1" aria-labelledby="aboutSystemModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content forgot-modal">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title" id="aboutSystemModalLabel"><?php echo htmlspecialchars(t('About This System'), ENT_QUOTES, 'UTF-8'); ?></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo htmlspecialchars(t('Close'), ENT_QUOTES, 'UTF-8'); ?>"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="forgot-icon"><i class="bi bi-journal-bookmark-fill"></i></div>
-                    <p><?php echo htmlspecialchars(t('Student Record System centralizes student records, teacher assignments, marks, summaries, and reports in one school platform.'), ENT_QUOTES, 'UTF-8'); ?></p>
-                    <div class="forgot-contact text-start">
-                        <div class="fw-semibold mb-2"><?php echo htmlspecialchars(t('Core Modules'), ENT_QUOTES, 'UTF-8'); ?></div>
-                        <div><?php echo htmlspecialchars(t('Student profiles and academic records'), ENT_QUOTES, 'UTF-8'); ?></div>
-                        <div><?php echo htmlspecialchars(t('Teacher assignments and homeroom management'), ENT_QUOTES, 'UTF-8'); ?></div>
-                        <div><?php echo htmlspecialchars(t('Marks entry, summaries, and printable reports'), ENT_QUOTES, 'UTF-8'); ?></div>
-                        <div><?php echo htmlspecialchars(t('Distributed branch oversight for campus operations'), ENT_QUOTES, 'UTF-8'); ?></div>
-                    </div>
-                    <div class="forgot-contact mt-3 text-start">
-                        <div class="fw-semibold mb-2"><?php echo htmlspecialchars(t('Who Uses It'), ENT_QUOTES, 'UTF-8'); ?></div>
-                        <div><?php echo htmlspecialchars(t('Super Admin manages the full platform, Branch Admin oversees campus operations, teachers manage marks, and students view results.'), ENT_QUOTES, 'UTF-8'); ?></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        window.loginRoleProfiles = <?php echo $roleProfilesJson ?: '{}'; ?>;
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/login.js"></script>
-</body>
-</html>
+redirectToPublicLanding();

@@ -18,16 +18,33 @@ class StudentService
     /**
      * @return array<int, array<string, mixed>>
      */
-    public static function listStudents(mysqli $conn, ?string $gradeFilter = null): array
+    public static function listStudents(mysqli $conn, ?string $gradeFilter = null, ?string $searchQuery = null): array
     {
-        $where = '';
+        $conditions = [];
         if ($gradeFilter !== null && $gradeFilter !== '') {
             $g = $conn->real_escape_string($gradeFilter);
-            $where = "WHERE s.grade = '$g'";
+            $conditions[] = "s.grade = '$g'";
         }
 
+        $q = $searchQuery !== null ? trim($searchQuery) : '';
+        if ($q !== '') {
+            $esc = $conn->real_escape_string($q);
+            $like = "'%" . $esc . "%'";
+            $conditions[] = "(s.name LIKE $like
+                OR s.first_name LIKE $like
+                OR s.last_name LIKE $like
+                OR CONCAT(TRIM(COALESCE(s.first_name,'')), ' ', TRIM(COALESCE(s.last_name,''))) LIKE $like
+                OR CAST(s.student_id AS CHAR) LIKE $like
+                OR s.grade LIKE $like
+                OR s.academic_year LIKE $like
+                OR s.semester LIKE $like
+                OR s.gender LIKE $like)";
+        }
+
+        $where = $conditions === [] ? '' : ('WHERE ' . implode(' AND ', $conditions));
+
         $rows = [];
-        $res = $conn->query("SELECT s.* FROM students s $where ORDER BY s.name");
+        $res = $conn->query("SELECT s.* FROM students s $where ORDER BY s.grade_id ASC, s.grade ASC, s.name ASC");
         if ($res) {
             while ($row = $res->fetch_assoc()) {
                 $rows[] = $row;

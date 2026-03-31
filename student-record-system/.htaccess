@@ -1,0 +1,44 @@
+# Deny access to environment files
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "\.env(\..+)?$">
+    Require all denied
+</FilesMatch>
+
+# Deny access to SQL dumps
+<FilesMatch "\.(sql|sqlite|db)$">
+    Require all denied
+</FilesMatch>
+
+# Deny access to batch/shell scripts
+<FilesMatch "\.(bat|sh|cmd)$">
+    Require all denied
+</FilesMatch>
+
+# Deny access to debug and setup scripts
+<FilesMatch "^(debug_|fix_|setup_|create_|quick_setup)">
+    Require all denied
+</FilesMatch>
+
+# Deny access to alternate/unused entry points
+<FilesMatch "^(index_fixed|login_modern|login_new|login_simple)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Deny access to metadata files
+<FilesMatch "^(exclude\.txt|README\.md|\.gitignore)$">
+    Require all denied
+</FilesMatch>
+
+# Deny access to hidden files
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Disable directory listing
+Options -Indexes
+
+# Default charset
+AddDefaultCharset UTF-8

@@ -43,7 +43,9 @@ function loadEnv($path = null) {
                     $value = substr($value, 1, -1);
                 }
 
-                putenv("$key=$value");
+                if (function_exists('putenv')) {
+                    @putenv("$key=$value");
+                }
                 $_ENV[$key] = $value;
                 $_SERVER[$key] = $value;
             }
@@ -57,15 +59,20 @@ function loadEnv($path = null) {
  * Get environment variable
  */
 function env($key, $default = null) {
-    $value = getenv($key);
-
-    if ($value === false) {
-        return $default;
+    if (array_key_exists($key, $_ENV)) {
+        $value = $_ENV[$key];
+    } elseif (array_key_exists($key, $_SERVER)) {
+        $value = $_SERVER[$key];
+    } else {
+        $value = getenv($key);
+        if ($value === false) {
+            return $default;
+        }
     }
 
-    if (strtolower($value) === 'true') {
+    if (is_string($value) && strtolower($value) === 'true') {
         return true;
-    } elseif (strtolower($value) === 'false') {
+    } elseif (is_string($value) && strtolower($value) === 'false') {
         return false;
     }
 

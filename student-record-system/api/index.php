@@ -44,19 +44,28 @@ $is_homeroom = isHomeroomTeacher();
 $session_teacher_id = $is_teacher ? (int)($_SESSION['teacher_id'] ?? 0) : 0;
 $session_student_id = $is_student ? (int)($_SESSION['student_id'] ?? 0) : 0;
 
-// --- GET /students ---
+// --- GET /students (?q= optional search, ?grade= optional for admin) ---
 if ($segments === ['students'] && $method === 'GET') {
     if (!$is_admin && !$is_teacher) {
         apiJsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+    }
+    $apiSearchQ = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
+    $apiGrade = '';
+    if ($is_admin && isset($_GET['grade']) && trim((string)$_GET['grade']) !== '') {
+        $apiGrade = apiNormalizeGradeLabel((string)$_GET['grade']);
+        $allowed = ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+        if (!in_array($apiGrade, $allowed, true)) {
+            $apiGrade = '';
+        }
     }
     if ($is_teacher && !$is_admin) {
         $grade = apiNormalizeGradeLabel((string)($_SESSION['assigned_grade'] ?? ''));
         if ($grade === '') {
             apiJsonResponse(['ok' => false, 'error' => 'Teacher account has no assigned grade'], 403);
         }
-        $list = StudentService::listStudents($conn, $grade);
+        $list = StudentService::listStudents($conn, $grade, $apiSearchQ !== '' ? $apiSearchQ : null);
     } else {
-        $list = StudentService::listStudents($conn, null);
+        $list = StudentService::listStudents($conn, $apiGrade !== '' ? $apiGrade : null, $apiSearchQ !== '' ? $apiSearchQ : null);
     }
     apiJsonResponse(['ok' => true, 'students' => $list]);
 }

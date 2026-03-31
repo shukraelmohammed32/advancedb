@@ -202,7 +202,7 @@
       background-color: #0f2d49;
       background-image:
         linear-gradient(120deg, rgba(15, 45, 73, 0.88) 0%, rgba(18, 59, 99, 0.78) 55%, rgba(27, 83, 127, 0.72) 100%),
-        url("assets/images/classroom-hero-banner.png");
+        url("assets/images/classroom-hero-banner.jpg");
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -308,114 +308,8 @@
     }
     .trust-logo:hover { color: var(--primary); }
 
-    /* =============================================
-       FEATURED PROGRAMS — renamed as Features
-    ============================================= */
-    .programs { padding: 96px 0; background: var(--surface-muted); }
     .section-header { text-align: center; margin-bottom: 56px; }
     .section-header .section-sub { margin: 0 auto; }
-    .programs-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-    .program-card {
-      background: var(--surface);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-soft);
-      transition: transform var(--transition), box-shadow var(--transition);
-      display: flex;
-      flex-direction: column;
-    }
-    .program-card:hover {
-      transform: translateY(-6px);
-      box-shadow: var(--shadow-strong);
-    }
-    .program-thumb {
-      height: 160px;
-      position: relative;
-      overflow: hidden;
-    }
-    .program-thumb-bg {
-      width: 100%; height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 3rem;
-    }
-    .bg-blue-grad   { background: linear-gradient(135deg,#1d4f86,#2a74bd); }
-    .bg-green-grad  { background: linear-gradient(135deg,#14725d,#1eaa88); }
-    .bg-orange-grad { background: linear-gradient(135deg,#a85c18,#d58d2f); }
-    .bg-purple-grad { background: linear-gradient(135deg,#1f5f95,#265f97); }
-    .bg-teal-grad   { background: linear-gradient(135deg,#1c8f7a,#1eaa88); }
-    .bg-indigo-grad { background: linear-gradient(135deg,#123b63,#1f5f95); }
-    .program-badge {
-      position: absolute;
-      top: 12px; left: 12px;
-      background: rgba(255,255,255,.93);
-      color: var(--primary-2);
-      font-size: .68rem;
-      font-weight: 700;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      padding: 3px 10px;
-      border-radius: 999px;
-    }
-    .program-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
-    .program-tag {
-      font-size: .72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--accent);
-      margin-bottom: 8px;
-    }
-    .program-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 8px;
-      line-height: 1.4;
-    }
-    .program-desc {
-      font-size: .875rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      flex: 1;
-      margin-bottom: 16px;
-    }
-    .program-meta {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding-top: 14px;
-      border-top: 1px solid #edf2f8;
-      font-size: .8rem;
-      color: #a0b4c8;
-    }
-    .program-meta i { font-size: .75rem; }
-    .program-footer {
-      padding: 14px 20px;
-      background: var(--surface-muted);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-top: 1px solid var(--border);
-    }
-    .program-price { font-size: .9375rem; font-weight: 700; color: var(--primary); }
-    .program-cta {
-      font-size: .8125rem;
-      font-weight: 600;
-      color: var(--accent);
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      transition: gap var(--transition), color var(--transition);
-    }
-    .program-cta:hover { color: #157a63; gap: 9px; }
 
     /* =============================================
        BENEFITS
@@ -612,7 +506,7 @@
       background-color: #0f2d49;
       background-image:
         linear-gradient(120deg, rgba(15, 45, 73, 0.9) 0%, rgba(18, 59, 99, 0.82) 55%, rgba(27, 83, 127, 0.76) 100%),
-        url("assets/images/classroom-hero-banner.png");
+        url("assets/images/classroom-hero-banner.jpg");
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -723,7 +617,6 @@
        RESPONSIVE
     ============================================= */
     @media (max-width: 1024px) {
-      .programs-grid { grid-template-columns: repeat(2, 1fr); }
       .benefits-grid { grid-template-columns: repeat(2, 1fr); }
       .categories-grid { grid-template-columns: repeat(2, 1fr); }
       .testimonials-grid { grid-template-columns: repeat(2, 1fr); }
@@ -733,7 +626,6 @@
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .hamburger { display: block; }
-      .programs-grid,
       .testimonials-grid { grid-template-columns: 1fr; }
       .benefits-grid,
       .categories-grid { grid-template-columns: repeat(2, 1fr); }
@@ -759,7 +651,6 @@
       <span class="logo-text">Student Record System</span>
     </a>
     <ul class="nav-links">
-      <li><a href="#programs">Features</a></li>
       <li><a href="#benefits">Benefits</a></li>
       <li><a href="#categories">Modules</a></li>
       <li><a href="#testimonials">Testimonials</a></li>
@@ -798,8 +689,8 @@
           <a href="sign-in.html" class="btn btn-accent">
             <i class="fas fa-sign-in-alt"></i> Login to Portal
           </a>
-          <a href="#programs" class="btn btn-outline-white">
-            Explore Features <i class="fas fa-arrow-right"></i>
+          <a href="#benefits" class="btn btn-outline-white">
+            Explore Benefits <i class="fas fa-arrow-right"></i>
           </a>
         </div>
         <div class="hero-stats">
@@ -839,163 +730,6 @@
     </div>
   </div>
 </div>
-
-<!-- =============================================
-     FEATURED PROGRAMS — System Features
-============================================= -->
-<section class="programs" id="programs">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-label">System Modules</div>
-      <h2 class="section-title">Everything Your School Needs</h2>
-      <p class="section-sub">
-        A complete suite of academic management tools — built for administrators,
-        homeroom teachers, subject teachers, and students alike.
-      </p>
-    </div>
-    <div class="programs-grid">
-
-      <!-- Card 1 -->
-      <div class="program-card">
-        <div class="program-thumb">
-          <div class="program-thumb-bg bg-blue-grad">🎓</div>
-          <span class="program-badge">MODULE</span>
-        </div>
-        <div class="program-body">
-          <div class="program-tag">Student Management</div>
-          <div class="program-title">Student Directory &amp; Enrollment</div>
-          <div class="program-desc">Register, search, and manage all student records. Assign students to sections, track enrollment status, and maintain full academic profiles.</div>
-          <div class="program-meta">
-            <span><i class="fas fa-users"></i> All Roles</span>
-            <span><i class="fas fa-lock"></i> Role-Based</span>
-            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
-          </div>
-        </div>
-        <div class="program-footer">
-          <span class="program-price">Students</span>
-          <a href="student-record-system/pages/students.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
-        </div>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="program-card">
-        <div class="program-thumb">
-          <div class="program-thumb-bg bg-green-grad">📚</div>
-          <span class="program-badge">MODULE</span>
-        </div>
-        <div class="program-body">
-          <div class="program-tag">Subjects &amp; Curriculum</div>
-          <div class="program-title">Subject &amp; Curriculum Management</div>
-          <div class="program-desc">Add and manage subjects, assign them to teachers, and organize curriculum data used across marks and academic reports.</div>
-          <div class="program-meta">
-            <span><i class="fas fa-chalkboard-teacher"></i> Teachers</span>
-            <span><i class="fas fa-lock"></i> Admin</span>
-            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
-          </div>
-        </div>
-        <div class="program-footer">
-          <span class="program-price">Subjects</span>
-          <a href="student-record-system/pages/subjects.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
-        </div>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="program-card">
-        <div class="program-thumb">
-          <div class="program-thumb-bg bg-orange-grad">✏️</div>
-          <span class="program-badge">MODULE</span>
-        </div>
-        <div class="program-body">
-          <div class="program-tag">Marks &amp; Grading</div>
-          <div class="program-title">Marks Entry &amp; Grade Computation</div>
-          <div class="program-desc">Teachers submit marks per subject. The system computes weighted averages, passes/fails, and feeds results directly into academic reports.</div>
-          <div class="program-meta">
-            <span><i class="fas fa-pen"></i> Teachers</span>
-            <span><i class="fas fa-calculator"></i> Auto Compute</span>
-            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
-          </div>
-        </div>
-        <div class="program-footer">
-          <span class="program-price">Marks</span>
-          <a href="student-record-system/pages/marks.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
-        </div>
-      </div>
-
-      <!-- Card 4 -->
-      <div class="program-card">
-        <div class="program-thumb">
-          <div class="program-thumb-bg bg-purple-grad">👨‍🏫</div>
-          <span class="program-badge">MODULE</span>
-        </div>
-        <div class="program-body">
-          <div class="program-tag">Faculty Management</div>
-          <div class="program-title">Teacher Profiles &amp; Assignments</div>
-          <div class="program-desc">Manage teacher accounts, assign homeroom or subject roles, and track which classes and subjects each faculty member handles.</div>
-          <div class="program-meta">
-            <span><i class="fas fa-user-tie"></i> Admin</span>
-            <span><i class="fas fa-lock"></i> Restricted</span>
-            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
-          </div>
-        </div>
-        <div class="program-footer">
-          <span class="program-price">Teachers</span>
-          <a href="student-record-system/pages/teachers.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
-        </div>
-      </div>
-
-      <!-- Card 5 -->
-      <div class="program-card">
-        <div class="program-thumb">
-          <div class="program-thumb-bg bg-teal-grad">📊</div>
-          <span class="program-badge">MODULE</span>
-        </div>
-        <div class="program-body">
-          <div class="program-tag">Results &amp; Summary</div>
-          <div class="program-title">Class Summary &amp; Ranking</div>
-          <div class="program-desc">Compile academic results for an entire class. View ranked performance, pass/fail breakdown, and generate printable summary sheets.</div>
-          <div class="program-meta">
-            <span><i class="fas fa-list-ol"></i> Rankings</span>
-            <span><i class="fas fa-print"></i> Printable</span>
-            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
-          </div>
-        </div>
-        <div class="program-footer">
-          <span class="program-price">Summary</span>
-          <a href="student-record-system/pages/summary.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
-        </div>
-      </div>
-
-      <!-- Card 6 -->
-      <div class="program-card">
-        <div class="program-thumb">
-          <div class="program-thumb-bg bg-indigo-grad">📄</div>
-          <span class="program-badge">MODULE</span>
-        </div>
-        <div class="program-body">
-          <div class="program-tag">Academic Reports</div>
-          <div class="program-title">Report Cards &amp; Academic Reports</div>
-          <div class="program-desc">Generate individual report cards per student. Students can view their own results; teachers and admins can download or print official reports.</div>
-          <div class="program-meta">
-            <span><i class="fas fa-file-pdf"></i> Exportable</span>
-            <span><i class="fas fa-eye"></i> Student View</span>
-            <span><i class="fas fa-star" style="color:#d58d2f;"></i> Core Module</span>
-          </div>
-        </div>
-        <div class="program-footer">
-          <span class="program-price">Reports</span>
-          <a href="student-record-system/pages/report.php" class="program-cta">Open Module <i class="fas fa-arrow-right"></i></a>
-        </div>
-      </div>
-
-    </div>
-
-    <div style="text-align:center;margin-top:44px;">
-      <a href="sign-in.html" class="btn btn-secondary">
-        Login to Access All Modules <i class="fas fa-arrow-right"></i>
-      </a>
-    </div>
-  </div>
-</section>
 
 <!-- =============================================
      BENEFITS
@@ -1237,7 +971,7 @@
         <a href="sign-in.html" class="btn btn-white">
           <i class="fas fa-sign-in-alt"></i> Login Now
         </a>
-        <a href="#programs" class="btn btn-outline-white">
+        <a href="#categories" class="btn btn-outline-white">
           View All Modules
         </a>
       </div>

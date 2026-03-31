@@ -33,7 +33,7 @@ function detectAppBasePath() {
         }
     }
 
-    $appUrl = getenv('APP_URL') ?: '';
+    $appUrl = env('APP_URL', '');
     $urlPath = is_string($appUrl) ? parse_url($appUrl, PHP_URL_PATH) : '';
     if (is_string($urlPath) && $urlPath !== '') {
         return normalizeSessionBasePath($urlPath);
@@ -43,8 +43,8 @@ function detectAppBasePath() {
 }
 
 function detectSessionName() {
-    $siteCode = trim((string)(getenv('SITE_CODE') ?: ''));
-    $databaseName = trim((string)(getenv('DB_DATABASE') ?: 'student_record_system'));
+    $siteCode = trim((string)env('SITE_CODE', ''));
+    $databaseName = trim((string)env('DB_DATABASE', 'student_record_system'));
     $nameSource = $siteCode !== '' ? $siteCode : $databaseName;
     $sessionName = preg_replace('/[^A-Za-z0-9_]/', '_', 'SRS_' . $nameSource);
     $sessionName = strtoupper(trim((string)$sessionName, '_'));
@@ -60,7 +60,7 @@ function startAppSession() {
     loadEnv();
 
     $cookiePath = detectAppBasePath();
-    $useSecureCookie = filter_var(getenv('FORCE_HTTPS') ?: false, FILTER_VALIDATE_BOOLEAN);
+    $useSecureCookie = filter_var(env('FORCE_HTTPS', false), FILTER_VALIDATE_BOOLEAN);
 
     ini_set('session.cookie_httponly', '1');
     ini_set('session.use_strict_mode', '1');

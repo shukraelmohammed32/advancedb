@@ -106,7 +106,7 @@ function normalizeEmailLocalPart($value) {
 }
 
 function studentLoginEmailDomain() {
-    $domain = strtolower(trim((string)(getenv('STUDENT_LOGIN_DOMAIN') ?: 'school.local')));
+    $domain = strtolower(trim((string)env('STUDENT_LOGIN_DOMAIN', 'school.local')));
     if (!preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/', $domain)) {
         return 'school.local';
     }
@@ -544,11 +544,50 @@ $student_profile_select = $student_profile_table_exists
 $student_profile_join = $student_profile_table_exists ? 'LEFT JOIN student_profiles sp ON sp.student_id = s.student_id' : '';
 
 $search_q = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
+$filter_grade = isset($_GET['grade']) ? normalizeGradeLabel((string)$_GET['grade']) : '';
+if ($filter_grade !== '' && !in_array($filter_grade, $allowed_grade_names, true)) {
+    $filter_grade = '';
+}
+
 $search_sql = '';
+$grade_filter_sql = '';
+if ($filter_grade !== '') {
+    $fg_esc = $conn->real_escape_string($filter_grade);
+    $grade_filter_sql = " AND s.grade = '$fg_esc' ";
+}
+
 if ($search_q !== '') {
     $safe_q = $conn->real_escape_string($search_q);
-    $search_sql = " AND s.name LIKE '%{$safe_q}%' ";
+    $like = "'%" . $safe_q . "%'";
+    $login_match = $is_admin
+        ? " OR EXISTS (
+            SELECT 1 FROM users u_search
+            WHERE u_search.student_id = s.student_id AND u_search.role = 'student'
+              AND (u_search.email LIKE $like OR u_search.username LIKE $like)
+        )"
+        : '';
+    $search_sql = " AND (
+        s.name LIKE $like
+        OR s.first_name LIKE $like
+        OR s.last_name LIKE $like
+        OR CONCAT(TRIM(COALESCE(s.first_name,'')), ' ', TRIM(COALESCE(s.last_name,''))) LIKE $like
+        OR CAST(s.student_id AS CHAR) LIKE $like
+        OR s.grade LIKE $like
+        OR s.academic_year LIKE $like
+        OR s.semester LIKE $like
+        OR s.gender LIKE $like
+        $login_match
+    ) ";
 }
+
+$students_list_params = [];
+if ($search_q !== '') {
+    $students_list_params['q'] = $search_q;
+}
+if ($filter_grade !== '') {
+    $students_list_params['grade'] = $filter_grade;
+}
+$students_list_qs = $students_list_params !== [] ? ('?' . http_build_query($students_list_params)) : '';
 
 // Get student data for editing
 $edit_student = null;
@@ -581,6 +620,7 @@ $students = $conn->query("SELECT
                          FROM students s
                          $student_site_join
                          WHERE 1=1
+                         $grade_filter_sql
                          $search_sql
                          ORDER BY s.grade_id ASC, s.grade ASC, s.name ASC");
 $students_by_grade = [];
@@ -601,6 +641,11 @@ if ($students) {
 
         $students_by_grade[$grade_label][] = $student;
     }
+}
+
+$students_total_count = 0;
+foreach ($students_by_grade as $grade_students) {
+    $students_total_count += count($grade_students);
 }
 
 $success_message = isset($_GET['success']) ? htmlspecialchars($_GET['success'], ENT_QUOTES, 'UTF-8') : '';
@@ -652,6 +697,53 @@ include __DIR__ . '/../includes/dashboard_shell_start.php';
                 <?php echo htmlspecialchars($info_message, ENT_QUOTES, 'UTF-8'); ?>
             </div>
         <?php endif; ?>
+
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body py-3">
+                        <form method="get" action="students.php" class="row g-2 align-items-end">
+                            <?php if ($is_admin && isset($_GET['edit'])): ?>
+                                <input type="hidden" name="edit" value="<?php echo (int)$_GET['edit']; ?>">
+                            <?php endif; ?>
+                            <div class="col-md-5 col-lg-4">
+                                <label for="student_search_q" class="form-label mb-1">Search</label>
+                                <input type="search" class="form-control" id="student_search_q" name="q"
+                                       placeholder="Name, ID, grade, year, email, username…"
+                                       value="<?php echo htmlspecialchars($search_q, ENT_QUOTES, 'UTF-8'); ?>"
+                                       autocomplete="off">
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <label for="student_filter_grade" class="form-label mb-1">Grade</label>
+                                <select class="form-select" id="student_filter_grade" name="grade">
+                                    <option value="">All grades</option>
+                                    <?php foreach ($grade_rows as $grade_row_filter):
+                                        $gnf = normalizeGradeLabel($grade_row_filter['grade_name']);
+                                        ?>
+                                        <option value="<?php echo htmlspecialchars($gnf, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $filter_grade === $gnf ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($gnf, ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-lg-auto d-flex flex-wrap gap-2 align-items-center pt-md-4 pt-0">
+                                <button type="submit" class="btn btn-primary">Search</button>
+                                <?php if ($search_q !== '' || $filter_grade !== ''): ?>
+                                    <a href="students.php<?php echo $is_admin && isset($_GET['edit']) ? ('?edit=' . (int)$_GET['edit']) : ''; ?>" class="btn btn-outline-secondary">Clear</a>
+                                <?php endif; ?>
+                            </div>
+                        </form>
+                        <p class="text-muted small mb-0 mt-2">
+                            Matches full name, first or last name, student ID, grade, academic year, semester, and gender<?php echo $is_admin ? '; also student login email or username' : ''; ?>.
+                            Leave the box empty and choose a grade to list everyone in that class.
+                        </p>
+                        <?php if ($students_total_count > 0 && ($search_q !== '' || $filter_grade !== '')): ?>
+                            <p class="mb-0 mt-2"><span class="badge bg-secondary"><?php echo (int)$students_total_count; ?> student<?php echo $students_total_count === 1 ? '' : 's'; ?> found</span></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="row">
             <?php if ($is_admin): ?>
@@ -813,7 +905,7 @@ include __DIR__ . '/../includes/dashboard_shell_start.php';
                                 <?php echo $edit_student ? 'Update Student' : 'Add Student'; ?>
                             </button>
                             <?php if ($edit_student): ?>
-                                <a href="students.php" class="btn btn-secondary">Cancel</a>
+                                <a href="students.php<?php echo htmlspecialchars($students_list_qs, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary">Cancel</a>
                             <?php endif; ?>
                         </form>
                     </div>
@@ -825,7 +917,13 @@ include __DIR__ . '/../includes/dashboard_shell_start.php';
                 <?php if (empty($students_by_grade)): ?>
                     <div class="card">
                         <div class="card-body">
-                            <p class="mb-0 text-muted"><?php echo $is_teacher ? 'No students found in your assigned grade.' : 'No students found.'; ?></p>
+                            <p class="mb-0 text-muted"><?php
+                                if ($search_q !== '' || $filter_grade !== '') {
+                                    echo 'No students match your search or filters. Try different keywords, choose another grade, or clear filters.';
+                                } else {
+                                    echo $is_teacher ? 'No students found in your assigned grade.' : 'No students found.';
+                                }
+                            ?></p>
                         </div>
                     </div>
                 <?php else: ?>
@@ -878,9 +976,16 @@ include __DIR__ . '/../includes/dashboard_shell_start.php';
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
-                                                        <a href="students.php?edit=<?php echo (int)$student['student_id']; ?>"
+                                                        <?php
+                                                        $edit_params = array_merge(['edit' => (int)$student['student_id']], $students_list_params);
+                                                        $del_params = array_merge(
+                                                            ['delete' => (int)$student['student_id'], 'csrf_token' => getCsrfToken()],
+                                                            $students_list_params
+                                                        );
+                                                        ?>
+                                                        <a href="students.php?<?php echo htmlspecialchars(http_build_query($edit_params), ENT_QUOTES, 'UTF-8'); ?>"
                                                            class="btn btn-sm btn-warning">Edit</a>
-                                                        <a href="students.php?delete=<?php echo (int)$student['student_id']; ?>&csrf_token=<?php echo $csrf_token; ?>"
+                                                        <a href="students.php?<?php echo htmlspecialchars(http_build_query($del_params), ENT_QUOTES, 'UTF-8'); ?>"
                                                            class="btn btn-sm btn-danger"
                                                            onclick="return confirm('Are you sure you want to delete this student from the coordinator and branch database?')">Delete</a>
                                                     </td>
