@@ -32,7 +32,7 @@ $full_title = $dashboard_page_title;
 <body class="<?php echo htmlspecialchars($dashboard_body_class, ENT_QUOTES, 'UTF-8'); ?>">
     <aside class="app-sidebar" id="appSidebar" aria-label="<?php echo htmlspecialchars(t('Main navigation'), ENT_QUOTES, 'UTF-8'); ?>">
         <div class="app-sidebar__brand">
-            <a href="<?php echo htmlspecialchars(dash_index_href(), ENT_QUOTES, 'UTF-8'); ?>" class="app-sidebar__logo"><span class="app-sidebar__logo-mark">SR</span><span class="app-sidebar__logo-text"><?php echo htmlspecialchars(t('Record System'), ENT_QUOTES, 'UTF-8'); ?></span></a>
+            <a href="<?php echo htmlspecialchars(dash_index_href(), ENT_QUOTES, 'UTF-8'); ?>" class="app-sidebar__logo"><span class="app-sidebar__logo-mark">SA</span><span class="app-sidebar__logo-text"><?php echo htmlspecialchars(t('SARMS'), ENT_QUOTES, 'UTF-8'); ?></span></a>
             <button type="button" class="app-sidebar__collapse btn-icon" id="sidebarCollapse" title="<?php echo htmlspecialchars(t('Collapse menu'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(t('Collapse menu'), ENT_QUOTES, 'UTF-8'); ?>">
                 <i class="bi bi-layout-sidebar-inset"></i>
             </button>
@@ -75,7 +75,7 @@ $full_title = $dashboard_page_title;
             <?php else: ?>
             <div class="app-topbar__search app-topbar__search--muted d-flex align-items-center px-3 flex-grow-1">
                 <i class="bi bi-mortarboard" aria-hidden="true"></i>
-                <span class="small text-muted"><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?></span>
+                <span class="small text-muted"><?php echo htmlspecialchars(t('SARMS'), ENT_QUOTES, 'UTF-8'); ?></span>
             </div>
             <?php endif; ?>
             <div class="app-topbar__actions">

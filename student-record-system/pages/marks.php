@@ -339,7 +339,7 @@ $csrf_token = urlencode(getCsrfToken());
 
 $GLOBALS['dashboard_from_pages'] = true;
 $GLOBALS['dashboard_nav_active'] = 'marks';
-$GLOBALS['dashboard_page_title'] = $page_title . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_page_title'] = $page_title . ' — ' . t('SARMS');
 $GLOBALS['dashboard_heading'] = $page_title;
 $GLOBALS['dashboard_subtitle'] = null;
 include __DIR__ . '/../includes/dashboard_shell_start.php';

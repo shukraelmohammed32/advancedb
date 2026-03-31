@@ -14,7 +14,7 @@ $footer_language_base_path = ($footer_base_path === '') ? '' : rtrim($footer_bas
     <div class="container">
         <div class="footer-content">
             <div class="footer-section">
-                <h4><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?></h4>
+                <h4><?php echo htmlspecialchars(t('SARMS'), ENT_QUOTES, 'UTF-8'); ?></h4>
                 <p><?php echo htmlspecialchars(t('Reliable record management for classes, teachers, marks, and reports.'), ENT_QUOTES, 'UTF-8'); ?></p>
             </div>
             <div class="footer-section">
@@ -50,7 +50,7 @@ $footer_language_base_path = ($footer_base_path === '') ? '' : rtrim($footer_bas
             </div>
             <div class="footer-section">
                 <h4><?php echo htmlspecialchars(t('Version'), ENT_QUOTES, 'UTF-8'); ?></h4>
-                <p><?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?> v2<br><?php echo htmlspecialchars(t('Built with PHP and MySQL'), ENT_QUOTES, 'UTF-8'); ?></p>
+                <p><?php echo htmlspecialchars(t('SARMS'), ENT_QUOTES, 'UTF-8'); ?> v2<br><?php echo htmlspecialchars(t('Built with PHP and MySQL'), ENT_QUOTES, 'UTF-8'); ?></p>
             </div>
         </div>
         <div class="footer-bottom">
@@ -59,7 +59,7 @@ $footer_language_base_path = ($footer_base_path === '') ? '' : rtrim($footer_bas
                 <?php echo renderLanguageSwitcher($footer_language_base_path); ?>
             </div>
             <?php endif; ?>
-            <p class="mb-0">&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars(t('Student Record System'), ENT_QUOTES, 'UTF-8'); ?>. <?php echo htmlspecialchars(t('All rights reserved.'), ENT_QUOTES, 'UTF-8'); ?></p>
+            <p class="mb-0">&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars(t('SARMS'), ENT_QUOTES, 'UTF-8'); ?>. <?php echo htmlspecialchars(t('All rights reserved.'), ENT_QUOTES, 'UTF-8'); ?></p>
         </div>
     </div>
 </footer>

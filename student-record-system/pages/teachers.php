@@ -552,7 +552,7 @@ $edit_teacher_name_parts = splitPersonName($edit_teacher['teacher_name'] ?? '');
 
 $GLOBALS['dashboard_from_pages'] = true;
 $GLOBALS['dashboard_nav_active'] = 'teachers';
-$GLOBALS['dashboard_page_title'] = t('Teacher Management') . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_page_title'] = t('Teacher Management') . ' — ' . t('SARMS');
 $GLOBALS['dashboard_heading'] = t('Teacher Management');
 $GLOBALS['dashboard_subtitle'] = null;
 include __DIR__ . '/../includes/dashboard_shell_start.php';

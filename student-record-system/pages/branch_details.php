@@ -47,7 +47,7 @@ function formatBranchValue($value, $fallback = null) {
 <?php
 $GLOBALS['dashboard_from_pages'] = true;
 $GLOBALS['dashboard_nav_active'] = 'dashboard';
-$GLOBALS['dashboard_page_title'] = (string)$page_title . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_page_title'] = (string)$page_title . ' — ' . t('SARMS');
 $GLOBALS['dashboard_heading'] = '';
 $GLOBALS['dashboard_subtitle'] = '';
 include __DIR__ . '/../includes/dashboard_shell_start.php';

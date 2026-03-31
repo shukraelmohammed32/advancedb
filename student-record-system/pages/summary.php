@@ -223,7 +223,7 @@ if ($subjectPerformance === false) {
 <?php
 $GLOBALS['dashboard_from_pages'] = true;
 $GLOBALS['dashboard_nav_active'] = 'summary';
-$GLOBALS['dashboard_page_title'] = t('Performance Summary') . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_page_title'] = t('Performance Summary') . ' — ' . t('SARMS');
 $GLOBALS['dashboard_heading'] = '';
 $GLOBALS['dashboard_subtitle'] = '';
 $GLOBALS['dashboard_body_class'] = 'dashboard-body summary-page';

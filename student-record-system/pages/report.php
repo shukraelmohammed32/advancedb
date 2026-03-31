@@ -238,7 +238,7 @@ if ($subjects) {
 <?php
 $GLOBALS['dashboard_from_pages'] = true;
 $GLOBALS['dashboard_nav_active'] = 'reports';
-$GLOBALS['dashboard_page_title'] = t('Academic Reports') . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_page_title'] = t('Academic Reports') . ' — ' . t('SARMS');
 $GLOBALS['dashboard_heading'] = $page_title;
 $GLOBALS['dashboard_subtitle'] = null;
 $GLOBALS['dashboard_extra_head'] = '<link rel="stylesheet" href="../assets/report-page.css">';

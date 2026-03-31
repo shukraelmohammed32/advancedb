@@ -383,7 +383,7 @@ if (!$profile_table_exists && $error_message === '') {
 <?php
 $GLOBALS['dashboard_from_pages'] = true;
 $GLOBALS['dashboard_nav_active'] = 'profile';
-$GLOBALS['dashboard_page_title'] = t('My Profile') . ' — ' . t('Student Record System');
+$GLOBALS['dashboard_page_title'] = t('My Profile') . ' — ' . t('SARMS');
 $GLOBALS['dashboard_heading'] = t('Profile');
 $GLOBALS['dashboard_subtitle'] = null;
 include __DIR__ . '/../includes/dashboard_shell_start.php';

@@ -25,7 +25,7 @@ if (!function_exists('availableLanguages')) {
 if (!function_exists('translationCatalog')) {
     function translationCatalog() {
         return [
-            'Student Record System' => [
+            'SARMS' => [
                 'om' => 'Sirna Galmee Barattootaa',
                 'am' => 'የተማሪ መዝገብ ስርዓት',
             ],
@@ -89,7 +89,7 @@ if (!function_exists('translationCatalog')) {
                 'om' => 'Waaee Sirnichaa',
                 'am' => 'ስለዚህ ስርዓት',
             ],
-            'Student Record System centralizes student records, teacher assignments, marks, summaries, and reports in one school platform.' => [
+            'SARMS centralizes student records, teacher assignments, marks, summaries, and reports in one school platform.' => [
                 'om' => 'Sirni Galmee Barattootaa kun galmee barattootaa, ramaddii barsiisotaa, qabxii, cuunfaa fi ripoortii hunda platformii mana barumsaa tokko keessatti walitti qaba.',
                 'am' => 'የተማሪ መዝገብ ስርዓቱ የተማሪ መረጃዎችን፣ የመምህራን ምደባዎችን፣ ውጤቶችን፣ ማጠቃለያዎችን እና ሪፖርቶችን በአንድ የትምህርት ቤት መድረክ ያከማቻል።',
             ],

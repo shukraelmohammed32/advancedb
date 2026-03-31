@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Custom Error Handler for Student Record System
+ * Custom Error Handler for SARMS
  */
 class ErrorHandler {
     
@@ -57,7 +57,7 @@ class ErrorHandler {
         echo '<!DOCTYPE html>
 <html>
 <head>
-    <title>System Error - Student Record System</title>
+    <title>System Error - SARMS</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 50px; }
         .error-container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }

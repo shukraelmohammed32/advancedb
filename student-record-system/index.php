@@ -112,9 +112,9 @@ function formatDashboardDateTime($value, $fallback = 'No activity yet') {
 <?php
 $GLOBALS['dashboard_from_pages'] = false;
 $GLOBALS['dashboard_nav_active'] = 'dashboard';
-$GLOBALS['dashboard_page_title'] = t('Student Record System') . ' - ' . t('Dashboard');
+$GLOBALS['dashboard_page_title'] = t('SARMS') . ' - ' . t('Dashboard');
 $GLOBALS['dashboard_heading'] = t('Dashboard');
-$GLOBALS['dashboard_subtitle'] = t('Student Record System') . ' — ' . getRoleLabel();
+$GLOBALS['dashboard_subtitle'] = t('SARMS') . ' — ' . getRoleLabel();
 include __DIR__ . '/includes/dashboard_shell_start.php';
 ?>
 

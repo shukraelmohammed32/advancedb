@@ -93,7 +93,7 @@ class AppConfig {
     }
     
     public static function getAppName() {
-        return env('APP_NAME', 'Student Record System');
+        return env('APP_NAME', 'SARMS');
     }
     
     public static function getAppUrl() {

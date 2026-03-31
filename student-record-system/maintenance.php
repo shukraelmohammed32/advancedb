@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maintenance Mode - Student Record System</title>
+    <title>Maintenance Mode - SARMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -51,7 +51,7 @@
         </div>
         <h1 class="maintenance-title">System Under Maintenance</h1>
         <p class="maintenance-message">
-            The Student Record System is currently undergoing scheduled maintenance. 
+            SARMS is currently undergoing scheduled maintenance. 
             We apologize for any inconvenience and appreciate your patience.
         </p>
         
