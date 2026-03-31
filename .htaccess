@@ -1,25 +1,38 @@
-# Deny access to hidden files and directories (.git, .env, .tmp_sessions)
+# Security hardening for web root
 <FilesMatch "^\.">
     Require all denied
 </FilesMatch>
 
-# Deny access to SQL files
 <FilesMatch "\.(sql|sqlite|db)$">
     Require all denied
 </FilesMatch>
 
-# Deny access to batch/shell scripts
 <FilesMatch "\.(bat|sh|cmd)$">
     Require all denied
 </FilesMatch>
 
-# Deny access to zip archives
 <FilesMatch "\.zip$">
     Require all denied
 </FilesMatch>
 
-# Default charset
 AddDefaultCharset UTF-8
-
-# Disable directory listing
 Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Public landing pages now live under /frontend
+    RewriteRule ^$ frontend/index.html [L]
+    RewriteRule ^index\.html$ frontend/index.html [L]
+    RewriteRule ^sign-in\.html$ frontend/sign-in.html [L]
+
+    # Static files moved under /frontend/assets
+    RewriteRule ^assets/(.*)$ frontend/assets/$1 [L]
+
+    # Keep legacy app URLs working after moving backend code
+    RewriteRule ^student-record-system/?$ backend/student-record-system/index.php [L]
+    RewriteRule ^student-record-system/(.*)$ backend/student-record-system/$1 [L]
+
+    # Support direct /frontend page access with old relative links
+    RewriteRule ^frontend/student-record-system/(.*)$ backend/student-record-system/$1 [L]
+</IfModule>
