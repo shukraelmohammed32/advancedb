@@ -17,6 +17,25 @@ function normalizeSessionBasePath($path) {
 }
 
 function detectAppBasePath() {
+    $requestUri = str_replace('\\', '/', (string)($_SERVER['REQUEST_URI'] ?? ''));
+    if ($requestUri !== '') {
+        $requestPath = parse_url($requestUri, PHP_URL_PATH);
+        if (is_string($requestPath) && $requestPath !== '') {
+            $marker = '/student-record-system';
+            $position = strpos($requestPath, $marker);
+            if ($position !== false) {
+                $publicBase = substr($requestPath, 0, $position + strlen($marker));
+                return normalizeSessionBasePath($publicBase);
+            }
+        }
+    }
+
+    $appUrl = env('APP_URL', '');
+    $urlPath = is_string($appUrl) ? parse_url($appUrl, PHP_URL_PATH) : '';
+    if (is_string($urlPath) && $urlPath !== '') {
+        return normalizeSessionBasePath($urlPath);
+    }
+
     $appRoot = realpath(dirname(__DIR__));
     $documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
 
@@ -31,12 +50,6 @@ function detectAppBasePath() {
                 return normalizeSessionBasePath($relativePath);
             }
         }
-    }
-
-    $appUrl = env('APP_URL', '');
-    $urlPath = is_string($appUrl) ? parse_url($appUrl, PHP_URL_PATH) : '';
-    if (is_string($urlPath) && $urlPath !== '') {
-        return normalizeSessionBasePath($urlPath);
     }
 
     return '/';
